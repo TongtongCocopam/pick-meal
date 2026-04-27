@@ -27,14 +27,13 @@ public class ApiResponse<T> {
         );
     }
 
-    public static ApiResponse<Void> fail(ErrorCode errorCode, String message) {
+    public static ApiResponse<Void> fail(ErrorCode errorCode, String detailMessage) {
         return new ApiResponse<>(
                 false,
                 null,
                 ErrorResponse.builder()
-                        .code(errorCode.getCode())
                         .message(errorCode.getMessage())
-                        .detail(message)
+                        .detail(detailMessage)
                         .build()
         );
     }
@@ -44,7 +43,6 @@ public class ApiResponse<T> {
                 false,
                 null,
                 ErrorResponse.builder()
-                        .code(errorCode.getCode())
                         .message(errorCode.getMessage())
                         .build()
         );
@@ -55,7 +53,6 @@ public class ApiResponse<T> {
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public static class ErrorResponse {
         private String message;
-        private String code;
         private String detail;
     }
 
