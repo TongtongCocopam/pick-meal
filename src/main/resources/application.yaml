@@ -1,3 +1,65 @@
 spring:
   application:
     name: PickMeal
+
+  # Database 설정 (PostgreSQL)
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/pickmeal_db
+    username: user
+    password: 1234
+
+  # JPA/Hibernate 설정
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Redis 설정
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  # 비동기(@Async) 스레드 풀 설정
+  task:
+    execution:
+      pool:
+        core-size: 5
+        max-size: 10
+        queue-capacity: 100
+      thread-name-prefix: diet-async-
+
+# 외부 API 설정 (OpenFeign / OpenAI)
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        # AI 응답은 오래 걸리므로 길게 설정
+        read-timeout: 30000
+
+# Swagger (OpenAPI) 설정
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    groups-order: DESC
+    operations-sorter: alpha
+  api-docs:
+    path: /api-docs
+
+# JWT 및 커스텀 보안 설정
+jwt:
+  secret: ${JWT_SECRET_KEY:your_default_very_long_secure_key_32chars}
+  access-expiration: 1800000 # 30분
+  refresh-expiration: 1209600000 # 14일
+
+# 로깅 설정
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
