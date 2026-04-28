@@ -7,6 +7,7 @@ import lombok.Getter;
 @Builder
 public class MemberResponse {
     public record Register(
+            Long userId,
             String nickName
     ){}
 }
