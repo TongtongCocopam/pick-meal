@@ -1,10 +1,7 @@
 package kongju.pickmeal.application.user.data;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -30,7 +27,7 @@ public class MemberRequest {
             String email,
             @NotBlank
             String nickName,
-            @NotBlank
+            @NotNull
             @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
             LocalDate birthDate
     ) {
