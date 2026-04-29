@@ -1,8 +1,8 @@
 package kongju.pickmeal.application.user;
 
 import jakarta.transaction.Transactional;
-import kongju.pickmeal.application.user.data.MemberRequest;
-import kongju.pickmeal.application.user.data.MemberResponse;
+import kongju.pickmeal.application.user.data.request.MemberRequest;
+import kongju.pickmeal.application.user.data.response.MemberResponse;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.User;

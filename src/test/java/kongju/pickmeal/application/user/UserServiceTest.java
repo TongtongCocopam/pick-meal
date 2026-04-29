@@ -22,8 +22,8 @@ import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.user.data.MemberRequest;
-import kongju.pickmeal.application.user.data.MemberResponse;
+import kongju.pickmeal.application.user.data.request.MemberRequest;
+import kongju.pickmeal.application.user.data.response.MemberResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(SpringExtension.class)

@@ -2,8 +2,8 @@ package kongju.pickmeal.api.user;
 
 import jakarta.validation.Valid;
 import kongju.pickmeal.application.user.UserService;
-import kongju.pickmeal.application.user.data.MemberRequest;
-import kongju.pickmeal.application.user.data.MemberResponse;
+import kongju.pickmeal.application.user.data.request.MemberRequest;
+import kongju.pickmeal.application.user.data.response.MemberResponse;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

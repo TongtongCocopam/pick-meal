@@ -18,8 +18,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 import kongju.pickmeal.application.user.UserService;
-import kongju.pickmeal.application.user.data.MemberRequest;
-import kongju.pickmeal.application.user.data.MemberResponse;
+import kongju.pickmeal.application.user.data.request.MemberRequest;
+import kongju.pickmeal.application.user.data.response.MemberResponse;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
