@@ -38,3 +38,7 @@ out/
 
 .env
 .env.local
+
+# Docker data directories
+postgres_data/
+redis_data/
