@@ -1,4 +1,4 @@
-package kongju.pickmeal.application.user.data;
+package kongju.pickmeal.application.user.data.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;

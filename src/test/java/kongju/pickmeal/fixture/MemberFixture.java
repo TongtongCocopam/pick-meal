@@ -1,6 +1,6 @@
 package kongju.pickmeal.fixture;
 
-import kongju.pickmeal.application.user.data.MemberRequest;
+import kongju.pickmeal.application.user.data.request.MemberRequest;
 
 import java.time.LocalDate;
 
