@@ -1,4 +1,4 @@
-package kongju.pickmeal.application.user.data;
+package kongju.pickmeal.application.user.data.response;
 
 import lombok.Builder;
 import lombok.Getter;

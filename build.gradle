@@ -19,6 +19,13 @@ repositories {
 }
 
 dependencies {
+    // JWT API (인터페이스 및 설정용)
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+    // JWT 구현체 (실제 로직 실행용)
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    // JSON 직렬화/역직렬화를 위한 Jackson 연동
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'

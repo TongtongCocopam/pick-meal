@@ -5,9 +5,9 @@ spring:
   # Database 설정 (PostgreSQL)
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/pickmeal_db
-    username: user
-    password: 1234
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   # JPA/Hibernate 설정
   jpa:
@@ -22,8 +22,8 @@ spring:
   # Redis 설정
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
 
   # 비동기(@Async) 스레드 풀 설정
   task:
@@ -54,7 +54,8 @@ springdoc:
 
 # JWT 및 커스텀 보안 설정
 jwt:
-  secret: ${JWT_SECRET_KEY:your_default_very_long_secure_key_32chars}
+  access-secret: ${JWT_ACCESS_SECRET}
+  refresh-secret: ${JWT_REFRESH_SECRET}
   access-expiration: 1800000 # 30분
   refresh-expiration: 1209600000 # 14일
 
