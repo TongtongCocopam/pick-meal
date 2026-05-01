@@ -13,11 +13,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
-import static kongju.pickmeal.fixture.MemberFixture.createRequest;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 import kongju.pickmeal.application.user.UserService;
+import static kongju.pickmeal.fixture.MemberFixture.createRequest;
 import kongju.pickmeal.application.user.data.request.MemberRequest;
 import kongju.pickmeal.application.user.data.response.MemberResponse;
 
