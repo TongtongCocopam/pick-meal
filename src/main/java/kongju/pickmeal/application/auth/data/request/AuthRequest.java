@@ -16,9 +16,9 @@ public class AuthRequest {
     ){}
     @Builder
     public record Logout(
-            @NotNull
+            @NotBlank
             String loginId,
-            @NotNull
+            @NotBlank
             String accessToken
     ){}
 }
