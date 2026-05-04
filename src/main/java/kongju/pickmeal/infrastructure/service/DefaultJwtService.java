@@ -48,6 +48,26 @@ public class DefaultJwtService implements JwtService {
     }
 
     @Override
+    public Long getExpiration(String token){
+        try{
+            Claims claims = Jwts.parser()
+                    .verifyWith(accessKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            Date expirationDate = claims.getExpiration();
+
+            long now = new Date().getTime();
+            long diff = expirationDate.getTime() - now;
+
+            return diff > 0 ? diff : 0L;
+        }catch(Exception e){
+            return 0L;
+        }
+    }
+
+    @Override
     public String createAccessToken(User user) {
         return createToken(user, accessExpiration, accessKey);
     }

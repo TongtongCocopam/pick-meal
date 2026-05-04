@@ -1,10 +1,6 @@
 package kongju.pickmeal.api.user;
 
 import jakarta.validation.Valid;
-import kongju.pickmeal.application.user.UserService;
-import kongju.pickmeal.application.user.data.request.MemberRequest;
-import kongju.pickmeal.application.user.data.response.MemberResponse;
-import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +8,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import kongju.pickmeal.application.user.UserService;
+import kongju.pickmeal.common.ApiResponse.ApiResponse;
+import kongju.pickmeal.application.user.data.request.MemberRequest;
+import kongju.pickmeal.application.user.data.response.MemberResponse;
+
 
 @RestController
 @RequestMapping("/api/v1/users")
