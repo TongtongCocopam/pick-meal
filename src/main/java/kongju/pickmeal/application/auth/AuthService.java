@@ -68,19 +68,29 @@ public class AuthService {
 
     /**
      * 존재하는 유저인지, 비밀번호가 일치하는지 확인
-     * @param request 아이디, 비밀번호
+     * @param request 비밀번호
      * @return User 객체
      */
     private User authenticate(AuthRequest.Login request) {
         // 존재하는 유저인지 확인
-        User user = userRepository.findByLoginId(request.loginId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
+        User user = userAuthenticate(request.loginId());
 
         // 비밀번호가 일치하는지 확인
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
         return user;
+    }
+
+    /**
+     * 존재하는 유저인지 확인
+     * @param loginId 아이디
+     * @return User 객체
+     */
+    private User userAuthenticate(String loginId) {
+        // 존재하는 유저인지 확인
+        return userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
     }
 
     /**
@@ -96,17 +106,21 @@ public class AuthService {
 
 
     public void logout(AuthRequest.Logout request, HttpServletResponse hResponse) {
+        userAuthenticate(request.loginId());
+
         // 레디스 리프레쉬 토큰 삭제
         refreshTokenRepository.deleteById(request.loginId());
 
         // 액세스 토큰 블랙 리스트 추가
         long expiration = jwtService.getExpiration(request.accessToken());
-        redisTemplate.opsForValue().set(
-                "blacklist:" + request.accessToken(),
-                "logout",
-                expiration,
-                TimeUnit.MILLISECONDS
-        );
+        if(expiration > 0L){
+            redisTemplate.opsForValue().set(
+                    "blacklist:" + request.accessToken(),
+                    "logout",
+                    expiration,
+                    TimeUnit.MILLISECONDS
+            );
+        }
 
         // 쿠키 정보에서 삭제
         ResponseCookie cookie = ResponseCookie.from("refreshToken", "")

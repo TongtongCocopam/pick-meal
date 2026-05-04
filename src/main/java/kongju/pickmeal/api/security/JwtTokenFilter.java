@@ -44,7 +44,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
         String isLogout = redisTemplate.opsForValue().get("blacklist:" + token);
         if (isLogout != null) {
-            filterChain.doFilter(request, response);
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
