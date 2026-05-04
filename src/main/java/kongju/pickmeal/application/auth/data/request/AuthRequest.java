@@ -1,6 +1,7 @@
 package kongju.pickmeal.application.auth.data.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,5 +14,11 @@ public class AuthRequest {
             @NotBlank
             String password
     ){}
-
+    @Builder
+    public record Logout(
+            @NotNull
+            String loginId,
+            @NotNull
+            String accessToken
+    ){}
 }
