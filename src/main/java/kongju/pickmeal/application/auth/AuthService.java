@@ -125,33 +125,14 @@ public class AuthService {
     }
 
     public AuthResponse.Token refresh(AuthRequest.RefreshToken request, String oldRefreshToken) {
-        // 2개 토큰 검증
-        if (request.accessToken() == null || request.accessToken().isEmpty()) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-        // 액세스 토큰이 만료되지 않았다면 에러 처리
-        if (!jwtService.isAccessTokenExpired(request.accessToken())) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-        // 리프레시 토큰 확인
-        if (!jwtService.validateRefreshToken(oldRefreshToken)) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-
-        // 유저와 토큰이 일치하는가
-        Optional<String> userId = jwtService.getSubFromExpiredToken(request.accessToken());
-        String savedToken = redisTemplate.opsForValue().get("rt:" + userId);
-        if (!Objects.requireNonNull(savedToken).equals(oldRefreshToken)) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-        // 없다면 에러 처리
-        Optional<User> user = Optional.of(userRepository.findByLoginId(String.valueOf(userId))
-                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED)));
+        User user = verifyToken(request, oldRefreshToken);
 
         // 토큰 재발급
-        String accessToken = jwtService.createAccessToken(user.get());
-        String refreshToken = jwtService.createRefreshToken(user.get());
-        saveRefreshToken(user.get().getLoginId(), refreshToken);
+        String accessToken = jwtService.createAccessToken(user);
+        String refreshToken = jwtService.createRefreshToken(user);
+
+        // 토큰 저장
+        saveRefreshToken(user.getLoginId(), refreshToken);
 
         return AuthResponse.Token
                 .builder()
@@ -160,8 +141,33 @@ public class AuthService {
                 .build();
     }
 
-    private void verifyRefreshToken(AuthRequest.RefreshToken request, HttpServletResponse hResponse) {
+    private User verifyToken(AuthRequest.RefreshToken request, String oldRefreshToken) {
+        // 2개 토큰 검증
+        if (request.accessToken() == null || request.accessToken().isBlank()) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        // 액세스 토큰이 만료되지 않았다면 에러 처리
+        if (!jwtService.isAccessTokenExpired(request.accessToken())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        // 리프레시 토큰 확인
+        if (oldRefreshToken == null || !jwtService.validateRefreshToken(oldRefreshToken)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
 
+        // 유저와 토큰이 일치하는가
+        String userId = jwtService.getSubFromExpiredToken(request.accessToken())
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+
+        String savedToken = redisTemplate.opsForValue().get("rt:" + userId);
+
+        if (savedToken == null || !savedToken.equals(oldRefreshToken)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 없다면 에러 처리
+        return userRepository.findByLoginId(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
     }
 
 }
