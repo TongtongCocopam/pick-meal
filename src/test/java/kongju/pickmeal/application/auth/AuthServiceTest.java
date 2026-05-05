@@ -8,7 +8,6 @@ import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
-import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.data.redis.core.RedisTemplate;
