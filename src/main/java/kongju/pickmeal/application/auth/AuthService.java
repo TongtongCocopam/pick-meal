@@ -1,16 +1,11 @@
 package kongju.pickmeal.application.auth;
 
 import java.time.Duration;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
-import org.springframework.http.ResponseCookie;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import kongju.pickmeal.core.user.User;
