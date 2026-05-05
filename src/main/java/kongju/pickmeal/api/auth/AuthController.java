@@ -73,8 +73,7 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse.AccessToken>> refresh(
             @RequestBody @Valid AuthRequest.RefreshToken request,
-            @CookieValue(name = "refreshToken", required = false
-            ) String oldRefreshToken,
+            @CookieValue(name = "refreshToken", required = false) String oldRefreshToken,
             HttpServletResponse hResponse) {
         AuthResponse.Token tokenSet = authService.refresh(request, oldRefreshToken);
 

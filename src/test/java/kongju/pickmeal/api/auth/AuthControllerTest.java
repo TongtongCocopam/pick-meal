@@ -1,10 +1,12 @@
 package kongju.pickmeal.api.auth;
 
 
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import jakarta.servlet.http.HttpServletResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,12 +16,13 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import kongju.pickmeal.core.service.JwtService;
 import kongju.pickmeal.core.user.UserRepository;
@@ -53,7 +56,12 @@ public class AuthControllerTest {
         @Test
         @DisplayName("아이디와 일치하는 유저를 찾지 못했거나 비밀번호가 일치하지 않을 경우 에러 처리")
         public void should_fail_loginId_not_found() throws Exception {
-            AuthRequest.Login request = new AuthRequest.Login("wrongId", "password123");
+            AuthRequest.Login request = AuthRequest.Login
+                    .builder()
+                    .loginId("wrongId")
+                    .password("password123")
+                    .build();
+
             given(authService.login(any(AuthRequest.Login.class))).willThrow(new BusinessException(ErrorCode.LOGIN_FAILED));
 
             mockMvc.perform(post("/api/v1/auth/login")
@@ -68,7 +76,11 @@ public class AuthControllerTest {
         @Test
         @DisplayName("로그인 성공한 케이스")
         public void should_success_login() throws Exception {
-            AuthRequest.Login request = new AuthRequest.Login("wrongId", "password123");
+            AuthRequest.Login request = AuthRequest.Login
+                    .builder()
+                    .loginId("wrongId")
+                    .password("password123")
+                    .build();
 
             AuthResponse.Token token = AuthResponse.Token.builder()
                     .accessToken("access_token_test")
@@ -108,7 +120,11 @@ public class AuthControllerTest {
         @Test
         @DisplayName("로그아웃 성공한 케이스")
         public void should_success_logout() throws Exception {
-            AuthRequest.Logout request = new AuthRequest.Logout("user1", "access");
+            AuthRequest.Logout request = AuthRequest.Logout
+                    .builder()
+                    .loginId("user1")
+                    .accessToken("access")
+                    .build();
 
             mockMvc.perform(post("/api/v1/auth/logout")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -119,5 +135,53 @@ public class AuthControllerTest {
         }
     }
 
+    @Nested
+    @DisplayName("토큰 재발급 테스트")
+    class Refresh {
+        @Test
+        @DisplayName("파라미터 누락")
+        public void should_fail_refresh_params_missing() throws Exception {
+            AuthRequest.RefreshToken request = AuthRequest.RefreshToken
+                    .builder()
+                    .accessToken("")
+                    .build();
 
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .cookie(new Cookie("refreshToken", "old-rt")))
+                    .andExpect(status().isBadRequest())
+                    .andDo(print())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("토큰 재발급 성공 케이스")
+        public void should_success_refresh() throws Exception {
+            AuthRequest.RefreshToken request = AuthRequest.RefreshToken
+                    .builder()
+                    .accessToken("accessToken")
+                    .build();
+
+            // 새로운 토큰 발급
+            AuthResponse.Token tokenSet = AuthResponse.Token
+                    .builder()
+                    .accessToken("new-access-token")
+                    .refreshToken("new-refresh-token")
+                    .build();
+
+            given(authService.refresh(any(), anyString())).willReturn(tokenSet);
+
+            mockMvc.perform(post("/api/v1/auth/refresh")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .cookie(new Cookie("refreshToken", "old-rt")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
+                    .andExpect(header().exists(HttpHeaders.SET_COOKIE))
+                    .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refreshToken=new-refresh-token")))
+                    .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("HttpOnly")));
+        }
+    }
 }
