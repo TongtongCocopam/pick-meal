@@ -8,7 +8,6 @@ import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
-import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -50,9 +49,6 @@ public class AuthServiceTest {
     private JwtService jwtService;
 
     @Mock
-    private HttpServletResponse mockHttpServletResponse;
-
-    @Mock
     private RedisTemplate<String, String> redisTemplate;
 
     @Mock
@@ -80,7 +76,7 @@ public class AuthServiceTest {
 
             given(userRepository.findByLoginId(anyString())).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.login(request, mockHttpServletResponse))
+            assertThatThrownBy(() -> authService.login(request))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOGIN_FAILED);
             verify(userRepository).findByLoginId("test1234");
@@ -102,7 +98,7 @@ public class AuthServiceTest {
 
             given(passwordEncoder.matches(anyString(), anyString())).willReturn(false);
 
-            assertThatThrownBy(() -> authService.login(request, mockHttpServletResponse))
+            assertThatThrownBy(() -> authService.login(request))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOGIN_FAILED);
 
@@ -130,7 +126,7 @@ public class AuthServiceTest {
 
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
-            AuthResponse.Token response = authService.login(request, mockHttpServletResponse);
+            AuthResponse.Token response = authService.login(request);
 
             assertThat(response.accessToken()).isEqualTo("mock_access_token");
             verify(userRepository).findByLoginId("test1234");
@@ -154,7 +150,7 @@ public class AuthServiceTest {
             given(userRepository.findByLoginId(anyString())).willReturn(Optional.empty());
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
-                authService.logout(request, mockHttpServletResponse);
+                authService.logout(request);
             });
 
             assertEquals(ErrorCode.LOGIN_FAILED, exception.getErrorCode());
@@ -176,7 +172,7 @@ public class AuthServiceTest {
 
             // 어떤 에러도 터지지 않아야 함
             assertDoesNotThrow(() -> {
-                authService.logout(request, mockHttpServletResponse);
+                authService.logout(request);
             });
             // 레디스 템플릿이 아닌 valueOperations를 확인해야 함
             verify(valueOperations, times(0)).set(anyString(), anyString(), anyLong(), any());
@@ -228,7 +224,7 @@ public class AuthServiceTest {
             given(userRepository.findByLoginId(anyString())).willReturn(Optional.ofNullable(user));
             given(jwtService.getExpiration("accessToken")).willReturn(3600000L);
 
-            authService.logout(request, mockHttpServletResponse);
+            authService.logout(request);
 
             // 리프레시 토큰 삭제 확인
             verify(refreshTokenRepository, times(1)).deleteById(anyString());
@@ -242,7 +238,110 @@ public class AuthServiceTest {
             );
 
         }
+    }
 
+    @Nested
+    @DisplayName("토큰 재발급 테스트")
+    class Refresh {
+        private AuthRequest.RefreshToken createRefreshTokenRequest() {
+            return AuthRequest.RefreshToken
+                    .builder()
+                    .accessToken("accessToken")
+                    .build();
+        }
+        private User createUser() {
+            return User.builder()
+                    .loginId("test1234")
+                    .password("password1234")
+                    .build();
+        }
+
+        @Test
+        @DisplayName("토큰 재발급 성공")
+        public void should_success_refresh() {
+            User user = createUser();
+            // 리프레시 토큰 시간, 액세스 토큰이 발급 시간 확인
+            AuthRequest.RefreshToken request = createRefreshTokenRequest();
+            String oldRefreshToken = "oldRefreshToken";
+
+            // 액세스 토큰 만료 안됨
+            given(jwtService.isAccessTokenExpired(anyString())).willReturn(true);
+            // 리프레시 토큰 만료
+            given(jwtService.validateRefreshToken(anyString())).willReturn(true);
+            // 만료된 액세스 토큰에서 유저 아이디 반환
+            given(jwtService.getSubFromExpiredToken(anyString())).willReturn(Optional.of("test1234"));
+            // 아이디로 토큰꺼내기
+            given(redisTemplate.opsForValue()).willReturn(valueOperations);
+            given(valueOperations.get("rt:test1234")).willReturn("oldRefreshToken");
+            // 유저 객체 반환
+            given(userRepository.findByLoginId(anyString())).willReturn(Optional.ofNullable(user));
+
+            given(jwtService.createAccessToken(user)).willReturn("newAccessToken");
+            given(jwtService.createRefreshToken(user)).willReturn("newRefreshToken");
+
+            AuthResponse.Token response = authService.refresh(request, oldRefreshToken);
+
+            assertThat(response.accessToken()).isEqualTo("newAccessToken");
+            assertThat(response.refreshToken()).isEqualTo("newRefreshToken");
+
+            verify(refreshTokenRepository, times(1)).save(any());
+            verify(userRepository, times(1)).findByLoginId("test1234");
+
+        }
+
+        @Test
+        @DisplayName("액세스 토큰이 만료되지 않았을 경우 에러")
+        public void should_fail_refresh_access_token_not_expired() {
+            AuthRequest.RefreshToken request = createRefreshTokenRequest();
+            String oldRefreshToken = "oldRefreshToken";
+            given(jwtService.isAccessTokenExpired(anyString())).willReturn(false);
+
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                authService.refresh(request, oldRefreshToken);
+            });
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+
+        }
+
+        @Test
+        @DisplayName("리프레시 토큰이 만료되었을때 or 없을 때")
+        public void should_fail_refresh_refresh_token_expired_or_not_found() {
+            AuthRequest.RefreshToken request = createRefreshTokenRequest();
+            String oldRefreshToken = "oldRefreshToken";
+            given(jwtService.isAccessTokenExpired(anyString())).willReturn(true);
+            given(jwtService.validateRefreshToken(anyString())).willReturn(false);
+
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                authService.refresh(request, oldRefreshToken);
+            });
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+
+        }
+
+        @Test
+        @DisplayName("유저와 토큰 정보가 맞지 않을때")
+        public void should_fail_refresh_user_token_not_match() {
+            AuthRequest.RefreshToken request = createRefreshTokenRequest();
+            String oldRefreshToken = "kk";
+
+            // 액세스 토큰 만료 안됨
+            given(jwtService.isAccessTokenExpired(anyString())).willReturn(true);
+            // 리프레시 토큰 만료
+            given(jwtService.validateRefreshToken(anyString())).willReturn(true);
+            // 만료된 액세스 토큰에서 유저 아이디 반환
+            given(jwtService.getSubFromExpiredToken(anyString())).willReturn(Optional.of("test1234"));
+            // 아이디로 토큰꺼내기
+            given(redisTemplate.opsForValue()).willReturn(valueOperations);
+            given(valueOperations.get("rt:test1234")).willReturn("oldRefreshToken");
+            // 유저 객체 반환
+            given(userRepository.findByLoginId(anyString())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                authService.refresh(request, oldRefreshToken);
+            });
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+        }
 
     }
 }
