@@ -50,9 +50,6 @@ public class AuthServiceTest {
     private JwtService jwtService;
 
     @Mock
-    private HttpServletResponse mockHttpServletResponse;
-
-    @Mock
     private RedisTemplate<String, String> redisTemplate;
 
     @Mock
@@ -80,7 +77,7 @@ public class AuthServiceTest {
 
             given(userRepository.findByLoginId(anyString())).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.login(request, mockHttpServletResponse))
+            assertThatThrownBy(() -> authService.login(request))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOGIN_FAILED);
             verify(userRepository).findByLoginId("test1234");
@@ -102,7 +99,7 @@ public class AuthServiceTest {
 
             given(passwordEncoder.matches(anyString(), anyString())).willReturn(false);
 
-            assertThatThrownBy(() -> authService.login(request, mockHttpServletResponse))
+            assertThatThrownBy(() -> authService.login(request))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOGIN_FAILED);
 
@@ -130,7 +127,7 @@ public class AuthServiceTest {
 
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
-            AuthResponse.Token response = authService.login(request, mockHttpServletResponse);
+            AuthResponse.Token response = authService.login(request);
 
             assertThat(response.accessToken()).isEqualTo("mock_access_token");
             verify(userRepository).findByLoginId("test1234");
@@ -154,7 +151,7 @@ public class AuthServiceTest {
             given(userRepository.findByLoginId(anyString())).willReturn(Optional.empty());
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
-                authService.logout(request, mockHttpServletResponse);
+                authService.logout(request);
             });
 
             assertEquals(ErrorCode.LOGIN_FAILED, exception.getErrorCode());
@@ -176,7 +173,7 @@ public class AuthServiceTest {
 
             // 어떤 에러도 터지지 않아야 함
             assertDoesNotThrow(() -> {
-                authService.logout(request, mockHttpServletResponse);
+                authService.logout(request);
             });
             // 레디스 템플릿이 아닌 valueOperations를 확인해야 함
             verify(valueOperations, times(0)).set(anyString(), anyString(), anyLong(), any());
@@ -228,7 +225,7 @@ public class AuthServiceTest {
             given(userRepository.findByLoginId(anyString())).willReturn(Optional.ofNullable(user));
             given(jwtService.getExpiration("accessToken")).willReturn(3600000L);
 
-            authService.logout(request, mockHttpServletResponse);
+            authService.logout(request);
 
             // 리프레시 토큰 삭제 확인
             verify(refreshTokenRepository, times(1)).deleteById(anyString());

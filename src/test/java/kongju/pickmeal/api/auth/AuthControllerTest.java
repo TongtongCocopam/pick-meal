@@ -54,7 +54,7 @@ public class AuthControllerTest {
         @DisplayName("아이디와 일치하는 유저를 찾지 못했거나 비밀번호가 일치하지 않을 경우 에러 처리")
         public void should_fail_loginId_not_found() throws Exception {
             AuthRequest.Login request = new AuthRequest.Login("wrongId", "password123");
-            given(authService.login(any(AuthRequest.Login.class), any(HttpServletResponse.class))).willThrow(new BusinessException(ErrorCode.LOGIN_FAILED));
+            given(authService.login(any(AuthRequest.Login.class))).willThrow(new BusinessException(ErrorCode.LOGIN_FAILED));
 
             mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -74,7 +74,7 @@ public class AuthControllerTest {
                     .accessToken("access_token_test")
                     .build();
 
-            given(authService.login(any(AuthRequest.Login.class), any(HttpServletResponse.class))).willReturn(token);
+            given(authService.login(any(AuthRequest.Login.class))).willReturn(token);
 
             mockMvc.perform(post("/api/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
