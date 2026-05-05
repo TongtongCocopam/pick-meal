@@ -1,6 +1,8 @@
 package kongju.pickmeal.application.auth;
 
 import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import lombok.RequiredArgsConstructor;
@@ -36,11 +38,11 @@ public class AuthService {
     /**
      * 로그인 기능
      * 액세스토큰과 리프레시 토큰 발급
+     *
      * @param request 아이디, 비밀번호
-     * @param hResponse 쿠키 정보를 담을 파라미터
      * @return 액세스 토큰
      */
-    public AuthResponse.Token login(AuthRequest.Login request, HttpServletResponse hResponse) {
+    public AuthResponse.Token login(AuthRequest.Login request) {
         User user = authenticate(request);
 
         // 액세스 토큰 발급
@@ -50,24 +52,16 @@ public class AuthService {
 
         // 리프레시 토큰 레디스에 저장
         saveRefreshToken(user.getLoginId(), refreshToken);
-        // 쿠키에 담기
-        ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .maxAge(Duration.ofDays(14).toSeconds())
-                .sameSite("Strict")
-                .build();
-
-        hResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return AuthResponse.Token.builder()
                 .accessToken(String.valueOf(accessToken))
+                .refreshToken(String.valueOf(refreshToken))
                 .build();
     }
 
     /**
      * 존재하는 유저인지, 비밀번호가 일치하는지 확인
+     *
      * @param request 비밀번호
      * @return User 객체
      */
@@ -84,6 +78,7 @@ public class AuthService {
 
     /**
      * 존재하는 유저인지 확인
+     *
      * @param loginId 아이디
      * @return User 객체
      */
@@ -95,8 +90,9 @@ public class AuthService {
 
     /**
      * 리프레시 토큰 레디스에 저장
+     *
      * @param loginId 사용자 아이디
-     * @param token 리프레시 토큰
+     * @param token   리프레시 토큰
      */
     private void saveRefreshToken(String loginId, String token) {
         long expiration = Duration.ofDays(14).toSeconds();
@@ -104,8 +100,13 @@ public class AuthService {
         refreshTokenRepository.save(refreshToken);
     }
 
-
-    public void logout(AuthRequest.Logout request, HttpServletResponse hResponse) {
+    /**
+     * 로그아웃 기능
+     * 리프레시 토큰 삭제, 액세스 토큰 블랙리스트 추가
+     *
+     * @param request 아이디, 액세스 토큰
+     */
+    public void logout(AuthRequest.Logout request) {
         userAuthenticate(request.loginId());
 
         // 레디스 리프레쉬 토큰 삭제
@@ -113,7 +114,7 @@ public class AuthService {
 
         // 액세스 토큰 블랙 리스트 추가
         long expiration = jwtService.getExpiration(request.accessToken());
-        if(expiration > 0L){
+        if (expiration > 0L) {
             redisTemplate.opsForValue().set(
                     "blacklist:" + request.accessToken(),
                     "logout",
@@ -121,15 +122,46 @@ public class AuthService {
                     TimeUnit.MILLISECONDS
             );
         }
-
-        // 쿠키 정보에서 삭제
-        ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .maxAge(0)
-                .build();
-
-        hResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
+
+    public AuthResponse.Token refresh(AuthRequest.RefreshToken request, String oldRefreshToken) {
+        // 2개 토큰 검증
+        if (request.accessToken() == null || request.accessToken().isEmpty()) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        // 액세스 토큰이 만료되지 않았다면 에러 처리
+        if (!jwtService.isAccessTokenExpired(request.accessToken())) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        // 리프레시 토큰 확인
+        if (!jwtService.validateRefreshToken(oldRefreshToken)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 유저와 토큰이 일치하는가
+        Optional<String> userId = jwtService.getSubFromExpiredToken(request.accessToken());
+        String savedToken = redisTemplate.opsForValue().get("rt:" + userId);
+        if (!Objects.requireNonNull(savedToken).equals(oldRefreshToken)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        // 없다면 에러 처리
+        Optional<User> user = Optional.of(userRepository.findByLoginId(String.valueOf(userId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED)));
+
+        // 토큰 재발급
+        String accessToken = jwtService.createAccessToken(user.get());
+        String refreshToken = jwtService.createRefreshToken(user.get());
+        saveRefreshToken(user.get().getLoginId(), refreshToken);
+
+        return AuthResponse.Token
+                .builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    private void verifyRefreshToken(AuthRequest.RefreshToken request, HttpServletResponse hResponse) {
+
+    }
+
 }

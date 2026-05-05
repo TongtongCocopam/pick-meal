@@ -21,4 +21,9 @@ public class AuthRequest {
             @NotBlank
             String accessToken
     ){}
+    @Builder
+    public record RefreshToken(
+      @NotBlank
+      String accessToken
+    ){}
 }
