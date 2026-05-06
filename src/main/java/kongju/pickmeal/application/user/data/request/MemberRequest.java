@@ -1,11 +1,12 @@
 package kongju.pickmeal.application.user.data.request;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.*;
-import lombok.Builder;
-import lombok.Getter;
-
 import java.time.LocalDate;
+
+import lombok.Getter;
+import lombok.Builder;
+import jakarta.validation.constraints.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 
 @Getter
 public class MemberRequest {
