@@ -101,11 +101,9 @@ public class AuthService {
      *
      * @param request 아이디, 액세스 토큰
      */
-    public void logout(AuthRequest.Logout request) {
-        userAuthenticate(request.loginId());
-
+    public void logout(AuthRequest.Token request, User user) {
         // 레디스 리프레쉬 토큰 삭제
-        refreshTokenRepository.deleteById(request.loginId());
+        refreshTokenRepository.deleteById(user.getLoginId());
 
         // 액세스 토큰 블랙 리스트 추가
         long expiration = jwtService.getExpiration(request.accessToken());
@@ -119,7 +117,7 @@ public class AuthService {
         }
     }
 
-    public AuthResponse.Token refresh(AuthRequest.RefreshToken request, String oldRefreshToken) {
+    public AuthResponse.Token refresh(AuthRequest.Token request, String oldRefreshToken) {
         User user = verifyToken(request, oldRefreshToken);
 
         // 토큰 재발급
@@ -136,31 +134,30 @@ public class AuthService {
                 .build();
     }
 
-    private User verifyToken(AuthRequest.RefreshToken request, String oldRefreshToken) {
+    private User verifyToken(AuthRequest.Token request, String oldRefreshToken) {
         // 2개 토큰 검증
         if (request.accessToken() == null || request.accessToken().isBlank()) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         // 액세스 토큰이 만료되지 않았다면 에러 처리
-        if (!jwtService.isAccessTokenExpired(request.accessToken())) {
+        if (!jwtService.isExpired(request.accessToken())) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
         // 리프레시 토큰 확인
-        if (oldRefreshToken == null || !jwtService.validateRefreshToken(oldRefreshToken)) {
+        if (oldRefreshToken == null || !jwtService.isValid(oldRefreshToken)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         // 유저와 토큰이 일치하는가
-        String userId = jwtService.getSubFromExpiredToken(request.accessToken())
+        String userId = jwtService.extractSubjectFromExpired(request.accessToken())
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
         String savedToken = redisTemplate.opsForValue().get("rt:" + userId);
-
         if (savedToken == null || !savedToken.equals(oldRefreshToken)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 없다면 에러 처리
+        // 유저반환
         return userRepository.findByLoginId(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
     }
