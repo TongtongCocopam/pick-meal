@@ -19,7 +19,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
-@Component
 @RequiredArgsConstructor // final이 붙은 필드를 모아서 생성자를 자동으로 만들어줌
 public class JwtTokenFilter extends OncePerRequestFilter {
     private final JwtService jwtService;

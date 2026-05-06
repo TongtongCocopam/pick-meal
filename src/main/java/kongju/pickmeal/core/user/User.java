@@ -1,17 +1,20 @@
 package kongju.pickmeal.core.user;
 
-import org.springframework.data.annotation.LastModifiedDate;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Past;
-import kongju.pickmeal.core.common.BaseTimeEntity;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import lombok.Getter;
+import lombok.Builder;
+import lombok.AccessLevel;
+import jakarta.persistence.*;
+import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.data.annotation.LastModifiedDate;
+
+import kongju.pickmeal.core.common.BaseTimeEntity;
+import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.common.exception.BusinessException;
 
 /**
  * 유저 정보를 담은 entity
@@ -50,5 +53,21 @@ public class User extends BaseTimeEntity {
         this.password = password;
         this.role = UserRole.GUEST;
         this.pickCount = 0L;
+    }
+
+    public void joinFamilyLeader(Long familyId){
+        if(this.familyId != null){
+            throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
+        }
+        this.familyId = familyId;
+        this.role = UserRole.READER;
+    }
+
+    public void joinFamilyMember(Long familyId){
+        if(this.familyId == null){
+            throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
+        }
+        this.familyId = familyId;
+        this.role = UserRole.MEMBER;
     }
 }
