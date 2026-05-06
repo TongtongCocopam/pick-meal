@@ -49,16 +49,18 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
         // 토큰 유효확인, 안에 담긴 User id가져옴
         // DB 유저 찾기
-        jwtService.getSubFromAccessToken(token)
+        jwtService.extractSubject(token)
                 .flatMap(id -> userRepository.findById(Long.valueOf(id)))
+                // 데이터가 있을 때만 실행
                 .ifPresent(user -> {
+                    // 스프링 시큐리티 권한
                     List<SimpleGrantedAuthority> authorities = List.of(
                             new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
                     );
                     // 시큐리티가 이해가능한 인증 티켓 생성
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(user, null, authorities);
-                    // 임시 저장
+                    // 저장
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 });
         // 필터 처리 완료

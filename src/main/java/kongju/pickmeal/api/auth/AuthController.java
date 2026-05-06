@@ -1,12 +1,14 @@
 package kongju.pickmeal.api.auth;
 
 import jakarta.validation.Valid;
+import kongju.pickmeal.core.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import kongju.pickmeal.application.auth.AuthService;
@@ -57,10 +59,11 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
-            @RequestBody @Valid AuthRequest.Logout request,
-            HttpServletResponse hResponse
+            @RequestBody @Valid AuthRequest.Token request,
+            HttpServletResponse hResponse,
+            @AuthenticationPrincipal User user
     ) {
-        authService.logout(request);
+        authService.logout(request, user);
 
         // 쿠키 정보에서 삭제
         saveCookie(hResponse, "", 0L);
@@ -72,7 +75,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse.AccessToken>> refresh(
-            @RequestBody @Valid AuthRequest.RefreshToken request,
+            @RequestBody @Valid AuthRequest.Token request,
             @CookieValue(name = "refreshToken", required = false) String oldRefreshToken,
             HttpServletResponse hResponse) {
         AuthResponse.Token tokenSet = authService.refresh(request, oldRefreshToken);

@@ -8,7 +8,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import jakarta.servlet.http.HttpServletResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +30,6 @@ import kongju.pickmeal.application.auth.AuthService;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.auth.data.request.AuthRequest;
 import kongju.pickmeal.application.auth.data.response.AuthResponse;
-import org.springframework.web.client.RestTemplate;
 
 
 @WebMvcTest(AuthController.class)
@@ -103,8 +101,7 @@ public class AuthControllerTest {
         @Test
         @DisplayName("필수 파라미터 누락")
         public void should_fail_logout_params_missing() throws Exception {
-            AuthRequest.Logout request = AuthRequest.Logout.builder()
-                    .loginId("")
+            AuthRequest.Token request = AuthRequest.Token.builder()
                     .accessToken("")
                     .build();
 
@@ -120,9 +117,8 @@ public class AuthControllerTest {
         @Test
         @DisplayName("로그아웃 성공한 케이스")
         public void should_success_logout() throws Exception {
-            AuthRequest.Logout request = AuthRequest.Logout
+            AuthRequest.Token request = AuthRequest.Token
                     .builder()
-                    .loginId("user1")
                     .accessToken("access")
                     .build();
 
@@ -141,7 +137,7 @@ public class AuthControllerTest {
         @Test
         @DisplayName("파라미터 누락")
         public void should_fail_refresh_params_missing() throws Exception {
-            AuthRequest.RefreshToken request = AuthRequest.RefreshToken
+            AuthRequest.Token request = AuthRequest.Token
                     .builder()
                     .accessToken("")
                     .build();
@@ -158,7 +154,7 @@ public class AuthControllerTest {
         @Test
         @DisplayName("토큰 재발급 성공 케이스")
         public void should_success_refresh() throws Exception {
-            AuthRequest.RefreshToken request = AuthRequest.RefreshToken
+            AuthRequest.Token request = AuthRequest.Token
                     .builder()
                     .accessToken("accessToken")
                     .build();
