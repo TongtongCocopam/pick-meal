@@ -98,34 +98,30 @@ public class DefaultJwtService implements JwtService {
         return createToken(user, refreshExpiration, refreshKey);
     }
 
-    @Override
-    public Optional<String> getSubFromAccessToken(String token) {
-        return getSubFromToken(token, accessKey);
-    }
-
-    @Override
-    public Optional<String> getSubFromRefreshToken(String token) {
-        return getSubFromToken(token, refreshKey);
+    /**
+     * 토큰 검증 및 claims반환
+     * @param token 토큰
+     * @param signingKey 키
+     * @return claims객체
+     */
+    private Claims getClaimsFromToken(String token, SecretKey signingKey) {
+        return Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     /**
-     * 유효한 토큰에서 사용자 id추출
-     * @param token 토큰
-     * @param signingKey 비밀 키
-     * @return 사용자 id
+     * 액세스 토큰 확인 및 loginId반환
+     * @param token 액세스 토큰
+     * @return loginId
      */
-    public Optional<String> getSubFromToken(String token, SecretKey signingKey) {
+    @Override
+    public Optional<String> extractSubject(String token) {
         try {
             // jjwt를 사용하여 토큰 내부의 claims을 가져옴
-            // 분석기 준비
-            Claims claims = Jwts.parser()
-                    // 서명 검증을 위한 키
-                    .verifyWith(signingKey)
-                    // 분석기 생성
-                    .build()
-                    // 실제 분석할 토큰
-                    .parseSignedClaims(token)
-                    .getPayload();
+            Claims claims = getClaimsFromToken(token, accessKey);
 
             return Optional.ofNullable(claims.getSubject());
         } catch (Exception e) {
@@ -139,10 +135,10 @@ public class DefaultJwtService implements JwtService {
      * @return 만료되었는지 boolean반환
      */
     @Override
-    public boolean isAccessTokenExpired(String token) {
+    public boolean isExpired(String token) {
         try {
             // 정상적으로 파싱되면 만료되지 않음
-            Jwts.parser().verifyWith(accessKey).build().parseSignedClaims(token);
+            getClaimsFromToken(token,accessKey);
             return false;
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
             // 유효기간이 지남
@@ -154,10 +150,10 @@ public class DefaultJwtService implements JwtService {
     }
 
     @Override
-    public Optional<String> getSubFromExpiredToken(String token){
+    public Optional<String> extractSubjectFromExpired(String token){
         try{
             // 정상 토큰인지 확인
-            return getSubFromAccessToken(token);
+            return extractSubject(token);
         }catch (Exception e){
             // 만료 예외 발생 확인
             if(e instanceof io.jsonwebtoken.ExpiredJwtException){
@@ -170,9 +166,9 @@ public class DefaultJwtService implements JwtService {
     }
 
     @Override
-    public boolean validateRefreshToken(String token){
+    public boolean isValid(String token){
         try{
-            Jwts.parser().verifyWith(refreshKey).build().parseSignedClaims(token);
+            getClaimsFromToken(token,refreshKey);
             return true;
         }catch (Exception e){
             return false;
