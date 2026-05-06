@@ -25,6 +25,7 @@ public class AuthController {
     private final AuthService authService;
 
     private static final long REFRESH_TOKEN_MAX_AGE = Duration.ofDays(14).toSeconds();
+
     private void saveCookie(HttpServletResponse hResponse, String refreshToken, Long expiresIn) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)

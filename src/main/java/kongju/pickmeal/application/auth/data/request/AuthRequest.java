@@ -13,13 +13,7 @@ public class AuthRequest {
             @NotBlank
             String password
     ){}
-//    @Builder
-//    public record Logout(
-//            @NotBlank
-//            String loginId,
-//            @NotBlank
-//            String accessToken
-//    ){}
+
     @Builder
     public record Token(
       @NotBlank

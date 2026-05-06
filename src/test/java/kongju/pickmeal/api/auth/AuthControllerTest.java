@@ -2,6 +2,7 @@ package kongju.pickmeal.api.auth;
 
 
 import jakarta.servlet.http.Cookie;
+import kongju.pickmeal.api.security.JwtTokenFilter;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
