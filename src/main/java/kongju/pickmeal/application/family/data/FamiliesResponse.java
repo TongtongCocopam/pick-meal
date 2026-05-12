@@ -9,4 +9,12 @@ public class FamiliesResponse {
             String invitationCode
     ) {
     }
+
+    @Builder
+    public record ApplySummary(
+            Long applyId,
+            String nickname,
+            String email
+    ) {
+    }
 }

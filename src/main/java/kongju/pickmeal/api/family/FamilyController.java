@@ -35,4 +35,14 @@ public class FamilyController {
                 .body(ApiResponse.success(response));
     }
 
+    @PostMapping("/apply")
+    public ResponseEntity<ApiResponse<FamiliesResponse.Create>> applyFamily(
+            @RequestBody @Valid FamiliesRequest.Apply request,
+            @AuthenticationPrincipal User user
+    ) {
+        familyService.apply(request, user);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success());
+    }
 }
