@@ -1,13 +1,12 @@
 package kongju.pickmeal.application.family;
 
-import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.core.family.*;
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.core.family.FamilyRepository;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.family.data.FamiliesRequest;
 import kongju.pickmeal.application.family.data.FamiliesResponse;
@@ -20,6 +19,7 @@ import java.security.SecureRandom;
 @RequiredArgsConstructor
 public class FamilyService {
     private final FamilyRepository familyRepository;
+    private final FamilyApplyRepository familyApplyRepository;
 
     /**
      * 가족 만들기
@@ -76,4 +76,47 @@ public class FamilyService {
         return sb.toString();
     }
 
+    /**
+     * 가족 합류 신청
+     * @param request 초대 코드
+     * @param user 신청한 유저 정보
+     */
+    public void apply(FamiliesRequest.Apply request, User user) {
+        // 가족 여부 확인
+        Family family = checkApply(request, user);
+
+        // 신청 테이블 만들기
+        JoinApply joinApply = JoinApply.builder()
+                .userId(user.getId())
+                .familyId(family.getId())
+                .status(ApplyStatus.PENDING)
+                .build();
+
+        familyApplyRepository.save(joinApply);
+    }
+
+
+    /**
+     * 가족 여부와 신청 확인
+     * @param request 초대 코드
+     * @param user 신청한 유저
+     * @return Family객체 반환
+     */
+    private Family checkApply(FamiliesRequest.Apply request, User user) {
+        // 가족이 있는 경우
+        Family family = familyRepository.findByInvitationCode(request.invitationCode())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITATION_CODE));
+
+        // 가족이 이미 있음
+        if(user.getFamilyId() != null){
+            throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
+        }
+
+        // 이미 신청한 경우
+        if(familyApplyRepository.existsByUserId(user.getId())){
+            throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
+        }
+
+        return family;
+    }
 }
