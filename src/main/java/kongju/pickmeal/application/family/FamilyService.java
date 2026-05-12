@@ -103,14 +103,14 @@ public class FamilyService {
      * @return Family객체 반환
      */
     private Family checkApply(FamiliesRequest.Apply request, User user) {
-        // 가족이 있는 경우
-        Family family = familyRepository.findByInvitationCode(request.invitationCode())
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITATION_CODE));
-
         // 가족이 이미 있음
         if(user.getFamilyId() != null){
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
+
+        // 가족이 있는 경우
+        Family family = familyRepository.findByInvitationCode(request.invitationCode())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITATION_CODE));
 
         // 이미 신청한 경우
         if(familyApplyRepository.existsByUserId(user.getId())){

@@ -64,7 +64,7 @@ public class User extends BaseTimeEntity {
     }
 
     public void joinFamilyMember(Long familyId){
-        if(this.familyId == null){
+        if(this.familyId != null){
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
         this.familyId = familyId;
