@@ -1,5 +1,6 @@
 package kongju.pickmeal.api.family;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import kongju.pickmeal.application.family.data.FamiliesResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
@@ -78,5 +79,41 @@ public class FamilyControllerTest {
 
     }
 
+
+    @Nested
+    @DisplayName("가족 합류 신청")
+    class FamilyApply {
+        @Test
+        @DisplayName("파라미터 형식에 맞지 않는 경우")
+        public void should_fail_apply_params_not_valid() throws Exception {
+            FamiliesRequest.Apply request = FamiliesRequest.Apply.builder()
+                    .invitationCode("")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/families/apply")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.detail").value("초대 코드는 필수입니다."))
+                    .andExpect(jsonPath("$.error.message").value("입력 형식이 올바르지 않습니다."));
+
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_apply() throws Exception {
+            FamiliesRequest.Apply request = FamiliesRequest.Apply.builder()
+                    .invitationCode("초대코드대충8자")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/families/apply")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+
+    }
 
 }
