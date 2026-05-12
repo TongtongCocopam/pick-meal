@@ -113,7 +113,7 @@ public class FamilyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITATION_CODE));
 
         // 이미 신청한 경우
-        if(familyApplyRepository.existsByUserId(user.getId())){
+        if(familyApplyRepository.checkPendingApply(user.getId(), family.getId(), ApplyStatus.PENDING)){
             throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
         }
 
