@@ -51,7 +51,7 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<List<FamiliesResponse.ApplyInfo>>> applyListFamily(
             @AuthenticationPrincipal User user
     ) {
-        List<FamiliesResponse.ApplyInfo> applyInfoList = familyService.roadApplyList(user);
+        List<FamiliesResponse.ApplyInfo> applyInfoList = familyService.loadApplyList(user);
 
         return ResponseEntity
                 .status(HttpStatus.OK)

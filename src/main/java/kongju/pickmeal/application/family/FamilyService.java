@@ -129,7 +129,7 @@ public class FamilyService {
      * @param user 리더 정보
      * @return 신청 리스트 반환
      */
-    public List<FamiliesResponse.ApplyInfo> roadApplyList(User user) {
+    public List<FamiliesResponse.ApplyInfo> loadApplyList(User user) {
         // 가족이 없는지 확인
         Long familyId = checkFamily(user);
 
