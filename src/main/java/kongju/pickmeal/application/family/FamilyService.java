@@ -124,6 +124,11 @@ public class FamilyService {
         return family;
     }
 
+    /**
+     * 가족 신청 목록 불러오기
+     * @param user 리더 정보
+     * @return 신청 리스트 반환
+     */
     public List<FamiliesResponse.ApplyInfo> roadApplyList(User user) {
         // 가족이 없는지 확인
         Long familyId = checkFamily(user);
@@ -143,6 +148,11 @@ public class FamilyService {
                 .toList();
     }
 
+    /**
+     * 가족 있는지 여부 확인
+     * @param user 해당 유저 객체
+     * @return 가족 아이디 반환
+     */
     private Long checkFamily(User user) {
         Long familyId = user.getFamilyId();
         if (user.getFamilyId() == null) {
