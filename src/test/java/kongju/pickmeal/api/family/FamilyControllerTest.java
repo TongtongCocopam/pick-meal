@@ -1,7 +1,5 @@
 package kongju.pickmeal.api.family;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import kongju.pickmeal.application.family.data.FamiliesResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
@@ -13,8 +11,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,6 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import kongju.pickmeal.application.family.FamilyService;
 import kongju.pickmeal.application.family.data.FamiliesRequest;
+import kongju.pickmeal.application.family.data.FamiliesResponse;
+
 
 @WebMvcTest(FamilyController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -91,8 +91,8 @@ public class FamilyControllerTest {
                     .build();
 
             mockMvc.perform(post("/api/v1/families/apply")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false))
                     .andExpect(jsonPath("$.error.detail").value("초대 코드는 필수입니다."))

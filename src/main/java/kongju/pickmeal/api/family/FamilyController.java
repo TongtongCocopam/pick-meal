@@ -1,13 +1,13 @@
 package kongju.pickmeal.api.family;
 
+import java.util.List;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import kongju.pickmeal.core.user.User;
@@ -44,5 +44,17 @@ public class FamilyController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
+    }
+
+    @GetMapping("/me/applies")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<List<FamiliesResponse.ApplyInfo>>> applyListFamily(
+            @AuthenticationPrincipal User user
+    ) {
+        List<FamiliesResponse.ApplyInfo> applyInfoList = familyService.loadApplyList(user);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(applyInfoList));
     }
 }

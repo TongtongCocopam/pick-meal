@@ -12,6 +12,8 @@ import kongju.pickmeal.application.family.data.FamiliesRequest;
 import kongju.pickmeal.application.family.data.FamiliesResponse;
 
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Service
@@ -78,8 +80,9 @@ public class FamilyService {
 
     /**
      * 가족 합류 신청
+     *
      * @param request 초대 코드
-     * @param user 신청한 유저 정보
+     * @param user    신청한 유저 정보
      */
     public void apply(FamiliesRequest.Apply request, User user) {
         // 가족 여부 확인
@@ -87,7 +90,7 @@ public class FamilyService {
 
         // 신청 테이블 만들기
         JoinApply joinApply = JoinApply.builder()
-                .userId(user.getId())
+                .user(user)
                 .familyId(family.getId())
                 .status(ApplyStatus.PENDING)
                 .build();
@@ -98,13 +101,14 @@ public class FamilyService {
 
     /**
      * 가족 여부와 신청 확인
+     *
      * @param request 초대 코드
-     * @param user 신청한 유저
+     * @param user    신청한 유저
      * @return Family객체 반환
      */
     private Family checkApply(FamiliesRequest.Apply request, User user) {
         // 가족이 이미 있음
-        if(user.getFamilyId() != null){
+        if (user.getFamilyId() != null) {
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
 
@@ -113,10 +117,47 @@ public class FamilyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITATION_CODE));
 
         // 이미 신청한 경우
-        if(familyApplyRepository.checkPendingApply(user.getId(), family.getId(), ApplyStatus.PENDING)){
+        if (familyApplyRepository.checkPendingApply(user, family.getId(), ApplyStatus.PENDING)) {
             throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
         }
 
         return family;
+    }
+
+    /**
+     * 가족 신청 목록 불러오기
+     * @param user 리더 정보
+     * @return 신청 리스트 반환
+     */
+    public List<FamiliesResponse.ApplyInfo> loadApplyList(User user) {
+        // 가족이 없는지 확인
+        Long familyId = checkFamily(user);
+
+//        List<JoinApply> joinApplies = familyApplyRepository.findAllByFamilyIdAndStatus(familyId, ApplyStatus.PENDING);
+//
+//        List<FamiliesResponse.ApplyInfo> applyInfos = new ArrayList<>();
+//        for (JoinApply joinApply : joinApplies) {
+//            FamiliesResponse.ApplyInfo applyInfo = FamiliesResponse.ApplyInfo.from(joinApply);
+//            applyInfos.add(applyInfo);
+//        }
+
+        // 유저 패밀리와 연관된 신청 리스트 가져오기
+        return familyApplyRepository.findAllByFamilyIdAndStatus(familyId, ApplyStatus.PENDING)
+                .stream()
+                .map(FamiliesResponse.ApplyInfo::from)
+                .toList();
+    }
+
+    /**
+     * 가족 있는지 여부 확인
+     * @param user 해당 유저 객체
+     * @return 가족 아이디 반환
+     */
+    private Long checkFamily(User user) {
+        Long familyId = user.getFamilyId();
+        if (user.getFamilyId() == null) {
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
+        return familyId;
     }
 }

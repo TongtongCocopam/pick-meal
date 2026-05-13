@@ -1,5 +1,8 @@
 package kongju.pickmeal.application.family;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import kongju.pickmeal.core.family.*;
@@ -37,6 +40,7 @@ public class FamilyServiceTest {
     public User createUser() {
         return User.builder()
                 .loginId("testUser")
+                .email("test1234@gmail.com")
                 .build();
     }
 
@@ -128,11 +132,11 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyApplyRepository.checkPendingApply(eq(user.getId()), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
+            given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.apply(request, user);
-            });
+            BusinessException exception = assertThrows(BusinessException.class, () ->
+                    familyService.apply(request, user)
+            );
 
             assertEquals(ErrorCode.ALREADY_PROCESSED, exception.getErrorCode());
         }
@@ -150,7 +154,7 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyApplyRepository.checkPendingApply(eq(user.getId()), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
+            given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
 
             // 오류 없이 실행되었는지 체크
             assertDoesNotThrow(() -> familyService.apply(request, user));
@@ -159,5 +163,40 @@ public class FamilyServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("가족 합류 신청 목록")
+    class ApplyList {
+        @Test
+        @DisplayName("가족 아이디가 없을때")
+        public void should_fail_roadApply_null_familyId() {
+            User user = createUser();
 
+            BusinessException exception = assertThrows(BusinessException.class, () ->
+                    familyService.loadApplyList(user)
+            );
+
+            assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_roadApply() {
+            User user = createUser();
+            user.joinFamilyMember(12L);
+
+            JoinApply joinApply = JoinApply.builder()
+                    .familyId(12L)
+                    .status(ApplyStatus.PENDING)
+                    .user(user)
+                    .build();
+
+            List<JoinApply> joinApplyList = new ArrayList<>();
+            joinApplyList.add(joinApply);
+
+            given(familyApplyRepository.findAllByFamilyIdAndStatus(any(), any())).willReturn(joinApplyList);
+
+            assertDoesNotThrow(() -> familyService.loadApplyList(user));
+            verify(familyApplyRepository, times(1)).findAllByFamilyIdAndStatus(any(), any());
+        }
+    }
 }

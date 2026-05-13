@@ -1,9 +1,12 @@
 package kongju.pickmeal.infrastructure.config;
 
+import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
+import kongju.pickmeal.api.security.CustomAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -20,11 +23,15 @@ import kongju.pickmeal.api.security.JwtTokenFilter;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity // @PreAuthorize 작동을 위해
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final RedisTemplate<String, String> redisTemplate;
+
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     @Bean
     public JwtTokenFilter jwtTokenFilter() {
@@ -41,6 +48,10 @@ public class SecurityConfig {
         http
                 // CSRF설정 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
+                        .accessDeniedHandler(customAccessDeniedHandler)
+                )
                 // 스프링 시큐리티가 세션 생성X, 기존 세션 사용 X
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
