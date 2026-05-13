@@ -128,7 +128,7 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyApplyRepository.checkPendingApply(eq(user.getId()), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
+            given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
                 familyService.apply(request, user);
@@ -150,7 +150,7 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyApplyRepository.checkPendingApply(eq(user.getId()), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
+            given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
 
             // 오류 없이 실행되었는지 체크
             assertDoesNotThrow(() -> familyService.apply(request, user));
