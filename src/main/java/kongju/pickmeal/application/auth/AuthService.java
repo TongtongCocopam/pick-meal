@@ -13,10 +13,9 @@ import kongju.pickmeal.core.auth.RefreshToken;
 import kongju.pickmeal.core.service.JwtService;
 import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.auth.data.request.AuthRequest;
-import kongju.pickmeal.application.auth.data.response.AuthResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 
@@ -37,7 +36,7 @@ public class AuthService {
      * @param request 아이디, 비밀번호
      * @return 액세스 토큰
      */
-    public AuthResponse.Token login(AuthRequest.Login request) {
+    public AuthDto.TokenPair login(AuthDto.LoginRequest request) {
         User user = authenticate(request);
 
         // 액세스 토큰 발급
@@ -48,7 +47,7 @@ public class AuthService {
         // 리프레시 토큰 레디스에 저장
         saveRefreshToken(user.getLoginId(), refreshToken);
 
-        return AuthResponse.Token.builder()
+        return AuthDto.TokenPair.builder()
                 .accessToken(String.valueOf(accessToken))
                 .refreshToken(String.valueOf(refreshToken))
                 .build();
@@ -60,7 +59,7 @@ public class AuthService {
      * @param request 비밀번호
      * @return User 객체
      */
-    private User authenticate(AuthRequest.Login request) {
+    private User authenticate(AuthDto.LoginRequest request) {
         // 존재하는 유저인지 확인
         User user = userAuthenticate(request.loginId());
 
@@ -98,27 +97,65 @@ public class AuthService {
     /**
      * 로그아웃 기능
      * 리프레시 토큰 삭제, 액세스 토큰 블랙리스트 추가
-     *
-     * @param request 아이디, 액세스 토큰
+     * @param authorizationHeader 액세스 토큰 담고 있음
+     * @param refreshToken 리프레시 토큰
      */
-    public void logout(AuthRequest.Token request, User user) {
-        // 레디스 리프레쉬 토큰 삭제
-        refreshTokenRepository.deleteById(user.getLoginId());
+    public void logout(String authorizationHeader, String refreshToken) {
+        String accessToken = extractAccessToken(authorizationHeader);
 
-        // 액세스 토큰 블랙 리스트 추가
-        long expiration = jwtService.getExpiration(request.accessToken());
-        if (expiration > 0L) {
-            redisTemplate.opsForValue().set(
-                    "blacklist:" + request.accessToken(),
-                    "logout",
-                    expiration,
-                    TimeUnit.MILLISECONDS
-            );
+        String loginId = checkRefreshTokenExpired(refreshToken);
+
+        // 레디스 리프레쉬 토큰 삭제
+        refreshTokenRepository.deleteById(loginId);
+
+        if (jwtService.isValidAccessToken(accessToken)) {
+            // 액세스 토큰 블랙 리스트 추가
+            long expiration = jwtService.getAccessTokenExpiration(accessToken);
+
+            if (expiration > 0L) {
+                redisTemplate.opsForValue().set(
+                        "blacklist:" + accessToken,
+                        "logout",
+                        expiration,
+                        TimeUnit.MILLISECONDS
+                );
+            }
         }
     }
 
-    public AuthResponse.Token refresh(AuthRequest.Token request, String oldRefreshToken) {
-        User user = verifyToken(request, oldRefreshToken);
+    /**
+     * 액세스 토큰 추출 후 유효한지 확인
+     * @param authorizationHeader 헤더
+     * @return 액세스 토큰
+     */
+    private String extractAccessToken(String authorizationHeader) {
+        String accessToken = jwtService.extractAccessToken(authorizationHeader)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+
+        if (accessToken.isBlank()) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+
+        return accessToken;
+    }
+
+    /**
+     * 리프레시 토큰에서 loginId추출
+     * @param refreshToken 리프레시 토큰
+     * @return loginId
+     */
+    private String checkRefreshTokenExpired(String refreshToken) {
+        return jwtService.extractSubjectFromRefreshToken(refreshToken)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+    }
+
+    /**
+     * 토큰 재발급
+     * @param oldRefreshToken 리프레시 토큰
+     * @return 액세스, 리프레시 토큰
+     */
+    public AuthDto.TokenPair refresh(String oldRefreshToken) {
+        User user = verifyToken(oldRefreshToken);
 
         // 토큰 재발급
         String accessToken = jwtService.createAccessToken(user);
@@ -127,29 +164,26 @@ public class AuthService {
         // 토큰 저장
         saveRefreshToken(user.getLoginId(), refreshToken);
 
-        return AuthResponse.Token
+        return AuthDto.TokenPair
                 .builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
     }
 
-    private User verifyToken(AuthRequest.Token request, String oldRefreshToken) {
-        // 2개 토큰 검증
-        if (request.accessToken() == null || request.accessToken().isBlank()) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
-        // 액세스 토큰이 만료되지 않았다면 에러 처리
-        if (!jwtService.isExpired(request.accessToken())) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-        }
+    /**
+     * 리프레시 토큰이 유효한지 확인하고 loginId반환
+     * @param oldRefreshToken 리프레시 토큰
+     * @return loginId
+     */
+    private User verifyToken(String oldRefreshToken) {
         // 리프레시 토큰 확인
-        if (oldRefreshToken == null || !jwtService.isValid(oldRefreshToken)) {
+        if (oldRefreshToken == null || !jwtService.isValidRefreshToken(oldRefreshToken)) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         // 유저와 토큰이 일치하는가
-        String userId = jwtService.extractSubjectFromExpired(request.accessToken())
+        String userId = jwtService.extractSubjectFromRefreshToken(oldRefreshToken)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
         String savedToken = redisTemplate.opsForValue().get("rt:" + userId);
