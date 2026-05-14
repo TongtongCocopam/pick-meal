@@ -13,8 +13,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.family.FamilyService;
-import kongju.pickmeal.application.family.data.FamiliesRequest;
-import kongju.pickmeal.application.family.data.FamiliesResponse;
+import kongju.pickmeal.application.family.data.FamilyDto;
+import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 
 @RestController
@@ -24,37 +24,37 @@ public class FamilyController {
     private final FamilyService familyService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<FamiliesResponse.Create>> createFamily(
-            @RequestBody @Valid FamiliesRequest.Create request,
+    public ResponseEntity<ApiResponse<FamilyDto.CreateResponse>> createFamily(
+            @RequestBody @Valid FamilyDto.CreateRequest request,
             @AuthenticationPrincipal User user
     ) {
 
-        FamiliesResponse.Create response = familyService.createFamily(request, user);
+        FamilyDto.CreateResponse response = familyService.createFamily(request, user);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));
     }
 
-    @PostMapping("/apply")
-    public ResponseEntity<ApiResponse<FamiliesResponse.Create>> applyFamily(
-            @RequestBody @Valid FamiliesRequest.Apply request,
+    @PostMapping("/applications")
+    public ResponseEntity<ApiResponse<Void>> applyFamily(
+            @RequestBody @Valid FamilyJoinRequestDto.CreateRequest request,
             @AuthenticationPrincipal User user
     ) {
-        familyService.apply(request, user);
+        familyService.joinRequest(request, user);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
     }
 
-    @GetMapping("/me/applies")
+    @GetMapping("/me/applications")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<List<FamiliesResponse.ApplyInfo>>> applyListFamily(
+    public ResponseEntity<ApiResponse<List<FamilyJoinRequestDto.Summary>>> applyListFamily(
             @AuthenticationPrincipal User user
     ) {
-        List<FamiliesResponse.ApplyInfo> applyInfoList = familyService.loadApplyList(user);
+        List<FamilyJoinRequestDto.Summary> joinRequestSummary = familyService.loadJoinRequestSummary(user);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(ApiResponse.success(applyInfoList));
+                .body(ApiResponse.success(joinRequestSummary));
     }
 }

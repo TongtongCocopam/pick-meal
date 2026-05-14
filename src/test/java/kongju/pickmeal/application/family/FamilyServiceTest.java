@@ -1,11 +1,9 @@
 package kongju.pickmeal.application.family;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 
-import kongju.pickmeal.core.family.*;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -14,17 +12,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 
+import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.application.family.data.FamilyDto;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.family.data.FamiliesRequest;
-import kongju.pickmeal.application.family.data.FamiliesResponse;
+import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 
 @ExtendWith(SpringExtension.class)
@@ -50,7 +49,7 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("소속된 가족이 있을 경우")
         public void should_fail_already_exist_family() {
-            FamiliesRequest.Create request = FamiliesRequest.Create.builder()
+            FamilyDto.CreateRequest request = FamilyDto.CreateRequest.builder()
                     .familyName("고양이")
                     .build();
 
@@ -68,13 +67,13 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("가족 그룹 성공적으로 생성")
         public void should_success_create_family() {
-            FamiliesRequest.Create request = FamiliesRequest.Create.builder()
+            FamilyDto.CreateRequest request = FamilyDto.CreateRequest.builder()
                     .familyName("고양이")
                     .build();
 
             User user = createUser();
 
-            FamiliesResponse.Create response = familyService.createFamily(request, user);
+            FamilyDto.CreateResponse response = familyService.createFamily(request, user);
             assertEquals(request.familyName(), response.familyName());
             verify(familyRepository, times(1)).save(any(Family.class));
         }
@@ -87,7 +86,7 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("이미 가족이 있을 경우")
         public void should_fail_apply_already_exist_family() {
-            FamiliesRequest.Apply request = FamiliesRequest.Apply.builder()
+            FamilyJoinRequestDto.CreateRequest request = FamilyJoinRequestDto.CreateRequest.builder()
                     .invitationCode("초대코드라는뜻")
                     .build();
 
@@ -96,7 +95,7 @@ public class FamilyServiceTest {
             user.joinFamilyMember(12L);
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.apply(request, user);
+                familyService.joinRequest(request, user);
             });
 
             assertEquals(ErrorCode.ALREADY_HAS_FAMILY, exception.getErrorCode());
@@ -105,7 +104,7 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("초대 코드를 찾지 못한 경우")
         public void should_fail_apply_invitation_code_not_found() {
-            FamiliesRequest.Apply request = FamiliesRequest.Apply.builder()
+            FamilyJoinRequestDto.CreateRequest request = FamilyJoinRequestDto.CreateRequest.builder()
                     .build();
 
             User user = createUser();
@@ -113,7 +112,7 @@ public class FamilyServiceTest {
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.empty());
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.apply(request, user);
+                familyService.joinRequest(request, user);
             });
 
             assertEquals(ErrorCode.INVALID_INVITATION_CODE, exception.getErrorCode());
@@ -122,7 +121,7 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("이미 신청한 경우")
         public void should_fail_apply_already_exists() {
-            FamiliesRequest.Apply request = FamiliesRequest.Apply.builder()
+            FamilyJoinRequestDto.CreateRequest request = FamilyJoinRequestDto.CreateRequest.builder()
                     .invitationCode("초대코드라는뜻")
                     .build();
 
@@ -135,7 +134,7 @@ public class FamilyServiceTest {
             given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
 
             BusinessException exception = assertThrows(BusinessException.class, () ->
-                    familyService.apply(request, user)
+                    familyService.joinRequest(request, user)
             );
 
             assertEquals(ErrorCode.ALREADY_PROCESSED, exception.getErrorCode());
@@ -144,7 +143,7 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("성공 케이스")
         public void should_success_apply() {
-            FamiliesRequest.Apply request = FamiliesRequest.Apply.builder()
+            FamilyJoinRequestDto.CreateRequest request = FamilyJoinRequestDto.CreateRequest.builder()
                     .invitationCode("초대코드라는뜻")
                     .build();
 
@@ -157,22 +156,22 @@ public class FamilyServiceTest {
             given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
 
             // 오류 없이 실행되었는지 체크
-            assertDoesNotThrow(() -> familyService.apply(request, user));
+            assertDoesNotThrow(() -> familyService.joinRequest(request, user));
 
-            verify(familyApplyRepository, times(1)).save(any(JoinApply.class));
+            verify(familyApplyRepository, times(1)).save(any(FamilyJoinRequest.class));
         }
     }
 
     @Nested
     @DisplayName("가족 합류 신청 목록")
-    class ApplyList {
+    class JoinSummary {
         @Test
         @DisplayName("가족 아이디가 없을때")
         public void should_fail_roadApply_null_familyId() {
             User user = createUser();
 
             BusinessException exception = assertThrows(BusinessException.class, () ->
-                    familyService.loadApplyList(user)
+                    familyService.loadJoinRequestSummary(user)
             );
 
             assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
@@ -184,18 +183,18 @@ public class FamilyServiceTest {
             User user = createUser();
             user.joinFamilyMember(12L);
 
-            JoinApply joinApply = JoinApply.builder()
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
                     .familyId(12L)
                     .status(ApplyStatus.PENDING)
                     .user(user)
                     .build();
 
-            List<JoinApply> joinApplyList = new ArrayList<>();
-            joinApplyList.add(joinApply);
+            List<FamilyJoinRequest> familyJoinRequestList = new ArrayList<>();
+            familyJoinRequestList.add(familyJoinRequest);
 
-            given(familyApplyRepository.findAllByFamilyIdAndStatus(any(), any())).willReturn(joinApplyList);
+            given(familyApplyRepository.findAllByFamilyIdAndStatus(any(), any())).willReturn(familyJoinRequestList);
 
-            assertDoesNotThrow(() -> familyService.loadApplyList(user));
+            assertDoesNotThrow(() -> familyService.loadJoinRequestSummary(user));
             verify(familyApplyRepository, times(1)).findAllByFamilyIdAndStatus(any(), any());
         }
     }
