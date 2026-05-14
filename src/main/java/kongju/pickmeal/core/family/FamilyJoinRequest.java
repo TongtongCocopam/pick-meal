@@ -11,10 +11,10 @@ import kongju.pickmeal.core.common.BaseTimeEntity;
 
 
 @Entity
-@Table(name = "join_applies")
+@Table(name = "family_join_requests")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class JoinApply extends BaseTimeEntity {
+public class FamilyJoinRequest extends BaseTimeEntity {
 
     @Column(nullable = false)
     private Long familyId;
@@ -27,7 +27,7 @@ public class JoinApply extends BaseTimeEntity {
     private User user;
 
     @Builder
-    public JoinApply(User user, Long familyId, ApplyStatus status) {
+    public FamilyJoinRequest(User user, Long familyId, ApplyStatus status) {
         this.user = user;
         this.familyId = familyId;
         this.status = status;
