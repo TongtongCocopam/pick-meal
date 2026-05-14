@@ -8,19 +8,19 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import kongju.pickmeal.core.user.User;
 
 
-public interface FamilyApplyRepository extends JpaRepository<JoinApply, Long> {
+public interface FamilyApplyRepository extends JpaRepository<FamilyJoinRequest, Long> {
 
     @Query("SELECT COUNT(ja) > 0 " +
-            "FROM JoinApply ja WHERE ja.user = :user AND " +
+            "FROM FamilyJoinRequest ja WHERE ja.user = :user AND " +
             "ja.status =:status AND " +
             "ja.familyId =:familyId"
     )
     boolean checkPendingApply(User user, Long familyId, ApplyStatus status);
 
-    @Query("SELECT ja FROM JoinApply ja " +
+    @Query("SELECT ja FROM FamilyJoinRequest ja " +
             "JOIN FETCH ja.user " +
             "WHERE ja.familyId = :familyId AND " +
             "ja.status = :status"
     )
-    List<JoinApply> findAllByFamilyIdAndStatus(Long familyId, ApplyStatus status);
+    List<FamilyJoinRequest> findAllByFamilyIdAndStatus(Long familyId, ApplyStatus status);
 }

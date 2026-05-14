@@ -59,12 +59,12 @@ public class FamilyControllerSecurityTest {
 
     @Nested
     @DisplayName("가족 합류 신청 목록")
-    class ApplyList {
+    class JoinSummary {
         @Test
         @DisplayName("리더 권한이 없을 경우")
         @WithMockUser(roles = "MEMBER")
         public void should_fail_roadApply_not_reader() throws Exception {
-            mockMvc.perform(get("/api/v1/families/me/applies")
+            mockMvc.perform(get("/api/v1/families/me/applications")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andDo(print())
                     .andExpect(status().isForbidden())
@@ -76,7 +76,7 @@ public class FamilyControllerSecurityTest {
         @DisplayName("성공 케이스")
         @WithMockUser(roles = "LEADER")
         public void should_success_roadApply() throws Exception {
-            mockMvc.perform(get("/api/v1/families/me/applies")
+            mockMvc.perform(get("/api/v1/families/me/applications")
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));

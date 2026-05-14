@@ -19,8 +19,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import kongju.pickmeal.application.family.FamilyService;
-import kongju.pickmeal.application.family.data.FamiliesRequest;
-import kongju.pickmeal.application.family.data.FamiliesResponse;
+import kongju.pickmeal.application.family.data.FamilyDto;
+import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 
 @WebMvcTest(FamilyController.class)
@@ -40,7 +40,7 @@ public class FamilyControllerTest {
         @Test
         @DisplayName("파라미터 누락")
         public void should_fail_params_missing() throws Exception {
-            FamiliesRequest.Create request = FamiliesRequest.Create.builder()
+            FamilyDto.CreateRequest request = FamilyDto.CreateRequest.builder()
                     .familyName("")
                     .build();
 
@@ -57,11 +57,11 @@ public class FamilyControllerTest {
         @Test
         @DisplayName("성공 케이스")
         public void should_success_create_Family() throws Exception {
-            FamiliesRequest.Create request = FamiliesRequest.Create.builder()
+            FamilyDto.CreateRequest request = FamilyDto.CreateRequest.builder()
                     .familyName("고양이")
                     .build();
 
-            FamiliesResponse.Create response = FamiliesResponse.Create.builder()
+            FamilyDto.CreateResponse response = FamilyDto.CreateResponse.builder()
                     .familyName("고양이")
                     .invitationCode("dfd12345e")
                     .build();
@@ -86,11 +86,11 @@ public class FamilyControllerTest {
         @Test
         @DisplayName("파라미터 형식에 맞지 않는 경우")
         public void should_fail_apply_params_not_valid() throws Exception {
-            FamiliesRequest.Apply request = FamiliesRequest.Apply.builder()
+            FamilyJoinRequestDto.CreateRequest request = FamilyJoinRequestDto.CreateRequest.builder()
                     .invitationCode("")
                     .build();
 
-            mockMvc.perform(post("/api/v1/families/apply")
+            mockMvc.perform(post("/api/v1/families/applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -103,11 +103,11 @@ public class FamilyControllerTest {
         @Test
         @DisplayName("성공케이스")
         public void should_success_apply() throws Exception {
-            FamiliesRequest.Apply request = FamiliesRequest.Apply.builder()
+            FamilyJoinRequestDto.CreateRequest request = FamilyJoinRequestDto.CreateRequest.builder()
                     .invitationCode("초대코드대충8자")
                     .build();
 
-            mockMvc.perform(post("/api/v1/families/apply")
+            mockMvc.perform(post("/api/v1/families/applications")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
