@@ -1,19 +1,20 @@
 package kongju.pickmeal.application.user;
 
+import java.util.Objects;
+import java.time.LocalDate;
+import java.util.regex.Pattern;
+
+import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
-import kongju.pickmeal.application.user.data.request.MemberRequest;
-import kongju.pickmeal.application.user.data.response.MemberResponse;
-import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.common.exception.ErrorCode;
+import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
+import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.application.user.data.UserDto;
+import kongju.pickmeal.common.exception.BusinessException;
 
-import java.time.LocalDate;
-import java.util.Objects;
-import java.util.regex.Pattern;
 
 @Service
 @Transactional
@@ -31,7 +32,7 @@ public class UserService {
      * @param request 회원가입 정보
      * @return 닉네임 반환
      */
-    public MemberResponse.Register signup(MemberRequest.Register request) {
+    public UserDto.SignupResponse signup(UserDto.SignupRequest request) {
         // 중복 이메일, 아이디 확인
         if (userRepository.existsByLoginId(request.loginId())) {
             throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE, request.loginId());
@@ -53,14 +54,17 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-        return new MemberResponse.Register(savedUser.getId(), savedUser.getNickName());
+        return UserDto.SignupResponse.builder()
+                .userId(savedUser.getId())
+                .nickName(savedUser.getNickName())
+                .build();
     }
 
     /**
      * 회원가입 데이터 유효성 검사하고 에러 처리
      * @param request 회원가입시 필요한 데이터
      */
-    private void validateResiterRequest(MemberRequest.Register request) {
+    private void validateResiterRequest(UserDto.SignupRequest request) {
         // 아이디 길이 검사 (6~15자)
         if (request.loginId().length() < 6 || request.loginId().length() > 15) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "아이디는 6~15자 사이여야 합니다.");

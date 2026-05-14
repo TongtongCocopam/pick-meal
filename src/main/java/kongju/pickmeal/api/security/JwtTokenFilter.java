@@ -1,23 +1,24 @@
 package kongju.pickmeal.api.security;
 
-import java.io.IOException;
 import java.util.List;
+import java.io.IOException;
 
 import jakarta.servlet.FilterChain;
-import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
-import kongju.pickmeal.core.service.JwtService;
 import jakarta.servlet.http.HttpServletResponse;
-import kongju.pickmeal.core.user.UserRepository;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+
+import kongju.pickmeal.core.service.JwtService;
+import kongju.pickmeal.core.user.UserRepository;
+import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.common.exception.BusinessException;
+
 
 @RequiredArgsConstructor // final이 붙은 필드를 모아서 생성자를 자동으로 만들어줌
 public class JwtTokenFilter extends OncePerRequestFilter {
@@ -48,7 +49,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
         // 토큰 유효확인, 안에 담긴 User id가져옴
         // DB 유저 찾기
-        jwtService.extractSubject(token)
+        jwtService.extractSubjectFromAccessToken(token)
                 .flatMap(id -> userRepository.findById(Long.valueOf(id)))
                 // 데이터가 있을 때만 실행
                 .ifPresent(user -> {

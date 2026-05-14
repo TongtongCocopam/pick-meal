@@ -1,4 +1,4 @@
-package kongju.pickmeal.application.user.data.request;
+package kongju.pickmeal.application.user.data;
 
 import java.time.LocalDate;
 
@@ -9,9 +9,9 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 
 @Getter
-public class MemberRequest {
+public class UserDto {
     @Builder
-    public record Register(
+    public record SignupRequest(
             @NotBlank
             @Size(min = 6, max = 15)
             String loginId,
@@ -31,7 +31,11 @@ public class MemberRequest {
             @NotNull
             @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
             LocalDate birthDate
-    ) {
-    }
+            ){}
 
+    @Builder
+    public record SignupResponse(
+            Long userId,
+            String nickName
+    ){}
 }

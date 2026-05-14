@@ -31,10 +31,9 @@ import kongju.pickmeal.core.service.JwtService;
 import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.api.security.JwtTokenFilter;
+import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.auth.data.request.AuthRequest;
-import kongju.pickmeal.application.auth.data.response.AuthResponse;
 
 
 @ExtendWith(SpringExtension.class)
@@ -76,7 +75,7 @@ public class AuthServiceTest {
         @Test
         @DisplayName("아이디와 일치하는 유저를 찾지 못했을 경우 에러 처리")
         public void should_fail_loginId_not_found() {
-            AuthRequest.Login request = AuthRequest.Login.builder()
+            AuthDto.LoginRequest request = AuthDto.LoginRequest.builder()
                     .loginId("test1234")
                     .password("password1234")
                     .build();
@@ -92,7 +91,7 @@ public class AuthServiceTest {
         @Test
         @DisplayName("비밀번호가 일치하지 않는 경우 에러 처리")
         public void should_fail_password_not_correct() {
-            AuthRequest.Login request = AuthRequest.Login.builder()
+            AuthDto.LoginRequest request = AuthDto.LoginRequest.builder()
                     .loginId("test1234")
                     .password("password1234")
                     .build();
@@ -114,7 +113,7 @@ public class AuthServiceTest {
         @Test
         @DisplayName("로그인 성공한 케이스")
         public void should_success_login() {
-            AuthRequest.Login request = AuthRequest.Login.builder()
+            AuthDto.LoginRequest request = AuthDto.LoginRequest.builder()
                     .loginId("test1234")
                     .password("password1234")
                     .build();
@@ -130,7 +129,7 @@ public class AuthServiceTest {
 
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
-            AuthResponse.Token response = authService.login(request);
+            AuthDto.TokenPair response = authService.login(request);
 
             assertThat(response.accessToken()).isEqualTo("mock_access_token");
             verify(userRepository).findByLoginId("test1234");
@@ -140,8 +139,8 @@ public class AuthServiceTest {
     @Nested
     @DisplayName("로그아웃 테스트")
     class Logout {
-        private AuthRequest.Token createLogoutRequest() {
-            return AuthRequest.Token.builder()
+        private AuthDto.TokenPair createLogoutRequest() {
+            return AuthDto.TokenPair.builder()
                     .accessToken("accessToken")
                     .build();
         }
@@ -149,19 +148,31 @@ public class AuthServiceTest {
         @Test
         @DisplayName("만료된 토큰으로 로그아웃")
         public void should_success_logout_expired_token() {
-            AuthRequest.Token request = createLogoutRequest();
+            String authorizationHeader = "Bearer mock_access_token";
+            String accessToken = "mock_access_token";
+            String refreshToken = "mock_refresh_token";
+
             User user = createUser();
 
-            given(redisTemplate.opsForValue()).willReturn(valueOperations);
-            given(userRepository.findByLoginId(anyString())).willReturn(Optional.ofNullable(user));
-            given(jwtService.getExpiration(any())).willReturn(0L);
+            given(jwtService.extractAccessToken(authorizationHeader))
+                    .willReturn(Optional.of(accessToken));
+
+            given(jwtService.isValidAccessToken(accessToken))
+                    .willReturn(true);
+
+            given(jwtService.isValidRefreshToken(refreshToken))
+                    .willReturn(false);
+
+            given(jwtService.extractSubjectFromRefreshToken(refreshToken))
+                    .willReturn(Optional.of(user.getLoginId()));
 
             // 어떤 에러도 터지지 않아야 함
             assertDoesNotThrow(() -> {
-                authService.logout(request, user);
+                authService.logout(authorizationHeader, refreshToken);
             });
             // 레디스 템플릿이 아닌 valueOperations를 확인해야 함
-            verify(valueOperations, times(0)).set(anyString(), anyString(), anyLong(), any());
+            verify(valueOperations, times(0))
+                    .set(anyString(), anyString(), anyLong(), any());
 
         }
 
@@ -178,7 +189,7 @@ public class AuthServiceTest {
             // 가짜 인증 붙이기
             mockHttpServletRequest.addHeader("Authorization", "Bearer " + token);
             // 빈 객체 반환
-            given(jwtService.extractSubject(token)).willReturn(Optional.empty());
+            given(jwtService.extractSubjectFromRefreshToken(token)).willReturn(Optional.empty());
 
             jwtTokenFilter.doFilter(mockHttpServletRequest, mockHttpServletResponse, mockFilterChain);
             // 토큰이 통과하지 못하면 null반환
@@ -200,20 +211,37 @@ public class AuthServiceTest {
         @Test
         @DisplayName("로그아웃 성공")
         public void should_success_logout() {
-            AuthRequest.Token request = createLogoutRequest();
-            User user = createUser();
-            given(redisTemplate.opsForValue()).willReturn(valueOperations);
-            given(userRepository.findByLoginId(anyString())).willReturn(Optional.ofNullable(user));
-            given(jwtService.getExpiration("accessToken")).willReturn(3600000L);
+            String authorizationHeader = "Bearer mock_access_token";
+            String accessToken = "mock_access_token";
+            String refreshToken = "mock_refresh_token";
 
-            authService.logout(request, user);
+            User user = createUser();
+
+            given(redisTemplate.opsForValue()).willReturn(valueOperations);
+
+            given(jwtService.extractAccessToken(authorizationHeader))
+                    .willReturn(Optional.of(accessToken));
+
+            given(jwtService.isValidAccessToken(accessToken))
+                    .willReturn(true);
+
+            given(jwtService.isValidRefreshToken(refreshToken))
+                    .willReturn(true);
+
+            given(jwtService.extractSubjectFromRefreshToken(refreshToken))
+                    .willReturn(Optional.of(user.getLoginId()));
+
+            given(jwtService.getAccessTokenExpiration(accessToken))
+                    .willReturn(3600000L);
+
+            authService.logout(authorizationHeader, refreshToken);
 
             // 리프레시 토큰 삭제 확인
             verify(refreshTokenRepository, times(1)).deleteById(anyString());
 
             // 블랙리스트 만료 시간 확인
             verify(valueOperations, times(1)).set(
-                    eq("blacklist:" + "accessToken"),
+                    eq("blacklist:" + "mock_access_token"),
                     eq("logout"),
                     eq(3600000L),
                     eq(TimeUnit.MILLISECONDS)
@@ -225,8 +253,8 @@ public class AuthServiceTest {
     @Nested
     @DisplayName("토큰 재발급 테스트")
     class Refresh {
-        private AuthRequest.Token createRefreshTokenRequest() {
-            return AuthRequest.Token
+        private AuthDto.TokenPair createRefreshTokenRequest() {
+            return AuthDto.TokenPair
                     .builder()
                     .accessToken("accessToken")
                     .build();
@@ -237,15 +265,14 @@ public class AuthServiceTest {
         public void should_success_refresh() {
             User user = createUser();
             // 리프레시 토큰 시간, 액세스 토큰이 발급 시간 확인
-            AuthRequest.Token request = createRefreshTokenRequest();
             String oldRefreshToken = "oldRefreshToken";
 
             // 액세스 토큰 만료 안됨
-            given(jwtService.isExpired(anyString())).willReturn(true);
+            given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
             // 리프레시 토큰 만료
-            given(jwtService.isValid(anyString())).willReturn(true);
+            given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
             // 만료된 액세스 토큰에서 유저 아이디 반환
-            given(jwtService.extractSubjectFromExpired(anyString())).willReturn(Optional.of("test1234"));
+            given(jwtService.extractSubjectFromRefreshToken(anyString())).willReturn(Optional.of("test1234"));
             // 아이디로 토큰꺼내기
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
             given(valueOperations.get("rt:test1234")).willReturn("oldRefreshToken");
@@ -255,7 +282,7 @@ public class AuthServiceTest {
             given(jwtService.createAccessToken(user)).willReturn("newAccessToken");
             given(jwtService.createRefreshToken(user)).willReturn("newRefreshToken");
 
-            AuthResponse.Token response = authService.refresh(request, oldRefreshToken);
+            AuthDto.TokenPair response = authService.refresh(oldRefreshToken);
 
             assertThat(response.accessToken()).isEqualTo("newAccessToken");
             assertThat(response.refreshToken()).isEqualTo("newRefreshToken");
@@ -265,31 +292,15 @@ public class AuthServiceTest {
 
         }
 
-        @Test
-        @DisplayName("액세스 토큰이 만료되지 않았을 경우 에러")
-        public void should_fail_refresh_access_token_not_expired() {
-            AuthRequest.Token request = createRefreshTokenRequest();
-            String oldRefreshToken = "oldRefreshToken";
-            given(jwtService.isExpired(anyString())).willReturn(false);
-
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                authService.refresh(request, oldRefreshToken);
-            });
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
-
-        }
 
         @Test
         @DisplayName("리프레시 토큰이 만료되었을때 or 없을 때")
         public void should_fail_refresh_refresh_token_expired_or_not_found() {
-            AuthRequest.Token request = createRefreshTokenRequest();
             String oldRefreshToken = "oldRefreshToken";
-            given(jwtService.isExpired(anyString())).willReturn(true);
-            given(jwtService.isValid(anyString())).willReturn(false);
+            given(jwtService.isValidRefreshToken(anyString())).willReturn(false);
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
-                authService.refresh(request, oldRefreshToken);
+                authService.refresh(oldRefreshToken);
             });
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
 
@@ -298,15 +309,12 @@ public class AuthServiceTest {
         @Test
         @DisplayName("유저와 토큰 정보가 맞지 않을때")
         public void should_fail_refresh_user_token_not_match() {
-            AuthRequest.Token request = createRefreshTokenRequest();
             String oldRefreshToken = "kk";
 
-            // 액세스 토큰 만료 안됨
-            given(jwtService.isExpired(anyString())).willReturn(true);
             // 리프레시 토큰 만료
-            given(jwtService.isValid(anyString())).willReturn(true);
-            // 만료된 액세스 토큰에서 유저 아이디 반환
-            given(jwtService.extractSubjectFromExpired(anyString())).willReturn(Optional.of("test1234"));
+            given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
+            // 만료된 리프레시 토큰에서 유저 아이디 반환
+            given(jwtService.extractSubjectFromRefreshToken(anyString())).willReturn(Optional.of("test1234"));
             // 아이디로 토큰꺼내기
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
             given(valueOperations.get("rt:test1234")).willReturn("oldRefreshToken");
@@ -314,7 +322,7 @@ public class AuthServiceTest {
             given(userRepository.findByLoginId(anyString())).willReturn(Optional.empty());
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
-                authService.refresh(request, oldRefreshToken);
+                authService.refresh(oldRefreshToken);
             });
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
         }

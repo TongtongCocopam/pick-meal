@@ -10,9 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import kongju.pickmeal.application.user.UserService;
+import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
-import kongju.pickmeal.application.user.data.request.MemberRequest;
-import kongju.pickmeal.application.user.data.response.MemberResponse;
 
 
 @RestController
@@ -22,8 +21,8 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<MemberResponse.Register>> signup(@RequestBody @Valid MemberRequest.Register request){
-        MemberResponse.Register response = userService.signup(request);
+    public ResponseEntity<ApiResponse<UserDto.SignupResponse>> signup(@RequestBody @Valid UserDto.SignupRequest request){
+        UserDto.SignupResponse response = userService.signup(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));

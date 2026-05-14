@@ -17,9 +17,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 import kongju.pickmeal.application.user.UserService;
+import kongju.pickmeal.application.user.data.UserDto;
 import static kongju.pickmeal.fixture.MemberFixture.createRequest;
-import kongju.pickmeal.application.user.data.request.MemberRequest;
-import kongju.pickmeal.application.user.data.response.MemberResponse;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -37,7 +36,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("아이디가 6자 미만이면 에러 반환")
     public void should_fail_invalid_loginId() throws Exception {
-        MemberRequest.Register request = createRequest("test", "test0000!!", "test0000!!", "test@test.com", "test@test.com", "tester", LocalDate.now());
+        UserDto.SignupRequest request = createRequest("test", "test0000!!", "test0000!!", "test@test.com", "test@test.com", "tester", LocalDate.now());
 
         mockMvc.perform(post("/api/v1/users/signup")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -54,7 +53,7 @@ public class UserControllerTest {
     @Test
     @DisplayName("비밀번호 불일치")
     public void should_fail_mismatch_password() throws Exception {
-        MemberRequest.Register request = createRequest("test", "test0000!!", "wrong!!", "test@test.com", "test@test.com", "tester", LocalDate.now());
+        UserDto.SignupRequest request = createRequest("test", "test0000!!", "wrong!!", "test@test.com", "test@test.com", "tester", LocalDate.now());
 
         mockMvc.perform(post("/api/v1/users/signup")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -70,9 +69,13 @@ public class UserControllerTest {
     @Test
     @DisplayName("회원가입 성공")
     public void should_success_signup() throws Exception {
-        MemberRequest.Register request = createRequest();
+        UserDto.SignupRequest request = createRequest();
 
-        MemberResponse.Register mockResponse = new MemberResponse.Register(1L, "tester");
+        UserDto.SignupResponse mockResponse = UserDto.SignupResponse.builder()
+                .userId(1L)
+                .nickName("tester")
+                .build();
+
         given(userService.signup(request)).willReturn(mockResponse);
 
         mockMvc.perform(post("/api/v1/users/signup")

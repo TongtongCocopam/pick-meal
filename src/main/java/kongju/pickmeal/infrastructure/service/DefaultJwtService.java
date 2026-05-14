@@ -2,15 +2,12 @@ package kongju.pickmeal.infrastructure.service;
 
 import java.util.Date;
 import java.util.Optional;
+import java.nio.charset.StandardCharsets;
 
 import io.jsonwebtoken.Jwts;
-
 import javax.crypto.SecretKey;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.security.Keys;
-
-import java.nio.charset.StandardCharsets;
 
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,18 +60,53 @@ public class DefaultJwtService implements JwtService {
                 .compact();
     }
 
+    @Override
+    public String createAccessToken(User user) {
+        return createToken(user, accessExpiration, accessKey);
+    }
+
+    @Override
+    public String createRefreshToken(User user) {
+        return createToken(user, refreshExpiration, refreshKey);
+    }
+
+
     /**
-     * 토큰 남은 유효시간 계산
-     * @param token 액세스 토큰
-     * @return 만료 시간 반환
+     * 액세스 토큰 추출
+     * @param authorizationHeader 헤더
+     * @return 액세스 토큰
      */
     @Override
-    public Long getExpiration(String token) {
+    public Optional<String> extractAccessToken(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            return Optional.empty();
+        }
+
+        if (!authorizationHeader.startsWith("Bearer ")) {
+            return Optional.empty();
+        }
+
+        String accessToken = authorizationHeader.substring(7).trim();
+
+        if (accessToken.isBlank()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(accessToken);
+    }
+
+    /**
+     * 액세스 토큰의 남은 만료 시간 계산
+     * @param accessToken 액세스 토큰
+     * @return 남은 만료 시간
+     */
+    @Override
+    public Long getAccessTokenExpiration(String accessToken) {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(accessKey)
                     .build()
-                    .parseSignedClaims(token)
+                    .parseSignedClaims(accessToken)
                     .getPayload();
 
             Date expirationDate = claims.getExpiration();
@@ -88,14 +120,85 @@ public class DefaultJwtService implements JwtService {
         }
     }
 
+    /**
+     * 액세스 토큰 유효성 검증
+     * @param accessToken 액세스 토큰
+     * @return 유효한지 boolean
+     */
     @Override
-    public String createAccessToken(User user) {
-        return createToken(user, accessExpiration, accessKey);
+    public boolean isValidAccessToken(String accessToken) {
+        return isValid(accessToken, accessKey);
     }
 
+    /**
+     * 리프레시 토큰 유효성 검증
+     * @param refreshToken 리프레시 토큰
+     * @return 유효한지 boolean
+     */
     @Override
-    public String createRefreshToken(User user) {
-        return createToken(user, refreshExpiration, refreshKey);
+    public boolean isValidRefreshToken(String refreshToken) {
+        return isValid(refreshToken, refreshKey);
+    }
+
+    /**
+     * accessToken 만료 여부 확인
+     * @param accessToken 액세스 토큰
+     * @return 만료 여부
+     */
+    @Override
+    public boolean isExpiredAccessToken(String accessToken) {
+        try {
+            // 정상적으로 파싱되면 만료되지 않음
+            getClaimsFromToken(accessToken,accessKey);
+            return false;
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // 유효기간이 지남
+            return true;
+        } catch (Exception e) {
+            // 알 수 없는 에러 전부
+            return false;
+        }
+    }
+
+    /**
+     * accessToken에서 loginId 추출
+     * @param accessToken 액세스 토큰
+     * @return 로그인 아이디
+     */
+    @Override
+    public Optional<String> extractSubjectFromAccessToken(String accessToken) {
+        return extractSubject(accessToken, accessKey);
+    }
+
+    /**
+     * refreshToken에서 loginId 추출
+     * @param refreshToken 리프레시 토큰
+     * @return 로그인 아이디
+     */
+    @Override
+    public Optional<String> extractSubjectFromRefreshToken(String refreshToken) {
+        return extractSubject(refreshToken, refreshKey);
+    }
+
+    /**
+     * 만료된 accessToken에서 loginId 추출
+     * @param accessToken 액세스 토큰
+     * @return 로그인 아이디
+     */
+    @Override
+    public Optional<String> extractSubjectFromExpiredAccessToken(String accessToken) {
+        try{
+            // 정상 토큰인지 확인
+            return extractSubject(accessToken, accessKey);
+        }catch (Exception e){
+            // 만료 예외 발생 확인
+            if(e instanceof io.jsonwebtoken.ExpiredJwtException){
+                // 만료 에러 객체는 파싱된 데이터가 보관되어 있으므로 id추출
+                return Optional.ofNullable(((io.jsonwebtoken.ExpiredJwtException) e).getClaims().getSubject());
+            }
+            // 위조된 토큰일 경우
+            return Optional.empty();
+        }
     }
 
     /**
@@ -113,15 +216,14 @@ public class DefaultJwtService implements JwtService {
     }
 
     /**
-     * 액세스 토큰 확인 및 loginId반환
-     * @param token 액세스 토큰
+     * 리프레시 토큰 확인 및 loginId반환
+     * @param token 리프레시 토큰
      * @return loginId
      */
-    @Override
-    public Optional<String> extractSubject(String token) {
+    public Optional<String> extractSubject(String token, SecretKey signingKey) {
         try {
             // jjwt를 사용하여 토큰 내부의 claims을 가져옴
-            Claims claims = getClaimsFromToken(token, accessKey);
+            Claims claims = getClaimsFromToken(token, signingKey);
 
             return Optional.ofNullable(claims.getSubject());
         } catch (Exception e) {
@@ -130,45 +232,14 @@ public class DefaultJwtService implements JwtService {
     }
 
     /**
-     * 액세스 토큰이 만료되었는지 확인
-     * @param token 액세스 토큰
-     * @return 만료되었는지 boolean반환
+     * 토큰과 키를 이용해 유요한 토큰인지 확인
+     * @param token 토큰
+     * @param signingKey 키
+     * @return boolean
      */
-    @Override
-    public boolean isExpired(String token) {
-        try {
-            // 정상적으로 파싱되면 만료되지 않음
-            getClaimsFromToken(token,accessKey);
-            return false;
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            // 유효기간이 지남
-            return true;
-        } catch (Exception e) {
-            // 알 수 없는 에러 전부
-            return false;
-        }
-    }
-
-    @Override
-    public Optional<String> extractSubjectFromExpired(String token){
+    public boolean isValid(String token, SecretKey signingKey){
         try{
-            // 정상 토큰인지 확인
-            return extractSubject(token);
-        }catch (Exception e){
-            // 만료 예외 발생 확인
-            if(e instanceof io.jsonwebtoken.ExpiredJwtException){
-                // 만료 에러 객체는 파싱된 데이터가 보관되어 있으므로 id추출
-                return Optional.ofNullable(((io.jsonwebtoken.ExpiredJwtException) e).getClaims().getSubject());
-            }
-            // 위조된 토큰일 경우
-            return Optional.empty();
-        }
-    }
-
-    @Override
-    public boolean isValid(String token){
-        try{
-            getClaimsFromToken(token,refreshKey);
+            getClaimsFromToken(token,signingKey);
             return true;
         }catch (Exception e){
             return false;

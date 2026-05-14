@@ -1,20 +1,17 @@
 package kongju.pickmeal.api.auth;
 
 import jakarta.validation.Valid;
-import kongju.pickmeal.core.user.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import kongju.pickmeal.application.auth.AuthService;
+import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
-import kongju.pickmeal.application.auth.data.request.AuthRequest;
-import kongju.pickmeal.application.auth.data.response.AuthResponse;
 
 import java.time.Duration;
 
@@ -39,16 +36,16 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse.AccessToken>> login(
-            @RequestBody @Valid AuthRequest.Login request,
+    public ResponseEntity<ApiResponse<AuthDto.AccessTokenResponse>> login(
+            @RequestBody @Valid AuthDto.LoginRequest request,
             HttpServletResponse hResponse
     ) {
-        AuthResponse.Token tokenSet = authService.login(request);
+        AuthDto.TokenPair tokenSet = authService.login(request);
 
         // 쿠키에 담기
         saveCookie(hResponse, tokenSet.refreshToken(), REFRESH_TOKEN_MAX_AGE);
 
-        AuthResponse.AccessToken response = AuthResponse.AccessToken
+        AuthDto.AccessTokenResponse response = AuthDto.AccessTokenResponse
                 .builder()
                 .accessToken(tokenSet.accessToken())
                 .build();
@@ -60,31 +57,34 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
-            @RequestBody @Valid AuthRequest.Token request,
-            HttpServletResponse hResponse,
-            @AuthenticationPrincipal User user
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse hResponse
     ) {
-        authService.logout(request, user);
+        authService.logout(authorizationHeader, refreshToken);
 
         // 쿠키 정보에서 삭제
-        saveCookie(hResponse, "", 0L);
+        deleteRefreshTokenCookie(hResponse);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(null));
     }
 
+    public void deleteRefreshTokenCookie(HttpServletResponse response) {
+        saveCookie(response, "", 0L);
+    }
+
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<AuthResponse.AccessToken>> refresh(
-            @RequestBody @Valid AuthRequest.Token request,
+    public ResponseEntity<ApiResponse<AuthDto.AccessTokenResponse>> refresh(
             @CookieValue(name = "refreshToken", required = false) String oldRefreshToken,
             HttpServletResponse hResponse) {
-        AuthResponse.Token tokenSet = authService.refresh(request, oldRefreshToken);
+        AuthDto.TokenPair tokenSet = authService.refresh(oldRefreshToken);
 
         // 새 토큰으로 쿠키 덮어쓰기
         saveCookie(hResponse, tokenSet.refreshToken(), REFRESH_TOKEN_MAX_AGE);
 
-        AuthResponse.AccessToken response = AuthResponse.AccessToken
+        AuthDto.AccessTokenResponse response = AuthDto.AccessTokenResponse
                 .builder()
                 .accessToken(tokenSet.accessToken())
                 .build();

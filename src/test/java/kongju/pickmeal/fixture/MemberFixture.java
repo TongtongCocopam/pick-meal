@@ -1,12 +1,13 @@
 package kongju.pickmeal.fixture;
 
-import kongju.pickmeal.application.user.data.request.MemberRequest;
-
 import java.time.LocalDate;
 
+import kongju.pickmeal.application.user.data.UserDto;
+
+
 public class MemberFixture {
-    public static MemberRequest.Register createRequest(String loginId, String password, String passwordCheck, String email, String name, String nickName, LocalDate birthDate) {
-        return MemberRequest.Register.builder()
+    public static UserDto.SignupRequest createRequest(String loginId, String password, String passwordCheck, String email, String name, String nickName, LocalDate birthDate) {
+        return UserDto.SignupRequest.builder()
                 .loginId(loginId)
                 .password(password)
                 .passwordCheck(passwordCheck)
@@ -16,8 +17,8 @@ public class MemberFixture {
                 .build();
     }
 
-    public static MemberRequest.Register createRequest() {
-        return MemberRequest.Register.builder()
+    public static UserDto.SignupRequest createRequest() {
+        return UserDto.SignupRequest.builder()
                 .loginId("test1234")
                 .password("test0000!!")
                 .passwordCheck("test0000!!")
