@@ -8,22 +8,32 @@ import java.util.Optional;
 
 @Service
 public interface JwtService {
+    // 액세스 토큰 생성
     String createAccessToken(User user);
-
+    // 리프레시 토큰 생성
     String createRefreshToken(User user);
 
-    // 남은 만료시간 계산
-    Long getExpiration(String token);
+    // Authorization Header에서 Bearer accessToken 추출
+    Optional<String> extractAccessToken(String authorizationHeader);
 
-    // 액세스 토큰에서 loginId반환
-    Optional<String> extractSubject(String token);
+    // accessToken 남은 만료 시간 계산
+    Long getAccessTokenExpiration(String accessToken);
 
-//    Optional<String> getSubFromRefreshToken(String token);
-    // 만료된 액세스 토큰 확인
-    boolean isExpired(String token);
-    // 리프레시 토큰 만료 확인
-    boolean isValid(String token);
-    // 만료된 액세스 토큰에서 loginId반환
-    Optional<String> extractSubjectFromExpired(String token);
+    // accessToken 유효성 검증
+    boolean isValidAccessToken(String accessToken);
 
+    // refreshToken 유효성 검증
+    boolean isValidRefreshToken(String refreshToken);
+
+    // accessToken 만료 여부 확인
+    boolean isExpiredAccessToken(String accessToken);
+
+    // accessToken에서 loginId 추출
+    Optional<String> extractSubjectFromAccessToken(String accessToken);
+
+    // refreshToken에서 loginId 추출
+    Optional<String> extractSubjectFromRefreshToken(String refreshToken);
+
+    // 만료된 accessToken에서 loginId 추출
+    Optional<String> extractSubjectFromExpiredAccessToken(String accessToken);
 }
