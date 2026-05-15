@@ -32,4 +32,12 @@ public class FamilyJoinRequest extends BaseTimeEntity {
         this.familyId = familyId;
         this.status = status;
     }
+
+    public void accept(){
+        this.status = ApplyStatus.APPROVED;
+    }
+
+    public void reject(){
+        this.status = ApplyStatus.REJECTED;
+    }
 }
