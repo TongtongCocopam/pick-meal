@@ -36,7 +36,7 @@ public class FamilyController {
     }
 
     @PostMapping("/applications")
-    public ResponseEntity<ApiResponse<Void>> applyFamily(
+    public ResponseEntity<ApiResponse<Void>> joinRequestFamily(
             @RequestBody @Valid FamilyJoinRequestDto.CreateRequest request,
             @AuthenticationPrincipal User user
     ) {
@@ -48,7 +48,7 @@ public class FamilyController {
 
     @GetMapping("/me/applications")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<List<FamilyJoinRequestDto.Summary>>> applyListFamily(
+    public ResponseEntity<ApiResponse<List<FamilyJoinRequestDto.Summary>>> requestListFamily(
             @AuthenticationPrincipal User user
     ) {
         List<FamilyJoinRequestDto.Summary> joinRequestSummary = familyService.loadJoinRequestSummary(user);
@@ -56,5 +56,18 @@ public class FamilyController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(joinRequestSummary));
+    }
+
+    @PostMapping("/me/applications/{requestId}")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<FamilyJoinRequestDto.ProcessResponse>> processRequestFamily(
+            @PathVariable Long requestId,
+            @RequestBody @Valid FamilyJoinRequestDto.ProcessRequest request,
+            @AuthenticationPrincipal User user
+    ) {
+        FamilyJoinRequestDto.ProcessResponse response = familyService.processJoinRequest(requestId, request, user);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(response));
     }
 }
