@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
 
+import kongju.pickmeal.application.family.data.JoinRequestStatus;
+import kongju.pickmeal.core.user.UserRole;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,7 @@ public class FamilyServiceTest {
     @Mock
     private FamilyRepository familyRepository;
     @Mock
-    private FamilyApplyRepository familyApplyRepository;
+    private FamilyJoinRepository familyJoinRepository;
 
     @InjectMocks
     private FamilyService familyService;
@@ -40,6 +42,13 @@ public class FamilyServiceTest {
         return User.builder()
                 .loginId("testUser")
                 .email("test1234@gmail.com")
+                .build();
+    }
+
+    public User createCustomUser(String loginId, String email) {
+        return User.builder()
+                .loginId(loginId)
+                .email(email)
                 .build();
     }
 
@@ -131,7 +140,7 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
+            given(familyJoinRepository.checkPendingRequest(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
 
             BusinessException exception = assertThrows(BusinessException.class, () ->
                     familyService.joinRequest(request, user)
@@ -153,12 +162,12 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
+            given(familyJoinRepository.checkPendingRequest(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
 
             // 오류 없이 실행되었는지 체크
             assertDoesNotThrow(() -> familyService.joinRequest(request, user));
 
-            verify(familyApplyRepository, times(1)).save(any(FamilyJoinRequest.class));
+            verify(familyJoinRepository, times(1)).save(any(FamilyJoinRequest.class));
         }
     }
 
@@ -192,10 +201,124 @@ public class FamilyServiceTest {
             List<FamilyJoinRequest> familyJoinRequestList = new ArrayList<>();
             familyJoinRequestList.add(familyJoinRequest);
 
-            given(familyApplyRepository.findAllByFamilyIdAndStatus(any(), any())).willReturn(familyJoinRequestList);
+            given(familyJoinRepository.findAllByFamilyIdAndStatus(any(), any())).willReturn(familyJoinRequestList);
 
             assertDoesNotThrow(() -> familyService.loadJoinRequestSummary(user));
-            verify(familyApplyRepository, times(1)).findAllByFamilyIdAndStatus(any(), any());
+            verify(familyJoinRepository, times(1)).findAllByFamilyIdAndStatus(any(), any());
         }
+    }
+
+    @Nested
+    @DisplayName("가족 승인 거부")
+    class JoinRequestProcess {
+        @Test
+        @DisplayName("decision이 null일경우")
+        public void should_fail_join_request_process_decision_null() {
+            FamilyJoinRequestDto.ProcessRequest request = FamilyJoinRequestDto.ProcessRequest.builder()
+                    .decision(null)
+                    .build();
+
+            User user = createUser();
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                familyService.processJoinRequest(1L, request, user);
+            });
+
+            assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("신청 기록이 없는경우")
+        public void should_fail_join_request_process_not_found_request() {
+            FamilyJoinRequestDto.ProcessRequest request = FamilyJoinRequestDto.ProcessRequest.builder()
+                    .decision(JoinRequestStatus.APPROVED)
+                    .build();
+
+            User user = createUser();
+            given(familyJoinRepository.findById(any())).willReturn(Optional.empty());
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                familyService.processJoinRequest(1L, request, user);
+            });
+
+            assertEquals(ErrorCode.REQUEST_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("다른 가족의 요청을 승인하려고 하는 경우")
+        public void should_fail_join_request_process_another_family_join_request() {
+            FamilyJoinRequestDto.ProcessRequest request = FamilyJoinRequestDto.ProcessRequest.builder()
+                    .decision(JoinRequestStatus.APPROVED)
+                    .build();
+
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+
+            User user2 = createCustomUser("custom", "custom1234@gmail.com");
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
+                    .familyId(2L)
+                    .user(user2)
+                    .build();
+
+            given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
+
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                familyService.processJoinRequest(1L, request, user);
+            });
+
+            assertEquals(ErrorCode.NOT_YOUR_FAMILY_REQUEST, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("이미 가족이 있는 경우")
+        public void should_fail_join_request_process_already_exists_family() {
+            FamilyJoinRequestDto.ProcessRequest request = FamilyJoinRequestDto.ProcessRequest.builder()
+                    .decision(JoinRequestStatus.APPROVED)
+                    .build();
+
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+
+            User user2 = createCustomUser("custom", "custom1234@gmail.com");
+            user2.joinFamilyLeader(1L);
+
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
+                    .familyId(1L)
+                    .user(user2)
+                    .build();
+
+            given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
+
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                familyService.processJoinRequest(1L, request, user);
+            });
+
+            assertEquals(ErrorCode.ALREADY_HAS_FAMILY, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_join_request_process() {
+            FamilyJoinRequestDto.ProcessRequest request = FamilyJoinRequestDto.ProcessRequest.builder()
+                    .decision(JoinRequestStatus.APPROVED)
+                    .build();
+
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+
+            User user2 = createCustomUser("custom", "custom1234@gmail.com");
+
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
+                    .familyId(1L)
+                    .user(user2)
+                    .build();
+
+            given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
+
+            FamilyJoinRequestDto.ProcessResponse response = familyService.processJoinRequest(1L, request, user);
+
+            assertEquals(1L, response.requestId());
+            assertEquals(JoinRequestStatus.APPROVED, response.decision());
+            assertEquals(UserRole.MEMBER, user2.getRole());
+        }
+
     }
 }

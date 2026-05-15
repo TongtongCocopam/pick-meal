@@ -2,8 +2,10 @@ package kongju.pickmeal.application.family.data;
 
 import lombok.Builder;
 import jakarta.validation.constraints.Size;
-import kongju.pickmeal.core.family.FamilyJoinRequest;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.NotBlank;
+
+import kongju.pickmeal.core.family.FamilyJoinRequest;
 
 
 public class FamilyJoinRequestDto {
@@ -48,7 +50,18 @@ public class FamilyJoinRequestDto {
             return prefix + asterisks + suffix + "@" + mail;
         }
     }
-    public record DecisionRequest(){}
-    public record DecisionResponse(){}
+
+    @Builder
+    public record ProcessRequest(
+            @NotNull
+            JoinRequestStatus decision
+    ){}
+
+    @Builder
+    public record ProcessResponse(
+        Long requestId,
+        JoinRequestStatus decision,
+        String nickname
+    ){}
 
 }
