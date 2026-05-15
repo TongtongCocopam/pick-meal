@@ -9,9 +9,11 @@ import org.springframework.stereotype.Service;
 
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.user.UserRole;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.data.FamilyDto;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.application.family.data.JoinRequestStatus;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 
@@ -20,7 +22,7 @@ import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 @RequiredArgsConstructor
 public class FamilyService {
     private final FamilyRepository familyRepository;
-    private final FamilyApplyRepository familyApplyRepository;
+    private final FamilyJoinRepository familyJoinRepository;
 
     /**
      * 가족 만들기
@@ -85,7 +87,7 @@ public class FamilyService {
      */
     public void joinRequest(FamilyJoinRequestDto.CreateRequest request, User user) {
         // 가족 여부 확인
-        Family family = checkApply(request, user);
+        Family family = validationJoinRequest(request.invitationCode(), user);
 
         // 신청 테이블 만들기
         FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
@@ -94,29 +96,29 @@ public class FamilyService {
                 .status(ApplyStatus.PENDING)
                 .build();
 
-        familyApplyRepository.save(familyJoinRequest);
+        familyJoinRepository.save(familyJoinRequest);
     }
 
 
     /**
      * 가족 여부와 신청 확인
      *
-     * @param request 초대 코드
-     * @param user    신청한 유저
+     * @param invitationCode 초대 코드
+     * @param user           신청한 유저
      * @return Family객체 반환
      */
-    private Family checkApply(FamilyJoinRequestDto.CreateRequest request, User user) {
+    private Family validationJoinRequest(String invitationCode, User user) {
         // 가족이 이미 있음
         if (user.getFamilyId() != null) {
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
 
         // 가족이 있는 경우
-        Family family = familyRepository.findByInvitationCode(request.invitationCode())
+        Family family = familyRepository.findByInvitationCode(invitationCode)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITATION_CODE));
 
         // 이미 신청한 경우
-        if (familyApplyRepository.checkPendingApply(user, family.getId(), ApplyStatus.PENDING)) {
+        if (familyJoinRepository.checkPendingRequest(user, family.getId(), ApplyStatus.PENDING)) {
             throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
         }
 
@@ -125,23 +127,16 @@ public class FamilyService {
 
     /**
      * 가족 신청 목록 불러오기
+     *
      * @param user 리더 정보
      * @return 신청 리스트 반환
      */
     public List<FamilyJoinRequestDto.Summary> loadJoinRequestSummary(User user) {
         // 가족이 없는지 확인
-        Long familyId = checkFamily(user);
-
-//        List<JoinApply> joinApplies = familyApplyRepository.findAllByFamilyIdAndStatus(familyId, ApplyStatus.PENDING);
-//
-//        List<FamiliesResponse.ApplyInfo> applyInfos = new ArrayList<>();
-//        for (JoinApply joinApply : joinApplies) {
-//            FamiliesResponse.ApplyInfo applyInfo = FamiliesResponse.ApplyInfo.from(joinApply);
-//            applyInfos.add(applyInfo);
-//        }
+        Long familyId = validationFamily(user.getFamilyId());
 
         // 유저 패밀리와 연관된 신청 리스트 가져오기
-        return familyApplyRepository.findAllByFamilyIdAndStatus(familyId, ApplyStatus.PENDING)
+        return familyJoinRepository.findAllByFamilyIdAndStatus(familyId, ApplyStatus.PENDING)
                 .stream()
                 .map(FamilyJoinRequestDto.Summary::from)
                 .toList();
@@ -149,14 +144,115 @@ public class FamilyService {
 
     /**
      * 가족 있는지 여부 확인
-     * @param user 해당 유저 객체
+     *
+     * @param familyId 해당 유저 객체
      * @return 가족 아이디 반환
      */
-    private Long checkFamily(User user) {
-        Long familyId = user.getFamilyId();
-        if (user.getFamilyId() == null) {
+    private Long validationFamily(Long familyId) {
+        if (familyId == null) {
             throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
         }
         return familyId;
+    }
+
+    /**
+     * 가족 합류 신청 승인, 거절
+     *
+     * @param requestId 요청 아이디
+     * @param request   승인, 거절 여부
+     * @param user      리더 user객체
+     * @return 승인, 닉네임, 요청 아이디
+     */
+    public FamilyJoinRequestDto.ProcessResponse processJoinRequest(
+            Long requestId,
+            FamilyJoinRequestDto.ProcessRequest request,
+            User user
+    ) {
+        validateDecision(request.decision());
+
+        // 존재하는 요청 아이디인지 확인하고 테이블 불러오기
+        FamilyJoinRequest familyJoinRequest = getFamilyJoinRequest(requestId, user.getFamilyId());
+
+        // 가족 구성원인지 확인 and 일반 user 인지도 확인?
+        User joinRequestUser = familyJoinRequest.getUser();
+        validationUser(joinRequestUser);
+
+        // 거절하는 경우 테이블 상태 변경
+        if (request.decision() == JoinRequestStatus.REJECTED) {
+            familyJoinRequest.reject();
+
+            return toProcessRequest(
+                    requestId,
+                    joinRequestUser.getNickName(),
+                    JoinRequestStatus.REJECTED
+            );
+        }
+
+        // 승인하는 경우 테이블 상태 변경
+        familyJoinRequest.accept();
+
+        // user테이블에 가족 테이블 연결, 멤버로 상태 변경
+        joinRequestUser.joinFamilyMember(user.getFamilyId());
+
+        return toProcessRequest(
+                requestId,
+                joinRequestUser.getNickName(),
+                JoinRequestStatus.APPROVED
+        );
+    }
+
+    /**
+     * 승인, 거절 형식 확인
+     *
+     * @param decision 승인, 거절 여부
+     */
+    private void validateDecision(JoinRequestStatus decision) {
+        if (decision == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        if (decision != JoinRequestStatus.APPROVED
+                && decision != JoinRequestStatus.REJECTED) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+    }
+
+    /**
+     * 요청 기록 확인
+     *
+     * @param requestId 요청 아이디
+     * @param familyId  가족 아이디
+     * @return 요청 테이블
+     */
+    private FamilyJoinRequest getFamilyJoinRequest(Long requestId, Long familyId) {
+        return familyJoinRepository.findByIdAndFamilyId(requestId, familyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.REQUEST_NOT_FOUND));
+    }
+
+    /**
+     * 유저 권한 검증, 가족이 없는지 확인
+     *
+     * @param user 신청 유저
+     */
+    private void validationUser(User user) {
+        if (user.getFamilyId() != null || user.getRole() != UserRole.GUEST) {
+            throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
+        }
+    }
+
+    /**
+     * 승인, 거절 응답 생성
+     *
+     * @param requestId 요청 아이디
+     * @param nickname  닉네임
+     * @param status    승인 거절 여부
+     * @return dto객체
+     */
+    private FamilyJoinRequestDto.ProcessResponse toProcessRequest(Long requestId, String nickname, JoinRequestStatus status) {
+        return FamilyJoinRequestDto.ProcessResponse.builder()
+                .requestId(requestId)
+                .nickname(nickname)
+                .decision(status)
+                .build();
     }
 }
