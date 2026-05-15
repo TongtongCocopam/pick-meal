@@ -210,11 +210,6 @@ public class FamilyService {
         if (decision == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
-
-        if (decision != JoinRequestStatus.APPROVED
-                && decision != JoinRequestStatus.REJECTED) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
-        }
     }
 
     /**
@@ -225,8 +220,14 @@ public class FamilyService {
      * @return 요청 테이블
      */
     private FamilyJoinRequest getFamilyJoinRequest(Long requestId, Long familyId) {
-        return familyJoinRepository.findByIdAndFamilyId(requestId, familyId)
+        FamilyJoinRequest joinRequest = familyJoinRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REQUEST_NOT_FOUND));
+
+        if (!joinRequest.getFamilyId().equals(familyId)) {
+            throw new BusinessException(ErrorCode.NOT_YOUR_FAMILY_REQUEST);
+        }
+
+        return joinRequest;
     }
 
     /**
