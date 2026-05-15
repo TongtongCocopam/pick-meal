@@ -31,7 +31,7 @@ public class FamilyServiceTest {
     @Mock
     private FamilyRepository familyRepository;
     @Mock
-    private FamilyApplyRepository familyApplyRepository;
+    private FamilyJoinRepository familyJoinRepository;
 
     @InjectMocks
     private FamilyService familyService;
@@ -131,7 +131,7 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
+            given(familyJoinRepository.checkPendingRequest(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
 
             BusinessException exception = assertThrows(BusinessException.class, () ->
                     familyService.joinRequest(request, user)
@@ -153,12 +153,12 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyApplyRepository.checkPendingApply(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
+            given(familyJoinRepository.checkPendingRequest(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
 
             // 오류 없이 실행되었는지 체크
             assertDoesNotThrow(() -> familyService.joinRequest(request, user));
 
-            verify(familyApplyRepository, times(1)).save(any(FamilyJoinRequest.class));
+            verify(familyJoinRepository, times(1)).save(any(FamilyJoinRequest.class));
         }
     }
 
@@ -192,10 +192,10 @@ public class FamilyServiceTest {
             List<FamilyJoinRequest> familyJoinRequestList = new ArrayList<>();
             familyJoinRequestList.add(familyJoinRequest);
 
-            given(familyApplyRepository.findAllByFamilyIdAndStatus(any(), any())).willReturn(familyJoinRequestList);
+            given(familyJoinRepository.findAllByFamilyIdAndStatus(any(), any())).willReturn(familyJoinRequestList);
 
             assertDoesNotThrow(() -> familyService.loadJoinRequestSummary(user));
-            verify(familyApplyRepository, times(1)).findAllByFamilyIdAndStatus(any(), any());
+            verify(familyJoinRepository, times(1)).findAllByFamilyIdAndStatus(any(), any());
         }
     }
 }
