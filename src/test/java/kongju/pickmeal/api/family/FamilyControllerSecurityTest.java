@@ -1,5 +1,11 @@
 package kongju.pickmeal.api.family;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
+import kongju.pickmeal.application.family.data.JoinRequestStatus;
+import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.core.user.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +24,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,6 +43,8 @@ public class FamilyControllerSecurityTest {
     private MockMvc mockMvc;
     @MockitoBean
     FamilyService familyService;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @TestConfiguration
     @EnableMethodSecurity
@@ -81,5 +92,64 @@ public class FamilyControllerSecurityTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
         }
+    }
+
+    @Nested
+    @DisplayName("가족 합류 승인, 거절")
+    class JoinRequestProcess {
+        @Test
+        @DisplayName("리더 권한이 없을 경우")
+        @WithMockUser(roles = "MEMBER")
+        public void should_fail_join_request_process_not_reader() throws Exception {
+            Long requestId = 1L;
+            FamilyJoinRequestDto.ProcessRequest request = FamilyJoinRequestDto.ProcessRequest.builder()
+                    .decision(JoinRequestStatus.APPROVED)
+                    .build();
+
+            given(familyService.processJoinRequest(eq(requestId), any(FamilyJoinRequestDto.ProcessRequest.class), any(User.class)))
+                    .willThrow(new BusinessException(ErrorCode.ACCESS_DENIED));
+
+            mockMvc.perform(post("/api/v1/families/me/applications/{requestId}", requestId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                    )
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.message").exists());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        @WithMockUser(roles = "LEADER")
+        public void should_success_join_request_process() throws Exception {
+            Long requestId = 1L;
+            FamilyJoinRequestDto.ProcessRequest request = FamilyJoinRequestDto.ProcessRequest.builder()
+                    .decision(JoinRequestStatus.APPROVED)
+                    .build();
+
+            FamilyJoinRequestDto.ProcessResponse response =
+                    FamilyJoinRequestDto.ProcessResponse.builder()
+                            .requestId(requestId)
+                            .nickname("배고픈동생")
+                            .decision(JoinRequestStatus.APPROVED)
+                            .build();
+
+            // 제대로 하려면 유저 권한을 leader로 인증을 만들어서 user와 함께 주입할 것
+            given(familyService.processJoinRequest(any(), any(), nullable(User.class)))
+                    .willReturn(response);
+
+            mockMvc.perform(post("/api/v1/families/me/applications/{requestId}", requestId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andDo(print())
+                    .andExpect(jsonPath("$.data.requestId").value(1))
+                    .andExpect(jsonPath("$.data.nickname").value("배고픈동생"))
+                    .andExpect(jsonPath("$.data.decision").value("APPROVED"));
+        }
+
     }
 }
