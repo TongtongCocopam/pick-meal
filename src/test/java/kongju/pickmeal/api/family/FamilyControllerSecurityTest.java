@@ -1,15 +1,10 @@
 package kongju.pickmeal.api.family;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
-import kongju.pickmeal.application.family.data.JoinRequestStatus;
-import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.core.user.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.http.MediaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
@@ -24,16 +19,22 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.mockito.ArgumentMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
+import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.FamilyService;
+import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
+import kongju.pickmeal.application.family.data.JoinRequestStatus;
+import kongju.pickmeal.application.family.data.FamilyInvitationDto;
+import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
+
 
 @WebMvcTest(FamilyController.class)
 @AutoConfigureMockMvc
@@ -151,5 +152,38 @@ public class FamilyControllerSecurityTest {
                     .andExpect(jsonPath("$.data.decision").value("APPROVED"));
         }
 
+    }
+
+    @Nested
+    @DisplayName("초대코드 재발급")
+    class ReissueInvitation {
+        @Test
+        @DisplayName("리더가 아닌 경우")
+        @WithMockUser(roles = "MEMBER")
+        public void should_fail_reissue_invitation_not_reader() throws Exception {
+            mockMvc.perform(patch("/api/v1/families/me/invitation-code"))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.message").exists());
+
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        @WithMockUser(roles = "LEADER")
+        public void should_success_reissue_invitation() throws Exception {
+            FamilyInvitationDto.CodeResponse response = FamilyInvitationDto.CodeResponse.builder()
+                    .newInvitationCode("1sdd12d")
+                    .build();
+
+            given(familyService.createInvitationCode(any())).willReturn(response);
+
+            mockMvc.perform(patch("/api/v1/families/me/invitation-code"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data").exists());
+        }
     }
 }
