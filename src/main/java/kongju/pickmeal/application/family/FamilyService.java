@@ -1,7 +1,6 @@
 package kongju.pickmeal.application.family;
 
 import java.util.List;
-import java.security.SecureRandom;
 
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
@@ -14,8 +13,8 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.data.FamilyDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.family.data.JoinRequestStatus;
+import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
-
 
 @Service
 @Transactional
@@ -23,6 +22,7 @@ import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 public class FamilyService {
     private final FamilyRepository familyRepository;
     private final FamilyJoinRepository familyJoinRepository;
+    private final InvitationCodeGenerator invitationCodeGenerator;
 
     /**
      * 가족 만들기
@@ -33,7 +33,7 @@ public class FamilyService {
      */
     public FamilyDto.CreateResponse createFamily(FamilyDto.CreateRequest request, User user) {
         // 초대 코드 생성
-        String invitationCode = generateInvitationCode();
+        String invitationCode = invitationCodeGenerator.generateUniqueCode();
         // 가족 엔티티 생성
         Family family = Family.builder()
                 .familyName(request.familyName())
@@ -49,34 +49,6 @@ public class FamilyService {
                 .familyName(family.getFamilyName())
                 .invitationCode(invitationCode)
                 .build();
-    }
-
-    /**
-     * 중복이 아닐때까지 생성
-     *
-     * @return 초대 코드 반환
-     */
-    private String generateInvitationCode() {
-        String invitationCode;
-        do {
-            invitationCode = generate();
-        } while (familyRepository.existsByInvitationCode(invitationCode));
-        return invitationCode;
-    }
-
-    /**
-     * 랜덤 문자열 생성기
-     *
-     * @return 8자리의 문자열 반환
-     */
-    private String generate() {
-        String CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        SecureRandom RANDOM = new SecureRandom();
-        StringBuilder sb = new StringBuilder(8);
-        for (int i = 0; i < 8; i++) {
-            sb.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
-        }
-        return sb.toString();
     }
 
     /**
@@ -254,6 +226,23 @@ public class FamilyService {
                 .requestId(requestId)
                 .nickname(nickname)
                 .decision(status)
+                .build();
+    }
+
+    /**
+     * 초대 코드 재발급
+     * @param user 재발급 리더
+     * @return 재발급한 초대코드
+     */
+    public FamilyInvitationDto.CodeResponse createInvitationCode(User user) {
+        String invitationCode = invitationCodeGenerator.generateUniqueCode();
+        Family family = familyRepository.findById(user.getFamilyId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+
+        family.reissueInvitationCode(invitationCode);
+
+        return FamilyInvitationDto.CodeResponse.builder()
+                .newInvitationCode(invitationCode)
                 .build();
     }
 }

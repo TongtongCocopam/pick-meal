@@ -1,5 +1,10 @@
 package kongju.pickmeal.application.family.data;
 
+import lombok.Builder;
+
 public class FamilyInvitationDto {
-    public record CodeResponse(){}
+    @Builder
+    public record CodeResponse(
+            String newInvitationCode
+    ){}
 }

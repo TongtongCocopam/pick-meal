@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
 
-import kongju.pickmeal.application.family.data.JoinRequestStatus;
 import kongju.pickmeal.core.user.UserRole;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
@@ -14,6 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
@@ -25,6 +25,8 @@ import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.data.FamilyDto;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.application.family.data.JoinRequestStatus;
+import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 
@@ -34,6 +36,8 @@ public class FamilyServiceTest {
     private FamilyRepository familyRepository;
     @Mock
     private FamilyJoinRepository familyJoinRepository;
+    @Mock
+    private InvitationCodeGenerator invitationCodeGenerator;
 
     @InjectMocks
     private FamilyService familyService;
@@ -284,7 +288,6 @@ public class FamilyServiceTest {
                     .familyId(1L)
                     .user(user2)
                     .build();
-
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
@@ -318,6 +321,62 @@ public class FamilyServiceTest {
             assertEquals(1L, response.requestId());
             assertEquals(JoinRequestStatus.APPROVED, response.decision());
             assertEquals(UserRole.MEMBER, user2.getRole());
+        }
+    }
+
+    @Nested
+    @DisplayName("초대코드 재발급")
+    class ReissueInvitation {
+        @Test
+        @DisplayName("재발급 신청 후 10분이 지나지 않았는데 재 신청한 경우")
+        public void should_fail_reissue_invitation_process_too_fast() {
+            Family family = Family.builder()
+                    .invitationCode("sds1234d")
+                    .build();
+
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+            family.reissueInvitationCode("st1454fs");
+
+            given(familyRepository.findById(any())).willReturn(Optional.of(family));
+
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                familyService.createInvitationCode(user);
+            });
+
+            assertEquals(ErrorCode.INVITATION_CODE_REISSUE_TOO_FAST, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("가족 아이디가 없는 경우")
+        public void should_fail_reissue_invitation_not_found_family() {
+            User user = createUser();
+
+            given(familyRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class, () -> {
+                familyService.createInvitationCode(user);
+            });
+
+            assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_reissue_invitation() {
+            Family family = Family.builder()
+                    .invitationCode("sds1234d")
+                    .build();
+
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+
+            given(familyRepository.findById(any())).willReturn(Optional.of(family));
+            given(invitationCodeGenerator.generateUniqueCode()).willReturn("12dd1sxg");
+
+            FamilyInvitationDto.CodeResponse response = familyService.createInvitationCode(user);
+
+            assertThat("12dd1sxg").isEqualTo(response.newInvitationCode());
         }
 
     }
