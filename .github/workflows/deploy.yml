@@ -13,12 +13,12 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_DB: pickmeal_db
-          POSTGRES_USER: ${{secrets.DB_USERNAME}}
-          POSTGRES_PASSWORD: ${{secrets.DB_PASSWORD}}
+          POSTGRES_USER: pickmeal
+          POSTGRES_PASSWORD: pickmeal
         ports:
           - "5432:5432"
         options: >-
-          --health-cmd="pg_isready -U ${{ secrets.DB_USERNAME }} -d pickmeal_db"
+          --health-cmd="pg_isready -U pickmeal -d pickmeal_db"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -50,8 +50,10 @@ jobs:
         run: ./gradlew test
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/pickmeal_db
-          SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          SPRING_DATASOURCE_USERNAME: pickmeal
+          SPRING_DATASOURCE_PASSWORD: pickmeal
+          SPRING_DATA_REDIS_HOST: localhost
+          SPRING_DATA_REDIS_PORT: 6379
 
       - name: Build with Gradle
         run: ./gradlew build -x test
