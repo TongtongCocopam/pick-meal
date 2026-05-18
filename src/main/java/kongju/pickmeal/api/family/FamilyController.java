@@ -14,6 +14,7 @@ import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.family.FamilyService;
 import kongju.pickmeal.application.family.data.FamilyDto;
+import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 
@@ -70,4 +71,16 @@ public class FamilyController {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(response));
     }
+
+    @PatchMapping("/me/invitation-code")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<FamilyInvitationDto.CodeResponse>> updateInvitationCode(@AuthenticationPrincipal User user) {
+        FamilyInvitationDto.CodeResponse response = familyService.createInvitationCode(user);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(response));
+    }
+
+
 }
