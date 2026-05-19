@@ -1,5 +1,6 @@
 package kongju.pickmeal.api.family;
 
+import kongju.pickmeal.core.family.FamilyMemberDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +35,9 @@ import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 import kongju.pickmeal.application.family.data.JoinRequestStatus;
 import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @WebMvcTest(FamilyController.class)
@@ -184,6 +188,36 @@ public class FamilyControllerSecurityTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data").exists());
+        }
+    }
+
+
+    @Nested
+    @DisplayName("가족 멤버 리스트 불러오기")
+    class getMembers {
+        @Test
+        @DisplayName("가족 구성원이 아닌 경우")
+        @WithMockUser(roles = "GUEST")
+        public void should_fail_get_members_not_found() throws Exception {
+            mockMvc.perform(get("/api/v1/families/me/members"))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error").exists());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        @WithMockUser(roles = "MEMBER")
+        public void should_success_get_members() throws Exception {
+            List<FamilyMemberDto.ListItem> listItems = new ArrayList<>();
+
+            given(familyService.getMembers(any())).willReturn(listItems);
+
+            mockMvc.perform(get("/api/v1/families/me/members"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
         }
     }
 }
