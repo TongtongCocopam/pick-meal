@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.family.FamilyMemberDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.family.FamilyService;
 import kongju.pickmeal.application.family.data.FamilyDto;
@@ -82,5 +83,14 @@ public class FamilyController {
                 .body(ApiResponse.success(response));
     }
 
+    @GetMapping("/me/members")
+    @PreAuthorize("hasRole('LEADER') or hasRole('MEMBER')")
+    public ResponseEntity<ApiResponse<List<FamilyMemberDto.ListItem>>> getFamilyMembers(@AuthenticationPrincipal User user) {
+
+        List<FamilyMemberDto.ListItem> listItems = familyService.getMembers(user);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(listItems));
+    }
 
 }

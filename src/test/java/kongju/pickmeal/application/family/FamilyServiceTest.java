@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
 
+import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.core.user.UserRole;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
@@ -38,6 +39,8 @@ public class FamilyServiceTest {
     private FamilyJoinRepository familyJoinRepository;
     @Mock
     private InvitationCodeGenerator invitationCodeGenerator;
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private FamilyService familyService;
@@ -49,10 +52,11 @@ public class FamilyServiceTest {
                 .build();
     }
 
-    public User createCustomUser(String loginId, String email) {
+    public User createCustomUser(String loginId, String email, String nickname) {
         return User.builder()
                 .loginId(loginId)
                 .email(email)
+                .nickName(nickname)
                 .build();
     }
 
@@ -70,9 +74,10 @@ public class FamilyServiceTest {
 
             user.joinFamilyLeader(100L);
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.createFamily(request, user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.createFamily(request, user)
+            );
 
             assertEquals(ErrorCode.ALREADY_HAS_FAMILY, exception.getErrorCode());
         }
@@ -107,9 +112,10 @@ public class FamilyServiceTest {
 
             user.joinFamilyMember(12L);
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.joinRequest(request, user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.joinRequest(request, user)
+            );
 
             assertEquals(ErrorCode.ALREADY_HAS_FAMILY, exception.getErrorCode());
         }
@@ -124,9 +130,10 @@ public class FamilyServiceTest {
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.empty());
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.joinRequest(request, user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.joinRequest(request, user)
+            );
 
             assertEquals(ErrorCode.INVALID_INVITATION_CODE, exception.getErrorCode());
         }
@@ -144,10 +151,12 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyJoinRepository.checkPendingRequest(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(true);
+            given(familyJoinRepository.checkPendingRequest(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING)))
+                    .willReturn(true);
 
-            BusinessException exception = assertThrows(BusinessException.class, () ->
-                    familyService.joinRequest(request, user)
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.joinRequest(request, user)
             );
 
             assertEquals(ErrorCode.ALREADY_PROCESSED, exception.getErrorCode());
@@ -166,7 +175,8 @@ public class FamilyServiceTest {
                     .build();
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
-            given(familyJoinRepository.checkPendingRequest(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING))).willReturn(false);
+            given(familyJoinRepository.checkPendingRequest(eq(user), eq(family.getId()), eq(ApplyStatus.PENDING)))
+                    .willReturn(false);
 
             // 오류 없이 실행되었는지 체크
             assertDoesNotThrow(() -> familyService.joinRequest(request, user));
@@ -183,8 +193,9 @@ public class FamilyServiceTest {
         public void should_fail_roadApply_null_familyId() {
             User user = createUser();
 
-            BusinessException exception = assertThrows(BusinessException.class, () ->
-                    familyService.loadJoinRequestSummary(user)
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.loadJoinRequestSummary(user)
             );
 
             assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
@@ -223,9 +234,10 @@ public class FamilyServiceTest {
                     .build();
 
             User user = createUser();
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.processJoinRequest(1L, request, user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.processJoinRequest(1L, request, user)
+            );
 
             assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
         }
@@ -239,9 +251,10 @@ public class FamilyServiceTest {
 
             User user = createUser();
             given(familyJoinRepository.findById(any())).willReturn(Optional.empty());
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.processJoinRequest(1L, request, user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.processJoinRequest(1L, request, user)
+            );
 
             assertEquals(ErrorCode.REQUEST_NOT_FOUND, exception.getErrorCode());
         }
@@ -256,7 +269,7 @@ public class FamilyServiceTest {
             User user = createUser();
             user.joinFamilyLeader(1L);
 
-            User user2 = createCustomUser("custom", "custom1234@gmail.com");
+            User user2 = createCustomUser("custom", "custom1234@gmail.com", "냠냠짬");
             FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
                     .familyId(2L)
                     .user(user2)
@@ -264,9 +277,10 @@ public class FamilyServiceTest {
 
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.processJoinRequest(1L, request, user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.processJoinRequest(1L, request, user)
+            );
 
             assertEquals(ErrorCode.NOT_YOUR_FAMILY_REQUEST, exception.getErrorCode());
         }
@@ -281,7 +295,7 @@ public class FamilyServiceTest {
             User user = createUser();
             user.joinFamilyLeader(1L);
 
-            User user2 = createCustomUser("custom", "custom1234@gmail.com");
+            User user2 = createCustomUser("custom", "custom1234@gmail.com", "배고파");
             user2.joinFamilyLeader(1L);
 
             FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
@@ -290,9 +304,10 @@ public class FamilyServiceTest {
                     .build();
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.processJoinRequest(1L, request, user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.processJoinRequest(1L, request, user)
+            );
 
             assertEquals(ErrorCode.ALREADY_HAS_FAMILY, exception.getErrorCode());
         }
@@ -307,7 +322,7 @@ public class FamilyServiceTest {
             User user = createUser();
             user.joinFamilyLeader(1L);
 
-            User user2 = createCustomUser("custom", "custom1234@gmail.com");
+            User user2 = createCustomUser("custom", "custom1234@gmail.com", "배불러");
 
             FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
                     .familyId(1L)
@@ -340,9 +355,10 @@ public class FamilyServiceTest {
 
             given(familyRepository.findById(any())).willReturn(Optional.of(family));
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.createInvitationCode(user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.createInvitationCode(user)
+            );
 
             assertEquals(ErrorCode.INVITATION_CODE_REISSUE_TOO_FAST, exception.getErrorCode());
         }
@@ -354,9 +370,10 @@ public class FamilyServiceTest {
 
             given(familyRepository.findById(any())).willReturn(Optional.empty());
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                familyService.createInvitationCode(user);
-            });
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.createInvitationCode(user)
+            );
 
             assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
         }
@@ -378,6 +395,60 @@ public class FamilyServiceTest {
 
             assertThat("12dd1sxg").isEqualTo(response.newInvitationCode());
         }
+    }
 
+    @Nested
+    @DisplayName("가족 멤버 리스트 불러오기")
+    class getMembers {
+        @Test
+        @DisplayName("가족 구성원이 없을 경우")
+        public void should_fail_get_members_not_found_family() {
+            User user = createUser();
+            given(familyRepository.findById(any())).willReturn(Optional.empty());
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.getMembers(user)
+            );
+            assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("멤버가 없을 경우")
+        public void should_success_get_members_not_found_members() {
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+            Family family = Family.builder()
+                    .build();
+
+            given(familyRepository.findById(any())).willReturn(Optional.of(family));
+            given(userRepository.findAllByFamilyId(1L)).willReturn(null);
+
+            List<FamilyMemberDto.ListItem> response = familyService.getMembers(user);
+
+            assertThat(response).isEqualTo(List.of());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_get_members() {
+            User user = createCustomUser("testUser1", "test1111@gmail.com", "유저1");
+            User user2 = createCustomUser("testUser2", "test2222@gmail.com", "유저2");
+            User user3 = createCustomUser("testUser3", "test3333@gmail.com", "유저3");
+
+            user.joinFamilyLeader(1L);
+            user2.joinFamilyLeader(1L);
+            user3.joinFamilyLeader(1L);
+
+            Family family = Family.builder()
+                    .build();
+
+            List<User> userList = List.of(user, user2, user3);
+            given(familyRepository.findById(any())).willReturn(Optional.of(family));
+            given(userRepository.findAllByFamilyId(any())).willReturn(userList);
+
+            List<FamilyMemberDto.ListItem> response = familyService.getMembers(user);
+            System.out.println(response);
+            assertThat(response.getFirst().nickname()).isEqualTo("유저1");
+        }
     }
 }
