@@ -86,11 +86,20 @@ public class FamilyController {
     @GetMapping("/me/members")
     @PreAuthorize("hasRole('LEADER') or hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<List<FamilyMemberDto.ListItem>>> getFamilyMembers(@AuthenticationPrincipal User user) {
-
         List<FamilyMemberDto.ListItem> listItems = familyService.getMembers(user);
+
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(listItems));
+    }
+
+    @DeleteMapping("/me")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<Void>> disbandMyFamily(@AuthenticationPrincipal User user) {
+        familyService.disbandFamily(user);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success());
     }
 
 }
