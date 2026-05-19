@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.core.user.UserRole;
+import org.assertj.core.api.NotThrownAssert;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
@@ -450,5 +452,56 @@ public class FamilyServiceTest {
             System.out.println(response);
             assertThat(response.getFirst().nickname()).isEqualTo("유저1");
         }
+    }
+
+    @Nested
+    @DisplayName("가족 그룹 삭제")
+    class DisbandFamily{
+        @Test
+        @DisplayName("가족 아이디가 없는 경우")
+        public void should_fail_disband_family_not_family() {
+            User user = createUser();
+            given(familyRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.disbandFamily(user));
+
+            assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("가족 그룹원이 남아 있는 경우")
+        public void should_fail_disband_family_exists_member(){
+            User user = createUser();
+            User user2 = createUser();
+            Family family = Family.builder()
+                    .build();
+
+            given(familyRepository.findById(any())).willReturn(Optional.ofNullable(family));
+            given(userRepository.findAllByFamilyId(any())).willReturn(List.of(user, user2));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.disbandFamily(user));
+
+            assertEquals(ErrorCode.FAMILY_MEMBER_EXISTS, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_disband_family() {
+            User user = createUser();
+            Family family = Family.builder()
+                    .build();
+
+            given(familyRepository.findById(any())).willReturn(Optional.ofNullable(family));
+            given(userRepository.findAllByFamilyId(any())).willReturn(List.of(user));
+
+            assertDoesNotThrow(() -> familyService.disbandFamily(user));
+
+            verify(familyRepository).delete(family);
+        }
+
     }
 }

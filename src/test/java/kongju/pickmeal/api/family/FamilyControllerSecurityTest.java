@@ -220,4 +220,29 @@ public class FamilyControllerSecurityTest {
                     .andExpect(jsonPath("$.success").value(true));
         }
     }
+
+    @Nested
+    @DisplayName("가족 그룹 삭제")
+    class DisbandFamily{
+        @Test
+        @DisplayName("리더가 아닌 경우")
+        @WithMockUser(roles = "MEMBER")
+        public void should_fail_disband_family_not_reader() throws Exception {
+            mockMvc.perform(delete("/api/v1/families/me"))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        @WithMockUser(roles = "LEADER")
+        public void should_success_disband_family() throws Exception {
+            mockMvc.perform(delete("/api/v1/families/me"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+
+    }
 }

@@ -253,6 +253,7 @@ public class FamilyService {
 
     /**
      * 가족 멤버 리스트 불러오기
+     *
      * @param user 가족이 있는 유저
      * @return 가족 구성원 리스트
      */
@@ -269,5 +270,27 @@ public class FamilyService {
                         .nickname(member.getNickName())
                         .build())
                 .toList();
+    }
+
+    /**
+     * 가족 그룹 삭제
+     * @param user 유저 객체
+     */
+    public void disbandFamily(User user) {
+        // 가족 그룹이 있는지 확인하고 family가져오기
+        Family family = familyRepository.findById(user.getFamilyId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+
+        // member가 있는지 확인
+        List<User> userList = userRepository.findAllByFamilyId(family.getId());
+
+        // 멤버가 있으면 실패
+        if (userList.size() != 1) {
+            throw new BusinessException(ErrorCode.FAMILY_MEMBER_EXISTS);
+        }
+
+        // member가 없으면 없애기
+        familyRepository.delete(family);
+        user.deleteFamilyLeader();
     }
 }
