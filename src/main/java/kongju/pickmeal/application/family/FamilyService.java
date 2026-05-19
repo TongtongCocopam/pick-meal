@@ -1,7 +1,9 @@
 package kongju.pickmeal.application.family;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import kongju.pickmeal.core.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class FamilyService {
     private final FamilyRepository familyRepository;
     private final FamilyJoinRepository familyJoinRepository;
     private final InvitationCodeGenerator invitationCodeGenerator;
+    private final UserRepository userRepository;
 
     /**
      * 가족 만들기
@@ -231,6 +234,7 @@ public class FamilyService {
 
     /**
      * 초대 코드 재발급
+     *
      * @param user 재발급 리더
      * @return 재발급한 초대코드
      */
@@ -244,5 +248,26 @@ public class FamilyService {
         return FamilyInvitationDto.CodeResponse.builder()
                 .newInvitationCode(invitationCode)
                 .build();
+    }
+
+
+    /**
+     * 가족 멤버 리스트 불러오기
+     * @param user 가족이 있는 유저
+     * @return 가족 구성원 리스트
+     */
+    public List<FamilyMemberDto.ListItem> getMembers(User user) {
+        // 가족이 있는지 확인
+        Family family = familyRepository.findById(user.getFamilyId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+
+        // 가족 id를 외래키로 가지고 있는 user리스트 가져오기
+        return userRepository.findAllByFamilyId(family.getId())
+                .stream()
+                .map(member -> FamilyMemberDto.ListItem.builder()
+                        .id(member.getId())
+                        .nickname(member.getNickName())
+                        .build())
+                .toList();
     }
 }
