@@ -70,4 +70,14 @@ public class User extends BaseTimeEntity {
         this.familyId = familyId;
         this.role = UserRole.MEMBER;
     }
+
+    public void deleteFamilyLeader(){
+        this.role = UserRole.GUEST;
+        this.familyId = null;
+    }
+
+    public void deleteFamilyMember(){
+        this.role = UserRole.GUEST;
+        this.familyId = null;
+    }
 }
