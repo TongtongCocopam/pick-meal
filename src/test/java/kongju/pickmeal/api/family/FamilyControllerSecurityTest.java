@@ -12,10 +12,12 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
@@ -25,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.common.exception.ErrorCode;
@@ -36,8 +39,8 @@ import kongju.pickmeal.application.family.data.JoinRequestStatus;
 import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 
 @WebMvcTest(FamilyController.class)
@@ -281,4 +284,41 @@ public class FamilyControllerSecurityTest {
                     .andExpect(jsonPath("$.data").exists());
         }
     }
+
+    @Nested
+    @DisplayName("그룹 나가기")
+    class LeaveFamily {
+        @Test
+        @DisplayName("멤버 권한이 아닌경우")
+        @WithMockUser("GEUST")
+        public void should_fail_leave_family_family_not_exist() throws Exception {
+            mockMvc.perform(delete("/api/v1/families/me/membership"))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        @WithMockUser(roles = "MEMBER")
+        public void should_success_leave_family() throws Exception {
+            User user = User.builder()
+                    .nickName("testNickname")
+                    .password("password")
+                    .build();
+
+//            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+//                    user,
+//                    null,
+//                    List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))
+//            );
+
+            mockMvc.perform(delete("/api/v1/families/me/membership"))
+//                            .with(authentication(authentication)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+    }
+
 }

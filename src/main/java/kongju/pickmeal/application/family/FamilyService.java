@@ -311,4 +311,17 @@ public class FamilyService {
                 .kickedNickname(member.getNickName())
                 .build();
     }
+
+    /**
+     * 가족 그룹을 탈퇴하는 경우
+     * @param user 탈퇴 유저
+     */
+    public void leaveMember(User user) {
+        // 가족이 없는 경우
+        userRepository.findById(user.getFamilyId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+
+        // 권한 변경
+        user.deleteFamilyMember();
+    }
 }

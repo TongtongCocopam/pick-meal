@@ -113,4 +113,15 @@ public class FamilyController {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(response));
     }
+
+    @DeleteMapping("/me/membership")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<ApiResponse<Void>> leaveFamilyMember(@AuthenticationPrincipal User user) {
+        familyService.leaveMember(user);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success());
+    }
+
 }
