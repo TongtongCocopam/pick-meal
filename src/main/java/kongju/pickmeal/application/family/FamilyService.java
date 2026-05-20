@@ -1,9 +1,7 @@
 package kongju.pickmeal.application.family;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import kongju.pickmeal.core.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -11,9 +9,11 @@ import org.springframework.stereotype.Service;
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserRole;
+import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.data.FamilyDto;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.application.family.data.FamilyMemberDto;
 import kongju.pickmeal.application.family.data.JoinRequestStatus;
 import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
@@ -274,6 +274,7 @@ public class FamilyService {
 
     /**
      * 가족 그룹 삭제
+     *
      * @param user 유저 객체
      */
     public void disbandFamily(User user) {
@@ -292,5 +293,22 @@ public class FamilyService {
         // member가 없으면 없애기
         familyRepository.delete(family);
         user.deleteFamilyLeader();
+    }
+
+    public FamilyMemberDto.KickResponse kickMember(Long userId, User user) {
+        // 아이디 확인? 굳이
+        User member = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 패밀리 멤버가 맞는지 확인
+        if (!userRepository.existsByIdAndFamilyId(userId, user.getFamilyId())) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "해당 가족의 리더가 아닙니다.");
+        }
+
+        // 멤버 제거, 권한 제거
+        member.deleteFamilyMember();
+        return FamilyMemberDto.KickResponse.builder()
+                .kickedNickname(member.getNickName())
+                .build();
     }
 }
