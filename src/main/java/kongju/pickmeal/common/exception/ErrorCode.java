@@ -30,6 +30,7 @@ public enum ErrorCode {
     REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "신청 데이터가 존재하지 않습니다."),
     INVITATION_CODE_REISSUE_TOO_FAST(HttpStatus.BAD_REQUEST, "초대코드 재발급 제한 시간이 지나지 않았습니다."),
     FAMILY_MEMBER_EXISTS(HttpStatus.BAD_REQUEST, "구성원을 모두 방출한 후에 삭제할 수 있습니다."),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
     ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 요청입니다."),
     DIET_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 식단이 이미 존재합니다."),
     DIET_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 식단 정보가 없습니다."),
