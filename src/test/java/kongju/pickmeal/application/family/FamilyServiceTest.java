@@ -4,9 +4,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
 
-import kongju.pickmeal.core.user.UserRepository;
-import kongju.pickmeal.core.user.UserRole;
-import org.assertj.core.api.NotThrownAssert;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -15,18 +12,21 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.user.UserRole;
+import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.data.FamilyDto;
+import kongju.pickmeal.application.family.data.FamilyMemberDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.family.data.JoinRequestStatus;
 import kongju.pickmeal.application.family.data.FamilyInvitationDto;
@@ -502,6 +502,52 @@ public class FamilyServiceTest {
 
             verify(familyRepository).delete(family);
         }
+
+    }
+
+    @Nested
+    @DisplayName("멤버 방출")
+    class KickMember{
+        @Test
+        @DisplayName("존재하지 않는 아이디인 경우")
+        public void should_fail_kick_member_not_found() {
+            User user = createUser();
+            given(userRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.kickMember(1L, user)
+            );
+
+            assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("가족 멤버가 아닌 경우")
+        public void should_fail_kick_member_not_my_family() {
+            User user = createUser();
+            given(userRepository.findById(any())).willReturn(Optional.of(user));
+            given(userRepository.existsByIdAndFamilyId(any(), any())).willReturn(false);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.kickMember(1L, user)
+            );
+
+            assertEquals(ErrorCode.ACCESS_DENIED, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_kick_member() {
+            User user = createCustomUser("test", "test1234@gmail.com", "testNickname");
+            given(userRepository.findById(any())).willReturn(Optional.of(user));
+            given(userRepository.existsByIdAndFamilyId(any(), any())).willReturn(true);
+
+            FamilyMemberDto.KickResponse response = familyService.kickMember(1L, user);
+            assertThat(response.kickedNickname()).isEqualTo("testNickname");
+        }
+
 
     }
 }

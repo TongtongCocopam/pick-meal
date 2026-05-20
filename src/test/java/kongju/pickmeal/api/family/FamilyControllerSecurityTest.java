@@ -1,6 +1,5 @@
 package kongju.pickmeal.api.family;
 
-import kongju.pickmeal.core.family.FamilyMemberDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +31,7 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.FamilyService;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
+import kongju.pickmeal.application.family.data.FamilyMemberDto;
 import kongju.pickmeal.application.family.data.JoinRequestStatus;
 import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
@@ -223,7 +223,7 @@ public class FamilyControllerSecurityTest {
 
     @Nested
     @DisplayName("가족 그룹 삭제")
-    class DisbandFamily{
+    class DisbandFamily {
         @Test
         @DisplayName("리더가 아닌 경우")
         @WithMockUser(roles = "MEMBER")
@@ -244,5 +244,41 @@ public class FamilyControllerSecurityTest {
                     .andExpect(jsonPath("$.success").value(true));
         }
 
+    }
+
+    @Nested
+    @DisplayName("멤버 방출")
+    class KickMember {
+        @Test
+        @DisplayName("권한 부족")
+        @WithMockUser(roles = "MEMBER")
+        public void should_fail_kick_member_not_reader() throws Exception {
+            Long userId = 1L;
+
+            mockMvc.perform(delete("/api/v1/families/me/members/{userId}", userId))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+
+        @Test
+        @DisplayName("성공 케이스")
+        @WithMockUser(roles = "LEADER")
+        public void should_success_kick_member() throws Exception {
+            Long userId = 1L;
+
+            FamilyMemberDto.KickResponse response = FamilyMemberDto.KickResponse.builder()
+                    .kickedNickname("testNickname")
+                    .build();
+
+            given(familyService.kickMember(any(), any())).willReturn(response);
+
+            mockMvc.perform(delete("/api/v1/families/me/members/{userId}", userId))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data").exists());
+        }
     }
 }

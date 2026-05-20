@@ -11,10 +11,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import kongju.pickmeal.core.user.User;
-import kongju.pickmeal.core.family.FamilyMemberDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.family.FamilyService;
 import kongju.pickmeal.application.family.data.FamilyDto;
+import kongju.pickmeal.application.family.data.FamilyMemberDto;
 import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
@@ -102,4 +102,15 @@ public class FamilyController {
                 .body(ApiResponse.success());
     }
 
+    @DeleteMapping("/me/members/{userId}")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<FamilyMemberDto.KickResponse>> kickFamilyMember(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal User user) {
+        FamilyMemberDto.KickResponse response = familyService.kickMember(userId, user);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(response));
+    }
 }

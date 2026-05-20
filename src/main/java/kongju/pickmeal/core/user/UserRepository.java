@@ -22,4 +22,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
 
     List<User> findAllByFamilyId(Long familyId);
+    boolean existsByIdAndFamilyId(Long id, Long familyId);
 }
