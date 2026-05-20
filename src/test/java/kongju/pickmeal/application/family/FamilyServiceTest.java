@@ -26,8 +26,8 @@ import kongju.pickmeal.core.user.UserRole;
 import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.data.FamilyDto;
-import kongju.pickmeal.application.family.data.FamilyMemberDto;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.application.family.data.FamilyMemberDto;
 import kongju.pickmeal.application.family.data.JoinRequestStatus;
 import kongju.pickmeal.application.family.data.FamilyInvitationDto;
 import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
@@ -547,7 +547,36 @@ public class FamilyServiceTest {
             FamilyMemberDto.KickResponse response = familyService.kickMember(1L, user);
             assertThat(response.kickedNickname()).isEqualTo("testNickname");
         }
-
-
     }
+
+    @Nested
+    @DisplayName("그룹 나가기")
+    class LeaveFamily{
+        @Test
+        @DisplayName("가족 멤버가 아닌 경우")
+        public void should_fail_kick_member_not_my_family() {
+            User user = createUser();
+
+            given(userRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.leaveMember(user)
+            );
+
+            assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_kick_member() {
+            User user = createCustomUser("test", "test1234@gmail.com", "testNickname");
+            given(userRepository.findById(any())).willReturn(Optional.of(user));
+
+            assertDoesNotThrow(() -> familyService.leaveMember(user));
+            assertThat(user.getRole()).isEqualTo(UserRole.GUEST);
+        }
+    }
+
+
 }
