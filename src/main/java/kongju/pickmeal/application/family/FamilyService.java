@@ -1,6 +1,7 @@
 package kongju.pickmeal.application.family;
 
 import java.util.List;
+import java.util.Objects;
 
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
@@ -10,13 +11,9 @@ import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserRole;
 import kongju.pickmeal.core.user.UserRepository;
+import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.application.family.data.FamilyDto;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.family.data.FamilyMemberDto;
-import kongju.pickmeal.application.family.data.JoinRequestStatus;
-import kongju.pickmeal.application.family.data.FamilyInvitationDto;
-import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 @Service
 @Transactional
@@ -314,6 +311,7 @@ public class FamilyService {
 
     /**
      * 가족 그룹을 탈퇴하는 경우
+     *
      * @param user 탈퇴 유저
      */
     public void leaveMember(User user) {
@@ -323,5 +321,45 @@ public class FamilyService {
 
         // 권한 변경
         user.deleteFamilyMember();
+    }
+
+    /**
+     * 선택권 분배
+     * @param user 리더
+     * @param request 선택권 개수
+     * @return 자동 분배 여부
+     */
+    public FamilyPickDto.ConfigResponse pickConfig(User user, FamilyPickDto.UpdateConfigRequest request) {
+        // 자동 분배가 true인지 확인
+        boolean isAuto = request.isAutoAllocations();
+
+        if (isAuto) {
+            // true라면 기본 값 들어왔는지 확인
+            Long defaultCount = request.defaultAllocations();
+
+            // 멤버들 기본값에 따라 설정
+            userRepository.findAllByFamilyId(user.getFamilyId())
+                    .forEach(member -> member.setPickCount(defaultCount));
+
+        } else {
+            // false라면 멤버별 선택권 넣기
+            List<FamilyPickDto.UpdateConfigRequest.pickAllocations> pickAllocations = request.pickAllocations();
+
+            pickAllocations
+                    .forEach(pick -> {
+                        User member = userRepository.findById(pick.userId())
+                                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+                        if (!Objects.equals(member.getFamilyId(), user.getFamilyId())) {
+                            throw new BusinessException(ErrorCode.NOT_YOUR_FAMILY_MEMBER);
+                        }
+
+                        member.setPickCount(pick.pickCount());
+                    });
+        }
+
+        return FamilyPickDto.ConfigResponse.builder()
+                .isAutoAllocations(isAuto)
+                .build();
     }
 }
