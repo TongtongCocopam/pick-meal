@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
 
+import kongju.pickmeal.application.family.data.*;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -25,12 +26,7 @@ import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserRole;
 import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.application.family.data.FamilyDto;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.family.data.FamilyMemberDto;
-import kongju.pickmeal.application.family.data.JoinRequestStatus;
-import kongju.pickmeal.application.family.data.FamilyInvitationDto;
-import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 
 @ExtendWith(SpringExtension.class)
@@ -456,7 +452,7 @@ public class FamilyServiceTest {
 
     @Nested
     @DisplayName("가족 그룹 삭제")
-    class DisbandFamily{
+    class DisbandFamily {
         @Test
         @DisplayName("가족 아이디가 없는 경우")
         public void should_fail_disband_family_not_family() {
@@ -472,7 +468,7 @@ public class FamilyServiceTest {
 
         @Test
         @DisplayName("가족 그룹원이 남아 있는 경우")
-        public void should_fail_disband_family_exists_member(){
+        public void should_fail_disband_family_exists_member() {
             User user = createUser();
             User user2 = createUser();
             Family family = Family.builder()
@@ -507,7 +503,7 @@ public class FamilyServiceTest {
 
     @Nested
     @DisplayName("멤버 방출")
-    class KickMember{
+    class KickMember {
         @Test
         @DisplayName("존재하지 않는 아이디인 경우")
         public void should_fail_kick_member_not_found() {
@@ -551,7 +547,7 @@ public class FamilyServiceTest {
 
     @Nested
     @DisplayName("그룹 나가기")
-    class LeaveFamily{
+    class LeaveFamily {
         @Test
         @DisplayName("가족 멤버가 아닌 경우")
         public void should_fail_kick_member_not_my_family() {
@@ -578,5 +574,97 @@ public class FamilyServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("선택권 분배")
+    class PickAllocation {
+        @Test
+        @DisplayName("유저를 찾지 못한 경우")
+        public void should_fail_pick_allocation_user_not_found() {
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+            User user2 = createCustomUser("test22", "test2222@gmail.com", "testNickname");
+            user2.joinFamilyLeader(1L);
 
+            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations = FamilyPickDto.UpdateConfigRequest.pickAllocations.builder()
+                    .userId(user2.getId())
+                    .pickCount(null)
+                    .build();
+
+
+            FamilyPickDto.UpdateConfigRequest request = FamilyPickDto.UpdateConfigRequest.builder()
+                    .isAutoAllocations(false)
+                    .defaultAllocations(2L)
+                    .pickAllocations(List.of(pickAllocations))
+                    .build();
+
+            given(userRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.pickConfig(user, request)
+            );
+
+            assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("내 가족이 아닌 경우")
+        public void should_fail_pick_allocation_not_my_family() {
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+            User user2 = createCustomUser("test22", "test2222@gmail.com", "testNickname");
+            user2.joinFamilyLeader(2L);
+
+            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations = FamilyPickDto.UpdateConfigRequest.pickAllocations.builder()
+                    .userId(user2.getId())
+                    .pickCount(2L)
+                    .build();
+
+
+            FamilyPickDto.UpdateConfigRequest request = FamilyPickDto.UpdateConfigRequest.builder()
+                    .isAutoAllocations(false)
+                    .defaultAllocations(null)
+                    .pickAllocations(List.of(pickAllocations))
+                    .build();
+
+            given(userRepository.findById(any())).willReturn(Optional.of(user2));
+
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> familyService.pickConfig(user, request)
+            );
+
+            assertEquals(ErrorCode.NOT_YOUR_FAMILY_MEMBER, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("선택권 분배")
+        public void should_success_pick_allocation() {
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+            User user2 = createCustomUser("test22", "test2222@gmail.com", "testNickname");
+            user2.joinFamilyLeader(1L);
+
+            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations = FamilyPickDto.UpdateConfigRequest.pickAllocations.builder()
+                    .userId(user2.getId())
+                    .pickCount(2L)
+                    .build();
+
+
+            FamilyPickDto.UpdateConfigRequest request = FamilyPickDto.UpdateConfigRequest.builder()
+                    .isAutoAllocations(false)
+                    .defaultAllocations(null)
+                    .pickAllocations(List.of(pickAllocations))
+                    .build();
+
+            given(userRepository.findById(any())).willReturn(Optional.of(user2));
+
+
+            familyService.pickConfig(user, request);
+
+            assertEquals(2L, user2.getPickCount());
+        }
+
+    }
 }
