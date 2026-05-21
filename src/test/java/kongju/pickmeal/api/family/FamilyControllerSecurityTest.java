@@ -1,5 +1,6 @@
 package kongju.pickmeal.api.family;
 
+import kongju.pickmeal.application.family.data.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
@@ -12,12 +13,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
@@ -27,17 +26,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.FamilyService;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
-import kongju.pickmeal.application.family.data.FamilyMemberDto;
-import kongju.pickmeal.application.family.data.JoinRequestStatus;
-import kongju.pickmeal.application.family.data.FamilyInvitationDto;
-import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -318,6 +312,54 @@ public class FamilyControllerSecurityTest {
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
+        }
+    }
+
+    @Nested
+    @DisplayName("선택권 분배")
+    class PickAllocation {
+        @Test
+        @DisplayName("리더가 아닌 경우")
+        @WithMockUser(roles = "MEMBER")
+        public void should_fail_pick_allocation_not_reader() throws Exception {
+            FamilyPickDto.UpdateConfigRequest request = FamilyPickDto.UpdateConfigRequest.builder()
+                    .pickAllocations(null)
+                    .isAutoAllocations(true)
+                    .defaultAllocations(1L)
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/families/me/picks/config")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                    )
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        @WithMockUser(roles = "LEADER")
+        public void should_success_pick_allocation() throws Exception {
+            FamilyPickDto.UpdateConfigRequest request = FamilyPickDto.UpdateConfigRequest.builder()
+                    .pickAllocations(null)
+                    .isAutoAllocations(true)
+                    .defaultAllocations(1L)
+                    .build();
+
+            FamilyPickDto.ConfigResponse response = FamilyPickDto.ConfigResponse.builder()
+                    .isAutoAllocations(true)
+                    .build();
+
+            given(familyService.pickConfig(any(), any())).willReturn(response);
+
+            mockMvc.perform(patch("/api/v1/families/me/picks/config")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data").exists());
+
         }
     }
 

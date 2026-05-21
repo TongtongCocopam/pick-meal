@@ -3,11 +3,8 @@ package kongju.pickmeal.core.user;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import lombok.Getter;
-import lombok.Builder;
-import lombok.AccessLevel;
+import lombok.*;
 import jakarta.persistence.*;
-import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -42,6 +39,7 @@ public class User extends BaseTimeEntity {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    @Setter
     private Long pickCount;
 
     @Builder

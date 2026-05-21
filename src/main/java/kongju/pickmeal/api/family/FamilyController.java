@@ -11,12 +11,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.family.FamilyService;
-import kongju.pickmeal.application.family.data.FamilyDto;
-import kongju.pickmeal.application.family.data.FamilyMemberDto;
-import kongju.pickmeal.application.family.data.FamilyInvitationDto;
-import kongju.pickmeal.application.family.data.FamilyJoinRequestDto;
 
 
 @RestController
@@ -122,6 +119,19 @@ public class FamilyController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
+    }
+
+    @PatchMapping("/me/picks/config")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<FamilyPickDto.ConfigResponse>> pickAllocation(
+            @AuthenticationPrincipal User user,
+            @RequestBody @Valid FamilyPickDto.UpdateConfigRequest request
+    ) {
+        FamilyPickDto.ConfigResponse response = familyService.pickConfig(user, request);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(response));
     }
 
 }
