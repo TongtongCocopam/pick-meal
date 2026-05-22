@@ -95,7 +95,7 @@ public class FamilyControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.error.detail").value("초대 코드는 필수입니다."))
+                    .andExpect(jsonPath("$.error.detail").value("초대 코드는 8자리여야 합니다."))
                     .andExpect(jsonPath("$.error.message").value("입력 형식이 올바르지 않습니다."));
 
         }
