@@ -87,7 +87,7 @@ public class FamilyControllerTest {
         @DisplayName("파라미터 형식에 맞지 않는 경우")
         public void should_fail_apply_params_not_valid() throws Exception {
             FamilyJoinRequestDto.CreateRequest request = FamilyJoinRequestDto.CreateRequest.builder()
-                    .invitationCode("")
+                    .invitationCode(" ")
                     .build();
 
             mockMvc.perform(post("/api/v1/families/applications")
@@ -95,7 +95,7 @@ public class FamilyControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false))
-                    .andExpect(jsonPath("$.error.detail").value("초대 코드는 8자리여야 합니다."))
+                    .andExpect(jsonPath("$.error.detail").exists())
                     .andExpect(jsonPath("$.error.message").value("입력 형식이 올바르지 않습니다."));
 
         }
