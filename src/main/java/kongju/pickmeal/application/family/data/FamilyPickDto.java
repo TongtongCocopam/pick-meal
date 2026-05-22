@@ -31,4 +31,12 @@ public class FamilyPickDto {
             Boolean isAutoAllocations
     ) {
     }
+
+    @Builder
+    public record ResetResponse(
+            Integer resetMember,
+            String resetAt
+    ){
+
+    }
 }

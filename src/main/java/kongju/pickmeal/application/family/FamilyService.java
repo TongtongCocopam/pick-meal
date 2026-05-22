@@ -1,5 +1,6 @@
 package kongju.pickmeal.application.family;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -325,7 +326,8 @@ public class FamilyService {
 
     /**
      * 선택권 분배
-     * @param user 리더
+     *
+     * @param user    리더
      * @param request 선택권 개수
      * @return 자동 분배 여부
      */
@@ -362,4 +364,17 @@ public class FamilyService {
                 .isAutoAllocations(isAuto)
                 .build();
     }
+
+    public FamilyPickDto.ResetResponse resetConfig(User user) {
+        // 멤버 목록 불러와 선택권 초기화
+        List<User> userList = userRepository.findAllByFamilyId(user.getFamilyId());
+
+        userList.forEach(member -> member.setPickCount(0L));
+
+        return FamilyPickDto.ResetResponse.builder()
+                .resetMember(userList.size())
+                .resetAt(String.valueOf(LocalDateTime.now()))
+                .build();
+    }
+
 }

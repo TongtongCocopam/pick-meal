@@ -667,4 +667,45 @@ public class FamilyServiceTest {
         }
 
     }
+
+    @Nested
+    @DisplayName("선택권 초기화")
+    class ResetAllocation {
+        @Test
+        @DisplayName("유저가 한명 밖에 없을 경우")
+        public void should_success_reset_allocation_user_not_found() {
+            User user = createUser();
+            user.joinFamilyLeader(1L);
+            user.setPickCount(5L);
+            given(userRepository.findAllByFamilyId(any())).willReturn(List.of(user));
+
+            familyService.resetConfig(user);
+
+            assertThat(user.getPickCount()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_reset_allocation() {
+            User leader = createUser();
+            leader.joinFamilyLeader(1L);
+            leader.setPickCount(5L);
+
+            User member1 = createCustomUser("test1", "test1@mail", "test1");
+            member1.joinFamilyLeader(1L);
+
+            User member2 = createCustomUser("test2", "test2@mail", "test2");
+            member2.joinFamilyLeader(1L);
+
+            given(userRepository.findAllByFamilyId(any())).willReturn(List.of(leader, member1, member2));
+
+            familyService.resetConfig(leader);
+
+            assertThat(leader.getPickCount()).isEqualTo(0);
+            assertThat(member1.getPickCount()).isEqualTo(0);
+            assertThat(member2.getPickCount()).isEqualTo(0);
+        }
+
+    }
+
 }

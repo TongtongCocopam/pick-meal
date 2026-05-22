@@ -1,5 +1,6 @@
 package kongju.pickmeal.api.family;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -363,4 +364,34 @@ public class FamilyControllerSecurityTest {
         }
     }
 
+    @Nested
+    @DisplayName("선택권 초기화")
+    class ResetAllocation {
+        @Test
+        @DisplayName("리더가 아닌 경우")
+        @WithMockUser(roles = "MEMBER")
+        public void should_fail_reset_allocation_not_leader() throws Exception {
+            mockMvc.perform(post("/api/v1/families/me/picks/reset"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        @WithMockUser(roles = "LEADER")
+        public void should_success_reset_allocation() throws Exception {
+            FamilyPickDto.ResetResponse response = FamilyPickDto.ResetResponse.builder()
+                    .resetMember(6)
+                    .resetAt(String.valueOf(LocalDateTime.now()))
+                    .build();
+
+            given(familyService.resetConfig(any())).willReturn(response);
+
+            mockMvc.perform(post("/api/v1/families/me/picks/reset"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.resetMember").value(6))
+                    .andExpect(jsonPath("$.data.resetAt").exists());
+        }
+    }
 }
