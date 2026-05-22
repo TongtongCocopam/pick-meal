@@ -134,4 +134,12 @@ public class FamilyController {
                 .body(ApiResponse.success(response));
     }
 
+    @PostMapping("/me/picks/reset")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<FamilyPickDto.ResetResponse>> resetAllocation(@AuthenticationPrincipal User user) {
+        FamilyPickDto.ResetResponse response = familyService.resetConfig(user);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(response));
+    }
 }
