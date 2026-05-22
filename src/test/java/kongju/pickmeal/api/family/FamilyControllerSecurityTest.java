@@ -1,6 +1,8 @@
 package kongju.pickmeal.api.family;
 
-import kongju.pickmeal.application.family.data.*;
+import java.util.List;
+import java.util.ArrayList;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
@@ -28,13 +30,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.family.FamilyService;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
-
-import java.util.List;
-import java.util.ArrayList;
 
 
 @WebMvcTest(FamilyController.class)
