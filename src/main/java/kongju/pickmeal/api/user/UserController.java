@@ -4,14 +4,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
+import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.application.user.UserService;
 import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
+import kongju.pickmeal.application.user.data.UserDietProfileDto;
 
 
 @RestController
@@ -26,5 +26,17 @@ public class UserController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));
+    }
+
+    @PatchMapping("/me/diet-profile")
+    public ResponseEntity<ApiResponse<Void>> updateDietProfile(
+            @RequestBody @Valid UserDietProfileDto.UpdateRequest request,
+            @AuthenticationPrincipal User user){
+
+        userService.updateDietProfile(request, user);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success());
     }
 }
