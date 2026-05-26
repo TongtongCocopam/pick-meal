@@ -6,6 +6,8 @@ public class UserFixture {
     public static User user() {
         return User.builder()
                 .loginId("testUser")
+                .nickName("tester")
+                .password("password1234")
                 .email("test1234@gmail.com")
                 .build();
     }
