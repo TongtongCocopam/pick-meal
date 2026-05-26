@@ -14,21 +14,20 @@ public interface FamilyJoinRepository extends JpaRepository<FamilyJoinRequest, L
     @Query("SELECT COUNT(ja) > 0 " +
             "FROM FamilyJoinRequest ja WHERE ja.user = :user AND " +
             "ja.status =:status AND " +
-            "ja.familyId =:familyId"
+            "ja.family =:family"
     )
-    boolean checkPendingRequest(User user, Long familyId, ApplyStatus status);
+    boolean checkPendingRequest(User user, Family family, ApplyStatus status);
 
     @Query("SELECT ja FROM FamilyJoinRequest ja " +
             "JOIN FETCH ja.user " +
-            "WHERE ja.familyId = :familyId AND " +
+            "WHERE ja.family = :family AND " +
             "ja.status = :status"
     )
-    List<FamilyJoinRequest> findAllByFamilyIdAndStatus(Long familyId, ApplyStatus status);
+    List<FamilyJoinRequest> findAllByFamilyAndStatus(Family family, ApplyStatus status);
 
     @Query("SELECT ja FROM FamilyJoinRequest ja " +
             "JOIN FETCH ja.user AND " +
-            "WHERE ja.familyId = :familyId"
+            "WHERE ja.family = :family"
     )
-    Optional<FamilyJoinRequest> findByIdAndFamilyId(Long id, Long familyId);
-
+    Optional<FamilyJoinRequest> findByIdAndFamily(Long id, Long family);
 }
