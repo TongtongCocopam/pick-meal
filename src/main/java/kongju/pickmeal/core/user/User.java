@@ -3,6 +3,8 @@ package kongju.pickmeal.core.user;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.core.user.type.UserRole;
 import lombok.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Past;
@@ -29,18 +31,20 @@ public class User extends BaseTimeEntity {
     @NotNull
     @Past(message = "생년월일은 미래일 수 없습니다.")
     private LocalDate birthDate;
-    private Long familyId;
     @Column(nullable = false, unique = true)
     private String loginId;
     @Column(nullable = false)
     private String password;
     @Column(nullable = false)
     private String email;
+    @Setter
+    private Long pickCount;
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    @Setter
-    private Long pickCount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_id")
+    private Family family;
 
     @Builder
     public User(String nickName, LocalDate birthDate, String loginId, String email, String password){
@@ -53,29 +57,29 @@ public class User extends BaseTimeEntity {
         this.pickCount = 0L;
     }
 
-    public void joinFamilyLeader(Long familyId){
-        if(this.familyId != null){
+    public void joinFamilyLeader(Family family){
+        if(this.family != null){
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
-        this.familyId = familyId;
+        this.family = family;
         this.role = UserRole.READER;
     }
 
-    public void joinFamilyMember(Long familyId){
-        if(this.familyId != null){
+    public void joinFamilyMember(Family family){
+        if(this.family != null){
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
-        this.familyId = familyId;
+        this.family = family;
         this.role = UserRole.MEMBER;
     }
 
     public void deleteFamilyLeader(){
         this.role = UserRole.GUEST;
-        this.familyId = null;
+        this.family = null;
     }
 
     public void deleteFamilyMember(){
         this.role = UserRole.GUEST;
-        this.familyId = null;
+        this.family = null;
     }
 }

@@ -4,11 +4,10 @@ package kongju.pickmeal.core.user;
 import java.util.List;
 import java.util.Optional;
 
+import kongju.pickmeal.core.family.Family;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/**
- * 유저 레포지토리
- */
+
 public interface UserRepository extends JpaRepository<User, Long> {
 
     /**
@@ -20,7 +19,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByLoginId(String loginId);
     boolean existsByEmail(String email);
-
-    List<User> findAllByFamilyId(Long familyId);
-    boolean existsByIdAndFamilyId(Long id, Long familyId);
+    List<User> findAllByFamily(Family family);
+    boolean existsByIdAndFamily(Long id, Family family);
 }

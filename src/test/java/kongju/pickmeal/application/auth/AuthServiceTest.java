@@ -35,6 +35,8 @@ import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.common.exception.BusinessException;
 
+import static kongju.pickmeal.support.fixture.UserFixture.user;
+
 
 @ExtendWith(SpringExtension.class)
 public class AuthServiceTest {
@@ -61,13 +63,6 @@ public class AuthServiceTest {
 
     @InjectMocks
     private AuthService authService;
-
-    private static User createUser() {
-        return User.builder()
-                .loginId("test1234")
-                .password("password1234")
-                .build();
-    }
 
     @Nested
     @DisplayName("로그인 테스트")
@@ -117,7 +112,7 @@ public class AuthServiceTest {
                     .loginId("test1234")
                     .password("password1234")
                     .build();
-            User user = createUser();
+            User user = user();
 
             given(userRepository.findByLoginId("test1234")).willReturn(Optional.of(user));
 
@@ -152,7 +147,7 @@ public class AuthServiceTest {
             String accessToken = "mock_access_token";
             String refreshToken = "mock_refresh_token";
 
-            User user = createUser();
+            User user = user();
 
             given(jwtService.extractAccessToken(authorizationHeader))
                     .willReturn(Optional.of(accessToken));
@@ -215,7 +210,7 @@ public class AuthServiceTest {
             String accessToken = "mock_access_token";
             String refreshToken = "mock_refresh_token";
 
-            User user = createUser();
+            User user = user();
 
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
@@ -263,7 +258,7 @@ public class AuthServiceTest {
         @Test
         @DisplayName("토큰 재발급 성공")
         public void should_success_refresh() {
-            User user = createUser();
+            User user = user();
             // 리프레시 토큰 시간, 액세스 토큰이 발급 시간 확인
             String oldRefreshToken = "oldRefreshToken";
 

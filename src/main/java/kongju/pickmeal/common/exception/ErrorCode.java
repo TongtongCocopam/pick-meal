@@ -14,6 +14,7 @@ public enum ErrorCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "인증 기간이 만료되었습니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
+
     LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 일치하지 않습니다."),
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "이미 존재하는 정보입니다."),
     INVALID_NICKNAME(HttpStatus.BAD_REQUEST, "유효하지 않은 닉네임입니다."),
@@ -21,6 +22,7 @@ public enum ErrorCode {
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다."),
     SAME_AS_OLD_PASSWORD(HttpStatus.BAD_REQUEST, "새 비밀번호가 현재 비밀번호와 동일합니다."),
     WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호 보안 정책에 부합하지 않습니다."),
+
     ALREADY_HAS_FAMILY(HttpStatus.BAD_REQUEST, "이미 소속된 가족이 있습니다."),
     FAMILY_NOT_FOUND(HttpStatus.NOT_FOUND, "가입된 가족 정보가 없습니다."),
     NOT_FAMILY_MEMBER(HttpStatus.FORBIDDEN, "가족 구성원이 아닙니다."),
@@ -31,6 +33,7 @@ public enum ErrorCode {
     INVITATION_CODE_REISSUE_TOO_FAST(HttpStatus.BAD_REQUEST, "초대코드 재발급 제한 시간이 지나지 않았습니다."),
     FAMILY_MEMBER_EXISTS(HttpStatus.BAD_REQUEST, "구성원을 모두 방출한 후에 삭제할 수 있습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
+
     ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 요청입니다."),
     DIET_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 식단이 이미 존재합니다."),
     DIET_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 식단 정보가 없습니다."),

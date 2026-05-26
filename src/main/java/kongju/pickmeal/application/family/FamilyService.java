@@ -1,8 +1,8 @@
 package kongju.pickmeal.application.family;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.time.LocalDateTime;
 
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
-import kongju.pickmeal.core.user.UserRole;
+import kongju.pickmeal.core.user.type.UserRole;
 import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
@@ -20,10 +20,10 @@ import kongju.pickmeal.common.exception.BusinessException;
 @Transactional
 @RequiredArgsConstructor
 public class FamilyService {
+    private final UserRepository userRepository;
     private final FamilyRepository familyRepository;
     private final FamilyJoinRepository familyJoinRepository;
     private final InvitationCodeGenerator invitationCodeGenerator;
-    private final UserRepository userRepository;
 
     /**
      * 가족 만들기
@@ -44,7 +44,7 @@ public class FamilyService {
         // 저장
         familyRepository.save(family);
         // 현재 유저를 리더로 가족 아이디와 연결
-        user.joinFamilyLeader(family.getId());
+        user.joinFamilyLeader(family);
 
         return FamilyDto.CreateResponse.builder()
                 .familyName(family.getFamilyName())
@@ -65,7 +65,7 @@ public class FamilyService {
         // 신청 테이블 만들기
         FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
                 .user(user)
-                .familyId(family.getId())
+                .family(family)
                 .status(ApplyStatus.PENDING)
                 .build();
 
@@ -82,16 +82,16 @@ public class FamilyService {
      */
     private Family validationJoinRequest(String invitationCode, User user) {
         // 가족이 이미 있음
-        if (user.getFamilyId() != null) {
+        if (user.getFamily() != null) {
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
 
-        // 가족이 있는 경우
+        // 초대코드와 일치하는 가족그룹이 없는 경우
         Family family = familyRepository.findByInvitationCode(invitationCode)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITATION_CODE));
 
         // 이미 신청한 경우
-        if (familyJoinRepository.checkPendingRequest(user, family.getId(), ApplyStatus.PENDING)) {
+        if (familyJoinRepository.checkPendingRequest(user, family, ApplyStatus.PENDING)) {
             throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
         }
 
@@ -106,10 +106,10 @@ public class FamilyService {
      */
     public List<FamilyJoinRequestDto.Summary> loadJoinRequestSummary(User user) {
         // 가족이 없는지 확인
-        Long familyId = validationFamily(user.getFamilyId());
+        Family family = validationFamily(user.getFamily());
 
         // 유저 패밀리와 연관된 신청 리스트 가져오기
-        return familyJoinRepository.findAllByFamilyIdAndStatus(familyId, ApplyStatus.PENDING)
+        return familyJoinRepository.findAllByFamilyAndStatus(family, ApplyStatus.PENDING)
                 .stream()
                 .map(FamilyJoinRequestDto.Summary::from)
                 .toList();
@@ -118,14 +118,14 @@ public class FamilyService {
     /**
      * 가족 있는지 여부 확인
      *
-     * @param familyId 해당 유저 객체
+     * @param family 해당 유저 객체
      * @return 가족 아이디 반환
      */
-    private Long validationFamily(Long familyId) {
-        if (familyId == null) {
+    private Family validationFamily(Family family) {
+        if (family == null) {
             throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
         }
-        return familyId;
+        return family;
     }
 
     /**
@@ -144,7 +144,7 @@ public class FamilyService {
         validateDecision(request.decision());
 
         // 존재하는 요청 아이디인지 확인하고 테이블 불러오기
-        FamilyJoinRequest familyJoinRequest = getFamilyJoinRequest(requestId, user.getFamilyId());
+        FamilyJoinRequest familyJoinRequest = getFamilyJoinRequest(requestId, user.getFamily());
 
         // 가족 구성원인지 확인 and 일반 user 인지도 확인?
         User joinRequestUser = familyJoinRequest.getUser();
@@ -165,7 +165,7 @@ public class FamilyService {
         familyJoinRequest.accept();
 
         // user테이블에 가족 테이블 연결, 멤버로 상태 변경
-        joinRequestUser.joinFamilyMember(user.getFamilyId());
+        joinRequestUser.joinFamilyMember(user.getFamily());
 
         return toProcessRequest(
                 requestId,
@@ -189,14 +189,14 @@ public class FamilyService {
      * 요청 기록 확인
      *
      * @param requestId 요청 아이디
-     * @param familyId  가족 아이디
+     * @param family  가족 객체
      * @return 요청 테이블
      */
-    private FamilyJoinRequest getFamilyJoinRequest(Long requestId, Long familyId) {
+    private FamilyJoinRequest getFamilyJoinRequest(Long requestId, Family family) {
         FamilyJoinRequest joinRequest = familyJoinRepository.findById(requestId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REQUEST_NOT_FOUND));
 
-        if (!joinRequest.getFamilyId().equals(familyId)) {
+        if (!joinRequest.getFamily().equals(family)) {
             throw new BusinessException(ErrorCode.NOT_YOUR_FAMILY_REQUEST);
         }
 
@@ -209,7 +209,7 @@ public class FamilyService {
      * @param user 신청 유저
      */
     private void validationUser(User user) {
-        if (user.getFamilyId() != null || user.getRole() != UserRole.GUEST) {
+        if (user.getFamily() != null || user.getRole() != UserRole.GUEST) {
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
     }
@@ -231,6 +231,22 @@ public class FamilyService {
     }
 
     /**
+     * 가족이 있는지 체크 후 가족 객체 반환
+     * @param user 가족 체크할 유저 객체
+     * @return family 객체
+     */
+    private Family validationFamily(User user) {
+        if(user.getFamily() == null) {
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
+
+        Long familyId = user.getFamily().getId();
+
+        return familyRepository.findById(familyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+    }
+
+    /**
      * 초대 코드 재발급
      *
      * @param user 재발급 리더
@@ -238,8 +254,8 @@ public class FamilyService {
      */
     public FamilyInvitationDto.CodeResponse createInvitationCode(User user) {
         String invitationCode = invitationCodeGenerator.generateUniqueCode();
-        Family family = familyRepository.findById(user.getFamilyId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+
+        Family family = validationFamily(user);
 
         family.reissueInvitationCode(invitationCode);
 
@@ -257,11 +273,10 @@ public class FamilyService {
      */
     public List<FamilyMemberDto.ListItem> getMembers(User user) {
         // 가족이 있는지 확인
-        Family family = familyRepository.findById(user.getFamilyId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+        Family family = validationFamily(user);
 
         // 가족 id를 외래키로 가지고 있는 user리스트 가져오기
-        return userRepository.findAllByFamilyId(family.getId())
+        return userRepository.findAllByFamily(family)
                 .stream()
                 .map(member -> FamilyMemberDto.ListItem.builder()
                         .id(member.getId())
@@ -277,11 +292,10 @@ public class FamilyService {
      */
     public void disbandFamily(User user) {
         // 가족 그룹이 있는지 확인하고 family가져오기
-        Family family = familyRepository.findById(user.getFamilyId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+        Family family = validationFamily(user);
 
         // member가 있는지 확인
-        List<User> userList = userRepository.findAllByFamilyId(family.getId());
+        List<User> userList = userRepository.findAllByFamily(family);
 
         // 멤버가 있으면 실패
         if (userList.size() != 1) {
@@ -299,7 +313,7 @@ public class FamilyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         // 패밀리 멤버가 맞는지 확인
-        if (!userRepository.existsByIdAndFamilyId(userId, user.getFamilyId())) {
+        if (!userRepository.existsByIdAndFamily(userId, user.getFamily())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "해당 가족의 리더가 아닙니다.");
         }
 
@@ -317,8 +331,7 @@ public class FamilyService {
      */
     public void leaveMember(User user) {
         // 가족이 없는 경우
-        userRepository.findById(user.getFamilyId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+        validationFamily(user);
 
         // 권한 변경
         user.deleteFamilyMember();
@@ -340,7 +353,7 @@ public class FamilyService {
             Long defaultCount = request.defaultAllocations();
 
             // 멤버들 기본값에 따라 설정
-            userRepository.findAllByFamilyId(user.getFamilyId())
+            userRepository.findAllByFamily(user.getFamily())
                     .forEach(member -> member.setPickCount(defaultCount));
 
         } else {
@@ -352,7 +365,7 @@ public class FamilyService {
                         User member = userRepository.findById(pick.userId())
                                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-                        if (!Objects.equals(member.getFamilyId(), user.getFamilyId())) {
+                        if (!Objects.equals(member.getFamily(), user.getFamily())) {
                             throw new BusinessException(ErrorCode.NOT_YOUR_FAMILY_MEMBER);
                         }
 
@@ -367,7 +380,7 @@ public class FamilyService {
 
     public FamilyPickDto.ResetResponse resetConfig(User user) {
         // 멤버 목록 불러와 선택권 초기화
-        List<User> userList = userRepository.findAllByFamilyId(user.getFamilyId());
+        List<User> userList = userRepository.findAllByFamily(user.getFamily());
 
         userList.forEach(member -> member.setPickCount(0L));
 
