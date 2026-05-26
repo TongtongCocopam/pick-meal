@@ -112,6 +112,7 @@ public class AuthServiceTest {
                     .loginId("test1234")
                     .password("password1234")
                     .build();
+
             User user = user();
 
             given(userRepository.findByLoginId("test1234")).willReturn(Optional.of(user));
