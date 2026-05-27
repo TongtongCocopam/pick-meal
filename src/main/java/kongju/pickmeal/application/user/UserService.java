@@ -108,19 +108,13 @@ public class UserService {
      * @param request 질병 리스트, 기호 식품 리스트
      * @param user    신청 유저 객체
      */
-    public void updateDietProfile(UserDietProfileDto.UpdateRequest request, User user) {
-        List<UserDietProfileDto.DiseaseRequest> diseases = request.diseases();
-        List<UserDietProfileDto.IngredientPreferenceRequest> ingredientPreferenceRequests = request.ingredientPreferences();
-
-        if ((diseases == null || diseases.isEmpty()) &&
-                (ingredientPreferenceRequests == null || ingredientPreferenceRequests.isEmpty())) {
+    public void updateDisease(UserDietProfileDto.UpdateDiseaseRequest request, User user) {
+        if (request == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "변경할 데이터가 존재하지 않습니다.");
         }
 
-        // 알레르기 정보는 최대 30개 받을 수 있음
-        // 선호 비선호 각 15개 제한
-        validateIngredientPreferences(ingredientPreferenceRequests);
         // 질병 정보 유효한지 확인
+        List<UserDietProfileDto.DiseaseRequest> diseases = request.diseases();
         validateDisease(diseases);
 
         List<UserDisease> userDiseases = Objects.requireNonNull(diseases)
@@ -135,8 +129,43 @@ public class UserService {
                 )
                 .toList();
 
+        userDiseaseRepository.saveAll(userDiseases);
 
-        List<UserIngredientPreference> preferences = Objects.requireNonNull(ingredientPreferenceRequests)
+    }
+
+    /**
+     * 질병 유효 검증
+     *
+     * @param diseases 질병 목록
+     */
+    private void validateDisease(List<UserDietProfileDto.DiseaseRequest> diseases) {
+        Set<DiseaseName> diseaseType = new HashSet<>();
+
+        for (UserDietProfileDto.DiseaseRequest disease : diseases) {
+            // 중복되는 질병이 있는지 체크
+            if (!diseaseType.add(disease.detailName())) {
+                throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE, "중복되는 병명이 있습니다.");
+            }
+
+            // 카테고리와 병명 종류가 일치하는지
+            if (!disease.detailName().isInCategory(disease.category())) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "질병 분류와 상세 병명이 일치하지 않습니다.");
+            }
+
+        }
+    }
+
+    public void updateIngredientPreference(UserDietProfileDto.UpdateIngredientPreferenceRequest request, User user) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "변경할 데이터가 존재하지 않습니다.");
+        }
+
+        // 알레르기 정보는 최대 30개 받을 수 있음
+        // 선호 비선호 각 15개 제한
+        List<UserDietProfileDto.IngredientPreferenceRequest> preferences = request.preferences();
+        validateIngredientPreferences(preferences);
+
+        List<UserIngredientPreference> userIngredientPreferences = Objects.requireNonNull(preferences)
                 .stream()
                 .map(preference -> {
                     Ingredient ingredient = ingredientRepository.findById(preference.ingredientId())
@@ -150,8 +179,7 @@ public class UserService {
                 })
                 .toList();
 
-        userDiseaseRepository.saveAll(userDiseases);
-        userIngredientPreferenceRepository.saveAll(preferences);
+        userIngredientPreferenceRepository.saveAll(userIngredientPreferences);
 
     }
 
@@ -167,9 +195,7 @@ public class UserService {
             return;
         }
 
-        int allergyCount = 0;
-        int preferredCount = 0;
-        int dislikedCount = 0;
+        int allergyCount = 0, preferredCount = 0, dislikedCount = 0;
 
         Set<Long> ingredientIds = new HashSet<>();
 
@@ -196,32 +222,6 @@ public class UserService {
 
         if (dislikedCount > MAX_DISLIKED_INGREDIENT_COUNT) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "비선호 재료는 최대 15개까지 설정 가능합니다.");
-        }
-    }
-
-    /**
-     * 질병 유효 검증
-     *
-     * @param diseases 질병 목록
-     */
-    private void validateDisease(List<UserDietProfileDto.DiseaseRequest> diseases) {
-        if (diseases == null || diseases.isEmpty()) {
-            return;
-        }
-
-        Set<DiseaseName> diseaseType = new HashSet<>();
-
-        for (UserDietProfileDto.DiseaseRequest disease : diseases) {
-            // 중복되는 질병이 있는지 체크
-            if (!diseaseType.add(disease.detailName())) {
-                throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE, "중복되는 병명이 있습니다.");
-            }
-
-            // 카테고리와 병명 종류가 일치하는지
-            if (!disease.detailName().isInCategory(disease.category())) {
-                throw new BusinessException(ErrorCode.INVALID_INPUT, "질병 분류와 상세 병명이 일치하지 않습니다.");
-            }
-
         }
     }
 

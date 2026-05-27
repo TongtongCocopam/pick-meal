@@ -13,6 +13,8 @@ import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
 
+import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -21,20 +23,31 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<UserDto.SignupResponse>> signup(@RequestBody @Valid UserDto.SignupRequest request){
+    public ResponseEntity<ApiResponse<UserDto.SignupResponse>> signup(@RequestBody @Valid UserDto.SignupRequest request) {
         UserDto.SignupResponse response = userService.signup(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));
     }
 
-    @PatchMapping("/me/diet-profile")
+    @PatchMapping("/me/diseases")
     public ResponseEntity<ApiResponse<Void>> updateDietProfile(
-            @RequestBody @Valid UserDietProfileDto.UpdateRequest request,
-            @AuthenticationPrincipal User user){
+            @RequestBody @Valid UserDietProfileDto.UpdateDiseaseRequest request,
+            @AuthenticationPrincipal User user) {
 
-        userService.updateDietProfile(request, user);
+        userService.updateDisease(request, user);
 
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success());
+    }
+
+    @PatchMapping("/me/ingredient-preferences")
+    public ResponseEntity<ApiResponse<Void>> updateIngredientPreferences(
+            @RequestBody @Valid UserDietProfileDto.UpdateIngredientPreferenceRequest request,
+            @AuthenticationPrincipal User user) {
+
+        userService.updateIngredientPreference(request, user);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
