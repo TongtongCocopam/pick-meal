@@ -133,19 +133,71 @@ public class UserServiceTest {
     }
 
     @Nested
-    @DisplayName("유저 건강, 선호 식품 정보 수정")
-    class DietProfile {
-        private UserDietProfileDto.IngredientPreferenceRequest createPreference(Long id) {
-            return UserDietProfileDto.IngredientPreferenceRequest.builder()
-                    .preference(FoodPreferenceType.PREFERRED)
-                    .ingredientId(id)
-                    .build();
-        }
-
+    @DisplayName("유저 건강 정보 수정")
+    class DiseaseProfile {
         private UserDietProfileDto.DiseaseRequest createDisease(DiseaseCategory category, DiseaseName diseaseName) {
             return UserDietProfileDto.DiseaseRequest.builder()
                     .category(category)
                     .detailName(diseaseName)
+                    .build();
+        }
+
+        @Test
+        @DisplayName("병명 중복")
+        public void should_fail_diet_profile_when_disease_is_duplicate() {
+            List<UserDietProfileDto.DiseaseRequest> diseases =
+                    Collections.nCopies(2, createDisease(DiseaseCategory.DIGESTIVE, DiseaseName.GASTRITIS));
+
+            UserDietProfileDto.UpdateDiseaseRequest request = UserDietProfileDto.UpdateDiseaseRequest.builder()
+                    .diseases(diseases)
+                    .build();
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.updateDisease(request, user()));
+
+            assertEquals(ErrorCode.DUPLICATE_RESOURCE, exception.getErrorCode());
+            assertEquals("중복되는 병명이 있습니다.", exception.getDetailMessage());
+        }
+
+
+        @Test
+        @DisplayName("질병 분류와 일치하지 않는 병명")
+        public void should_fail_diet_profile_when_not_correct_disease_name() {
+            UserDietProfileDto.DiseaseRequest disease = createDisease(DiseaseCategory.IMMUNE, DiseaseName.GASTRITIS);
+            UserDietProfileDto.UpdateDiseaseRequest request = UserDietProfileDto.UpdateDiseaseRequest.builder()
+                    .diseases(List.of(disease))
+                    .build();
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.updateDisease(request, user()));
+
+            assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
+            assertEquals("질병 분류와 상세 병명이 일치하지 않습니다.", exception.getDetailMessage());
+        }
+
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_diet_profile() {
+            UserDietProfileDto.DiseaseRequest disease = createDisease(DiseaseCategory.DIGESTIVE, DiseaseName.GASTRITIS);
+            UserDietProfileDto.UpdateDiseaseRequest request = UserDietProfileDto.UpdateDiseaseRequest.builder()
+                    .diseases(List.of(disease))
+                    .build();
+
+            assertDoesNotThrow(() -> userService.updateDisease(request, user()));
+
+            verify(userDiseaseRepository).saveAll(any());
+        }
+
+    }
+
+    @Nested
+    @DisplayName("선호 식품 정보 수정")
+    class PreferenceProfile {
+        private UserDietProfileDto.IngredientPreferenceRequest createPreference(Long id) {
+            return UserDietProfileDto.IngredientPreferenceRequest.builder()
+                    .preference(FoodPreferenceType.PREFERRED)
+                    .ingredientId(id)
                     .build();
         }
 
@@ -155,11 +207,12 @@ public class UserServiceTest {
             UserDietProfileDto.IngredientPreferenceRequest preference1 = createPreference(1L);
             UserDietProfileDto.IngredientPreferenceRequest preference2 = createPreference(1L);
 
-            UserDietProfileDto.UpdateRequest request = UserDietProfileDto.UpdateRequest.builder()
-                    .ingredientPreferences(List.of(preference1, preference2))
+            UserDietProfileDto.UpdateIngredientPreferenceRequest request = UserDietProfileDto.UpdateIngredientPreferenceRequest.builder()
+                    .preferences(List.of(preference1, preference2))
                     .build();
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDietProfile(request, user()));
+                    () -> userService.updateIngredientPreference(request, user()));
 
             assertEquals(ErrorCode.DUPLICATE_RESOURCE, exception.getErrorCode());
         }
@@ -171,72 +224,30 @@ public class UserServiceTest {
                     .mapToObj(this::createPreference)
                     .toList();
 
-
-            UserDietProfileDto.UpdateRequest request = UserDietProfileDto.UpdateRequest.builder()
-                    .ingredientPreferences(preferences)
-                    .diseases(List.of())
+            UserDietProfileDto.UpdateIngredientPreferenceRequest request = UserDietProfileDto.UpdateIngredientPreferenceRequest.builder()
+                    .preferences(preferences)
                     .build();
 
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDietProfile(request, user()));
+                    () -> userService.updateIngredientPreference(request, user()));
 
             assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
             assertEquals("선호 재료는 최대 15개까지 설정 가능합니다.", exception.getDetailMessage());
         }
 
-
-        @Test
-        @DisplayName("병명 중복")
-        public void should_fail_diet_profile_when_disease_is_duplicate() {
-            List<UserDietProfileDto.DiseaseRequest> diseases =
-                    Collections.nCopies(2, createDisease(DiseaseCategory.DIGESTIVE, DiseaseName.GASTRITIS));
-
-            UserDietProfileDto.UpdateRequest request = UserDietProfileDto.UpdateRequest.builder()
-                    .ingredientPreferences(List.of())
-                    .diseases(diseases)
-                    .build();
-
-
-            BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDietProfile(request, user()));
-
-            assertEquals(ErrorCode.DUPLICATE_RESOURCE, exception.getErrorCode());
-            assertEquals("중복되는 병명이 있습니다.", exception.getDetailMessage());
-        }
-
-
-        @Test
-        @DisplayName("질병 분류와 일치하지 않는 병명")
-        public void should_fail_diet_profile_when_not_correct_disease_name() {
-            UserDietProfileDto.DiseaseRequest disease = createDisease(DiseaseCategory.IMMUNE, DiseaseName.GASTRITIS);
-
-            UserDietProfileDto.UpdateRequest request = UserDietProfileDto.UpdateRequest.builder()
-                    .ingredientPreferences(List.of())
-                    .diseases(List.of(disease))
-                    .build();
-
-
-            BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDietProfile(request, user()));
-
-            assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
-            assertEquals("질병 분류와 상세 병명이 일치하지 않습니다.", exception.getDetailMessage());
-        }
-
-
         @Test
         @DisplayName("없는 재료 ID")
         public void should_fail_diet_profile_when_not_exists_ingredient() {
             UserDietProfileDto.IngredientPreferenceRequest preference = createPreference(1L);
-            UserDietProfileDto.UpdateRequest request = UserDietProfileDto.UpdateRequest.builder()
-                    .ingredientPreferences(List.of(preference))
-                    .diseases(List.of())
+
+            UserDietProfileDto.UpdateIngredientPreferenceRequest request = UserDietProfileDto.UpdateIngredientPreferenceRequest.builder()
+                    .preferences(List.of(preference))
                     .build();
 
             given(ingredientRepository.findById(1L)).willReturn(Optional.empty());
 
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDietProfile(request, user()));
+                    () -> userService.updateIngredientPreference(request, user()));
 
             assertEquals(ErrorCode.INGREDIENT_NOT_FOUND, exception.getErrorCode());
             assertEquals("존재하지 않는 재료 아이디: [1]", exception.getDetailMessage());
@@ -247,11 +258,8 @@ public class UserServiceTest {
         @DisplayName("성공케이스")
         public void should_success_diet_profile() {
             UserDietProfileDto.IngredientPreferenceRequest preference = createPreference(1L);
-            UserDietProfileDto.DiseaseRequest disease = createDisease(DiseaseCategory.DIGESTIVE, DiseaseName.GASTRITIS);
-
-            UserDietProfileDto.UpdateRequest request = UserDietProfileDto.UpdateRequest.builder()
-                    .ingredientPreferences(List.of(preference))
-                    .diseases(List.of(disease))
+            UserDietProfileDto.UpdateIngredientPreferenceRequest request = UserDietProfileDto.UpdateIngredientPreferenceRequest.builder()
+                    .preferences(List.of(preference))
                     .build();
 
             Ingredient ingredient = Ingredient.builder()
@@ -260,9 +268,8 @@ public class UserServiceTest {
 
             given(ingredientRepository.findById(1L)).willReturn(Optional.ofNullable(ingredient));
 
-            assertDoesNotThrow(() -> userService.updateDietProfile(request, user()));
+            assertDoesNotThrow(() -> userService.updateIngredientPreference(request, user()));
 
-            verify(userDiseaseRepository).saveAll(any());
             verify(userIngredientPreferenceRepository).saveAll(any());
         }
 
