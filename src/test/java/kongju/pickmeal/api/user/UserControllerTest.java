@@ -7,6 +7,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.user.type.DiseaseCategory;
+import kongju.pickmeal.core.user.type.DiseaseName;
+import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -101,20 +105,17 @@ public class UserControllerTest {
     }
 
     @Nested
-    @DisplayName("유저 건강, 선호 식품 정보 수정")
-    class DietProfile {
+    @DisplayName("유저 건강 정보 수정")
+    class DiseaseProfile {
         @Test
         @DisplayName("파라미터 누락")
         public void should_fail_diet_profile_when_param_is_empty() throws Exception {
-            UserDietProfileDto.UpdateRequest request = UserDietProfileDto.UpdateRequest.builder()
-                    .ingredientPreferences(null)
-                    .diseases(null)
-                    .build();
+            UserDietProfileDto.UpdateDiseaseRequest request = UserDietProfileDto.UpdateDiseaseRequest.builder().build();
 
-            doThrow(new BusinessException(ErrorCode.INVALID_INPUT, "변경할 데이터가 존재하지 않습니다."))
-                    .when(userService).updateDietProfile(any(), any());
+            doThrow(new BusinessException(ErrorCode.INVALID_INPUT, "질병 분류는 필수입니다."))
+                    .when(userService).updateDisease(any(), any());
 
-            mockMvc.perform(patch("/api/v1/users/me/diet-profile")
+            mockMvc.perform(patch("/api/v1/users/me/diseases")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -125,13 +126,58 @@ public class UserControllerTest {
         @Test
         @DisplayName("성공케이스")
         public void should_success_diet_profile() throws Exception {
-
-            UserDietProfileDto.UpdateRequest request = UserDietProfileDto.UpdateRequest.builder()
-                    .ingredientPreferences(List.of())
-                    .diseases(List.of())
+            UserDietProfileDto.DiseaseRequest disease = UserDietProfileDto.DiseaseRequest.builder()
+                    .category(DiseaseCategory.DIGESTIVE)
+                    .detailName(DiseaseName.ANEMIA)
+                    .description("대충 병")
+                    .build();
+            UserDietProfileDto.UpdateDiseaseRequest request = UserDietProfileDto.UpdateDiseaseRequest.builder()
+                    .diseases(List.of(disease))
                     .build();
 
-            mockMvc.perform(patch("/api/v1/users/me/diet-profile")
+
+            mockMvc.perform(patch("/api/v1/users/me/diseases")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+
+    }
+
+    @Nested
+    @DisplayName("선호 식품 정보 수정")
+    class PreferenceProfile {
+        @Test
+        @DisplayName("파라미터 누락")
+        public void should_fail_diet_profile_when_param_is_empty() throws Exception {
+            UserDietProfileDto.UpdateIngredientPreferenceRequest request = UserDietProfileDto.UpdateIngredientPreferenceRequest.builder()
+                    .build();
+
+            doThrow(new BusinessException(ErrorCode.INVALID_INPUT, "변경할 데이터가 존재하지 않습니다."))
+                    .when(userService).updateIngredientPreference(any(), any());
+
+            mockMvc.perform(patch("/api/v1/users/me/ingredient-preferences")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.message").exists());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_diet_profile() throws Exception {
+            UserDietProfileDto.IngredientPreferenceRequest preference = UserDietProfileDto.IngredientPreferenceRequest.builder()
+                    .ingredientId(1L)
+                    .preference(FoodPreferenceType.PREFERRED)
+                    .build();
+
+            UserDietProfileDto.UpdateIngredientPreferenceRequest request = UserDietProfileDto.UpdateIngredientPreferenceRequest.builder()
+                    .preferences(List.of(preference))
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/users/me/ingredient-preferences")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
