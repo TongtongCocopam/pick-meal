@@ -4,6 +4,7 @@ import java.util.*;
 import java.time.LocalDate;
 import java.util.regex.Pattern;
 
+import kongju.pickmeal.application.user.data.UserHealthDto;
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final IngredientRepository ingredientRepository;
     private final UserDiseaseRepository userDiseaseRepository;
+    private final UserHealthRepository userHealthRepository;
     private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
 
     private static final Pattern PASSWORD_PATTERN =
@@ -117,6 +119,8 @@ public class UserService {
         List<UserDietProfileDto.DiseaseRequest> diseases = request.diseases();
         validateDisease(diseases);
 
+        userDiseaseRepository.deleteAllByUser(user);
+
         List<UserDisease> userDiseases = Objects.requireNonNull(diseases)
                 .stream()
                 .map(disease ->
@@ -164,6 +168,8 @@ public class UserService {
         // 선호 비선호 각 15개 제한
         List<UserDietProfileDto.IngredientPreferenceRequest> preferences = request.preferences();
         validateIngredientPreferences(preferences);
+
+        userIngredientPreferenceRepository.deleteAllByUser(user);
 
         List<UserIngredientPreference> userIngredientPreferences = Objects.requireNonNull(preferences)
                 .stream()
@@ -223,6 +229,22 @@ public class UserService {
         if (dislikedCount > MAX_DISLIKED_INGREDIENT_COUNT) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "비선호 재료는 최대 15개까지 설정 가능합니다.");
         }
+    }
+
+    public void updateHealth(UserHealthDto.UpdateRequest request, User user) {
+        UserHealthProfile health = userHealthRepository.findByUser(user)
+                .orElseGet(() -> UserHealthProfile.builder()
+                        .user(user)
+                        .build());
+
+        health.update(
+                request.gender(),
+                request.height(),
+                request.weight()
+        );
+
+        // 키, 몸무게, 성별 입력
+        userHealthRepository.save(health);
     }
 
 }

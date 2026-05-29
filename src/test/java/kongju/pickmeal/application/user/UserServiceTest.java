@@ -1,12 +1,16 @@
 package kongju.pickmeal.application.user;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.stream.LongStream;
 
+import kongju.pickmeal.application.user.data.UserHealthDto;
 import kongju.pickmeal.core.diet.Ingredient;
+import kongju.pickmeal.core.user.*;
+import kongju.pickmeal.core.user.type.Gender;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.mockito.ArgumentCaptor;
@@ -14,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -25,21 +30,20 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-import kongju.pickmeal.core.user.User;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.core.diet.IngredientRepository;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
-import kongju.pickmeal.core.user.UserDiseaseRepository;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
-import kongju.pickmeal.core.user.UserIngredientPreferenceRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 import static kongju.pickmeal.fixture.MemberFixture.createRequest;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 @ExtendWith(SpringExtension.class)
@@ -52,6 +56,9 @@ public class UserServiceTest {
 
     @Mock
     private UserDiseaseRepository userDiseaseRepository;
+
+    @Mock
+    private UserHealthRepository userHealthRepository;
 
     @Mock
     private UserIngredientPreferenceRepository userIngredientPreferenceRepository;
@@ -275,4 +282,22 @@ public class UserServiceTest {
 
     }
 
+    @Nested
+    @DisplayName("건강 정보 수정")
+    class HealthProfile {
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_health_profile() {
+            UserHealthDto.UpdateRequest request = UserHealthDto.UpdateRequest.builder()
+                    .gender(Gender.male)
+                    .height(BigDecimal.valueOf(152.5))
+                    .weight(BigDecimal.valueOf(55))
+                    .build();
+
+            given(userHealthRepository.findByUser(any())).willReturn(Optional.empty());
+            assertDoesNotThrow(() -> userService.updateHealth(request, user()));
+            verify(userHealthRepository).save(any());
+        }
+
+    }
 }
