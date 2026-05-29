@@ -1,6 +1,7 @@
 package kongju.pickmeal.api.user;
 
 import jakarta.validation.Valid;
+import kongju.pickmeal.application.user.data.UserHealthDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +49,18 @@ public class UserController {
             @AuthenticationPrincipal User user) {
 
         userService.updateIngredientPreference(request, user);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success());
+    }
+
+    @PatchMapping("/me/health")
+    public ResponseEntity<ApiResponse<Void>> updateHealth(
+            @RequestBody @Valid UserHealthDto.UpdateRequest request,
+            @AuthenticationPrincipal User user
+    ) {
+        userService.updateHealth(request, user);
+
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
