@@ -1,16 +1,19 @@
 package kongju.pickmeal.api.user;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
+import kongju.pickmeal.application.user.data.UserHealthDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
+import kongju.pickmeal.core.user.type.Gender;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -178,6 +181,40 @@ public class UserControllerTest {
                     .build();
 
             mockMvc.perform(patch("/api/v1/users/me/ingredient-preferences")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+
+    }
+
+    @Nested
+    @DisplayName("건강 정보 수정")
+    class HealthProfile {
+        @Test
+        @DisplayName("파라미터 누락")
+        public void should_fail_health_profile_when_param_is_empty() throws Exception {
+            UserHealthDto.UpdateRequest request = UserHealthDto.UpdateRequest.builder().build();
+
+            mockMvc.perform(patch("/api/v1/users/me/health")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.message").exists());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_health_profile() throws Exception {
+            UserHealthDto.UpdateRequest request = UserHealthDto.UpdateRequest.builder()
+                    .gender(Gender.female)
+                    .weight(BigDecimal.valueOf(45.2))
+                    .height(BigDecimal.valueOf(150.3))
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/users/me/health")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
