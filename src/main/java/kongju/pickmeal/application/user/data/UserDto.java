@@ -27,7 +27,7 @@ public class UserDto {
             @Email
             String email,
             @NotBlank
-            String nickName,
+            String nickname,
             @NotNull
             @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
             LocalDate birthDate
@@ -36,6 +36,6 @@ public class UserDto {
     @Builder
     public record SignupResponse(
             Long userId,
-            String nickName
+            String nickname
     ){}
 }

@@ -1,7 +1,7 @@
 package kongju.pickmeal.api.user;
 
 import jakarta.validation.Valid;
-import kongju.pickmeal.application.user.data.UserHealthDto;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,9 +12,9 @@ import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.application.user.UserService;
 import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
+import kongju.pickmeal.application.user.data.UserHealthDto;
+import kongju.pickmeal.application.user.data.UserProfileDto;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
-
-import java.util.List;
 
 
 @RestController
@@ -65,4 +65,17 @@ public class UserController {
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
     }
+
+    @PatchMapping("/me/profile")
+    public ResponseEntity<ApiResponse<UserProfileDto.UpdateResponse>> updateProfile(
+            @RequestBody @Valid UserProfileDto.UpdateRequest request,
+            @AuthenticationPrincipal User user
+    ) {
+        UserProfileDto.UpdateResponse response = userService.updateProfile(request, user);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(response));
+    }
+
 }

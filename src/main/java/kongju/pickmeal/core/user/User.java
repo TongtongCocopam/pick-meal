@@ -24,7 +24,7 @@ import kongju.pickmeal.common.exception.BusinessException;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
     @Column(nullable = false, unique = true)
-    private String nickName;
+    private String nickname;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
@@ -47,8 +47,8 @@ public class User extends BaseTimeEntity {
     private Family family;
 
     @Builder
-    public User(String nickName, LocalDate birthDate, String loginId, String email, String password){
-        this.nickName = nickName;
+    public User(String nickname, LocalDate birthDate, String loginId, String email, String password){
+        this.nickname = nickname;
         this.birthDate = birthDate;
         this.loginId = loginId;
         this.email = email;
@@ -81,5 +81,13 @@ public class User extends BaseTimeEntity {
     public void deleteFamilyMember(){
         this.role = UserRole.GUEST;
         this.family = null;
+    }
+
+    public void updateNickname(String nickname){
+        this.nickname = nickname;
+    }
+
+    public void updateBirthDate(LocalDate birthDate){
+        this.birthDate = birthDate;
     }
 }

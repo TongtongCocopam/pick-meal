@@ -4,7 +4,7 @@ import java.util.*;
 import java.time.LocalDate;
 import java.util.regex.Pattern;
 
-import kongju.pickmeal.application.user.data.UserHealthDto;
+
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -17,6 +17,8 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.core.diet.IngredientRepository;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.application.user.data.UserHealthDto;
+import kongju.pickmeal.application.user.data.UserProfileDto;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
 
 
@@ -61,14 +63,14 @@ public class UserService {
                 .email(request.email())
                 .password(password)
                 .birthDate(request.birthDate())
-                .nickName(request.nickName())
+                .nickname(request.nickname())
                 .build();
 
         User savedUser = userRepository.save(user);
 
         return UserDto.SignupResponse.builder()
                 .userId(savedUser.getId())
-                .nickName(savedUser.getNickName())
+                .nickname(savedUser.getNickname())
                 .build();
     }
 
@@ -231,6 +233,11 @@ public class UserService {
         }
     }
 
+    /**
+     * 성별, 몸무게, 키 등 정보 수정
+     * @param request 유저 정보
+     * @param user 유저
+     */
     public void updateHealth(UserHealthDto.UpdateRequest request, User user) {
         UserHealthProfile health = userHealthRepository.findByUser(user)
                 .orElseGet(() -> UserHealthProfile.builder()
@@ -247,4 +254,35 @@ public class UserService {
         userHealthRepository.save(health);
     }
 
+    /**
+     * 닉네임, 생일 수정
+     * @param request 유저 정보
+     * @param user 유저
+     * @return 수정된 결과
+     */
+    public UserProfileDto.UpdateResponse updateProfile(UserProfileDto.UpdateRequest request, User user) {
+        String nickname = request.nickname();
+        LocalDate birthDate = request.birthDate();
+
+        if(nickname == null && birthDate == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "변경할 데이터가 존재하지 않습니다.");
+        }
+
+        // null인 것만 빼고 적용
+        if(nickname != null){
+            user.updateNickname(nickname);
+        }
+
+        if(birthDate != null){
+            user.updateBirthDate(birthDate);
+        }
+
+        return UserProfileDto.UpdateResponse.builder()
+                .id(user.getId())
+                .nickname(user.getNickname())
+                .birthDate(user.getBirthDate())
+                .email(user.getEmail())
+                .loginId(user.getLoginId())
+                .build();
+    }
 }
