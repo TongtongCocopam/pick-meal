@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
 
+import kongju.pickmeal.support.fixture.UserFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
@@ -297,16 +298,7 @@ public class FamilyControllerSecurityTest {
         @DisplayName("성공 케이스")
         @WithMockUser(roles = "MEMBER")
         public void should_success_leave_family() throws Exception {
-            User user = User.builder()
-                    .nickName("testNickname")
-                    .password("password")
-                    .build();
-
-//            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-//                    user,
-//                    null,
-//                    List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))
-//            );
+            User user = UserFixture.user();
 
             mockMvc.perform(delete("/api/v1/families/me/membership"))
 //                            .with(authentication(authentication)))

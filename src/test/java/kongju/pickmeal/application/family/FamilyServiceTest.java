@@ -414,7 +414,7 @@ public class FamilyServiceTest {
 
             List<FamilyMemberDto.ListItem> response = familyService.getMembers(user);
 
-            assertThat(response.getFirst().nickname()).isEqualTo(user.getNickName());
+            assertThat(response.getFirst().nickname()).isEqualTo(user.getNickname());
         }
 
         @Test
