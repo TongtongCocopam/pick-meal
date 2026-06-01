@@ -156,7 +156,7 @@ public class FamilyService {
 
             return toProcessRequest(
                     requestId,
-                    joinRequestUser.getNickName(),
+                    joinRequestUser.getNickname(),
                     JoinRequestStatus.REJECTED
             );
         }
@@ -169,7 +169,7 @@ public class FamilyService {
 
         return toProcessRequest(
                 requestId,
-                joinRequestUser.getNickName(),
+                joinRequestUser.getNickname(),
                 JoinRequestStatus.APPROVED
         );
     }
@@ -280,7 +280,7 @@ public class FamilyService {
                 .stream()
                 .map(member -> FamilyMemberDto.ListItem.builder()
                         .id(member.getId())
-                        .nickname(member.getNickName())
+                        .nickname(member.getNickname())
                         .build())
                 .toList();
     }
@@ -320,7 +320,7 @@ public class FamilyService {
         // 멤버 제거, 권한 제거
         member.deleteFamilyMember();
         return FamilyMemberDto.KickResponse.builder()
-                .kickedNickname(member.getNickName())
+                .kickedNickname(member.getNickname())
                 .build();
     }
 

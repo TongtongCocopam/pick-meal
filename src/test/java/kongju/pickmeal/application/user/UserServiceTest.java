@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -40,10 +39,9 @@ import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
-import static kongju.pickmeal.fixture.MemberFixture.createRequest;
+import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 @ExtendWith(SpringExtension.class)
@@ -103,7 +101,7 @@ public class UserServiceTest {
         @DisplayName("비밀번호와 비밀번호 확인이 다르면 회원가입에 실패한다")
         void should_fail_when_password_mismatch() {
             // 비밀번호와 확인용 비밀번호를 다르게 설정
-            UserDto.SignupRequest request = createRequest("test1234", "test0000!!", "wrong!!", "test@test.com", "test@test.com", "tester", LocalDate.now());
+            UserDto.SignupRequest request = createRequest("test1234", "test0000!!", "wrong!!", "test@test.com", "tester", LocalDate.now());
 
             assertThatThrownBy(() -> userService.signup(request))
                     .isInstanceOf(BusinessException.class)
@@ -135,7 +133,7 @@ public class UserServiceTest {
             // 가져온 객체 꺼내기
             User savedUser = user.getValue();
             assertThat(savedUser.getPassword()).isEqualTo("hash_pw");
-            assertThat(response.nickName()).isEqualTo(request.nickName());
+            assertThat(response.nickname()).isEqualTo(request.nickname());
         }
     }
 
@@ -298,6 +296,12 @@ public class UserServiceTest {
             assertDoesNotThrow(() -> userService.updateHealth(request, user()));
             verify(userHealthRepository).save(any());
         }
+
+    }
+
+    @Nested
+    @DisplayName("유저 정보 수정")
+    class UserProfile {
 
     }
 }

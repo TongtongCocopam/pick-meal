@@ -26,7 +26,7 @@ public class FamilyJoinRequestDto {
             return FamilyJoinRequestDto.Summary.builder()
                     .requestId(familyJoinRequest.getId())
                     .email(maskEmail(familyJoinRequest.getUser().getEmail()))
-                    .nickname(familyJoinRequest.getUser().getNickName())
+                    .nickname(familyJoinRequest.getUser().getNickname())
                     .build();
         }
 
