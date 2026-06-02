@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
-import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
+import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.application.family.FamilyService;
 
 
@@ -25,10 +25,10 @@ public class FamilyController {
     @PostMapping
     public ResponseEntity<ApiResponse<FamilyDto.CreateResponse>> createFamily(
             @RequestBody @Valid FamilyDto.CreateRequest request,
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
 
-        FamilyDto.CreateResponse response = familyService.createFamily(request, user);
+        FamilyDto.CreateResponse response = familyService.createFamily(request, userDetails.getId());
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));
@@ -37,9 +37,9 @@ public class FamilyController {
     @PostMapping("/applications")
     public ResponseEntity<ApiResponse<Void>> joinRequestFamily(
             @RequestBody @Valid FamilyJoinRequestDto.CreateRequest request,
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        familyService.joinRequest(request, user);
+        familyService.joinRequest(request, userDetails.getId());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
@@ -48,9 +48,9 @@ public class FamilyController {
     @GetMapping("/me/applications")
     @PreAuthorize("hasRole('LEADER')")
     public ResponseEntity<ApiResponse<List<FamilyJoinRequestDto.Summary>>> requestListFamily(
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<FamilyJoinRequestDto.Summary> joinRequestSummary = familyService.loadJoinRequestSummary(user);
+        List<FamilyJoinRequestDto.Summary> joinRequestSummary = familyService.loadJoinRequestSummary(userDetails.getId());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -62,9 +62,9 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<FamilyJoinRequestDto.ProcessResponse>> processRequestFamily(
             @PathVariable Long requestId,
             @RequestBody @Valid FamilyJoinRequestDto.ProcessRequest request,
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        FamilyJoinRequestDto.ProcessResponse response = familyService.processJoinRequest(requestId, request, user);
+        FamilyJoinRequestDto.ProcessResponse response = familyService.processJoinRequest(requestId, request, userDetails.getId());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(response));
@@ -72,8 +72,10 @@ public class FamilyController {
 
     @PatchMapping("/me/invitation-code")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<FamilyInvitationDto.CodeResponse>> updateInvitationCode(@AuthenticationPrincipal User user) {
-        FamilyInvitationDto.CodeResponse response = familyService.createInvitationCode(user);
+    public ResponseEntity<ApiResponse<FamilyInvitationDto.CodeResponse>> updateInvitationCode(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        FamilyInvitationDto.CodeResponse response = familyService.createInvitationCode(userDetails.getId());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -82,8 +84,10 @@ public class FamilyController {
 
     @GetMapping("/me/members")
     @PreAuthorize("hasRole('LEADER') or hasRole('MEMBER')")
-    public ResponseEntity<ApiResponse<List<FamilyMemberDto.ListItem>>> getFamilyMembers(@AuthenticationPrincipal User user) {
-        List<FamilyMemberDto.ListItem> listItems = familyService.getMembers(user);
+    public ResponseEntity<ApiResponse<List<FamilyMemberDto.ListItem>>> getFamilyMembers(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        List<FamilyMemberDto.ListItem> listItems = familyService.getMembers(userDetails.getId());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -92,8 +96,10 @@ public class FamilyController {
 
     @DeleteMapping("/me")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<Void>> disbandMyFamily(@AuthenticationPrincipal User user) {
-        familyService.disbandFamily(user);
+    public ResponseEntity<ApiResponse<Void>> disbandMyFamily(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        familyService.disbandFamily(userDetails.getId());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
@@ -103,8 +109,9 @@ public class FamilyController {
     @PreAuthorize("hasRole('LEADER')")
     public ResponseEntity<ApiResponse<FamilyMemberDto.KickResponse>> kickFamilyMember(
             @PathVariable Long userId,
-            @AuthenticationPrincipal User user) {
-        FamilyMemberDto.KickResponse response = familyService.kickMember(userId, user);
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        FamilyMemberDto.KickResponse response = familyService.kickMember(userId, userDetails.getId());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -113,8 +120,10 @@ public class FamilyController {
 
     @DeleteMapping("/me/membership")
     @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<ApiResponse<Void>> leaveFamilyMember(@AuthenticationPrincipal User user) {
-        familyService.leaveMember(user);
+    public ResponseEntity<ApiResponse<Void>> leaveFamilyMember(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        familyService.leaveMember(userDetails.getId());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -124,10 +133,10 @@ public class FamilyController {
     @PatchMapping("/me/picks/config")
     @PreAuthorize("hasRole('LEADER')")
     public ResponseEntity<ApiResponse<FamilyPickDto.ConfigResponse>> pickAllocation(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid FamilyPickDto.UpdateConfigRequest request
     ) {
-        FamilyPickDto.ConfigResponse response = familyService.pickConfig(user, request);
+        FamilyPickDto.ConfigResponse response = familyService.pickConfig(userDetails.getId(), request);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -136,8 +145,10 @@ public class FamilyController {
 
     @PostMapping("/me/picks/reset")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<FamilyPickDto.ResetResponse>> resetAllocation(@AuthenticationPrincipal User user) {
-        FamilyPickDto.ResetResponse response = familyService.resetConfig(user);
+    public ResponseEntity<ApiResponse<FamilyPickDto.ResetResponse>> resetAllocation(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        FamilyPickDto.ResetResponse response = familyService.resetConfig(userDetails.getId());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(response));
