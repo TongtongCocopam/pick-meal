@@ -2,8 +2,6 @@ package kongju.pickmeal.core.family;
 
 import java.time.LocalDateTime;
 
-import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.common.exception.ErrorCode;
 import lombok.Getter;
 import lombok.Builder;
 import lombok.AccessLevel;
@@ -12,6 +10,9 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import kongju.pickmeal.core.common.BaseTimeEntity;
+import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.common.exception.BusinessException;
+
 
 @Entity
 @Table(name = "families")
