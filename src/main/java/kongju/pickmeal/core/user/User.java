@@ -3,14 +3,14 @@ package kongju.pickmeal.core.user;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import kongju.pickmeal.core.family.Family;
-import kongju.pickmeal.core.user.type.UserRole;
 import lombok.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.LastModifiedDate;
 
+import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.core.user.type.UserRole;
 import kongju.pickmeal.core.common.BaseTimeEntity;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
@@ -62,7 +62,7 @@ public class User extends BaseTimeEntity {
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
         this.family = family;
-        this.role = UserRole.READER;
+        this.role = UserRole.LEADER;
     }
 
     public void joinFamilyMember(Family family){
