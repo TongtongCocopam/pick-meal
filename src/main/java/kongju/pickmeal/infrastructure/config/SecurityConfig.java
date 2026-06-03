@@ -16,8 +16,8 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import kongju.pickmeal.core.service.JwtService;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.api.security.JwtTokenFilter;
+import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 import kongju.pickmeal.api.security.CustomAuthenticationEntryPoint;
 
