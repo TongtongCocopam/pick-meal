@@ -14,18 +14,18 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import kongju.pickmeal.core.service.JwtService;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.auth.AuthService;
 import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.user.repository.UserRepository;
 
 
 @WebMvcTest(AuthController.class)
