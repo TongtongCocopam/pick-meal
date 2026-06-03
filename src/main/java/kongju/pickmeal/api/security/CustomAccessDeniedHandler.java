@@ -3,7 +3,6 @@ package kongju.pickmeal.api.security;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import jakarta.servlet.ServletException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import jakarta.servlet.http.HttpServletRequest;
