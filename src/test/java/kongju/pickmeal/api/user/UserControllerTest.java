@@ -9,8 +9,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.http.MediaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.core.Authentication;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -20,6 +20,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 
 import kongju.pickmeal.core.user.User;
@@ -104,9 +105,10 @@ public class UserControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
+                    .andDo(print())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.userId").value(1L))
-                    .andExpect(jsonPath("$.data.nickName").value("tester"));
+                    .andExpect(jsonPath("$.data.nickname").value("tester"));
         }
     }
 
