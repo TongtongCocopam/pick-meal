@@ -11,11 +11,11 @@ import org.springframework.stereotype.Service;
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.type.UserRole;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.user.repository.UserRepository;
 
 @Service
 @Transactional
