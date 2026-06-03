@@ -4,7 +4,6 @@ import java.util.*;
 import java.time.LocalDate;
 import java.util.regex.Pattern;
 
-
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -18,8 +17,12 @@ import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.core.diet.IngredientRepository;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.user.data.UserHealthDto;
+import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.application.user.data.UserProfileDto;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
+import kongju.pickmeal.core.user.repository.UserHealthRepository;
+import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
+import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 
 @Service
