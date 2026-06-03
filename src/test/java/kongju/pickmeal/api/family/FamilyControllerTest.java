@@ -9,19 +9,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.http.MediaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.context.annotation.Bean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.eq;
@@ -33,14 +27,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
-import kongju.pickmeal.core.user.type.UserRole;
 import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.application.family.FamilyService;
+import kongju.pickmeal.support.fixture.TestSecurityConfig;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.api.exception.GlobalExceptionHandler;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
+
+import static kongju.pickmeal.support.fixture.SecurityFixture.*;
 
 
 @WebMvcTest(FamilyController.class)
@@ -48,7 +43,7 @@ import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 @Import({
         CustomAccessDeniedHandler.class,
         GlobalExceptionHandler.class,
-        FamilyControllerTest.TestSecurityConfig.class
+        TestSecurityConfig.class
 })
 public class FamilyControllerTest {
     @Autowired
@@ -57,36 +52,6 @@ public class FamilyControllerTest {
     private ObjectMapper objectMapper;
     @MockitoBean
     private FamilyService familyService;
-
-    @TestConfiguration
-    @EnableMethodSecurity // PreAuthorize사용
-    static class TestSecurityConfig {
-
-        @Bean
-        SecurityFilterChain testSecurityFilterChain(
-                HttpSecurity http,
-                CustomAccessDeniedHandler customAccessDeniedHandler
-        ) throws Exception {
-            return http
-                    // csrf끄기
-                    .csrf(AbstractHttpConfigurer::disable)
-                    .exceptionHandling(exception -> exception
-                            .accessDeniedHandler(customAccessDeniedHandler)
-                    )
-                    // 인증 정보는 확인
-                    .authorizeHttpRequests(auth -> auth
-                            .anyRequest().authenticated()
-                    )
-                    .build();
-        }
-    }
-
-    private CustomUserDetails mockLoginUser(Long userId, UserRole role) {
-        return CustomUserDetails.builder()
-                .id(userId)
-                .role(role)
-                .build();
-    }
 
     @Nested
     @DisplayName("가족 그룹 생성 테스트")
@@ -123,7 +88,7 @@ public class FamilyControllerTest {
                     .willReturn(response);
 
             mockMvc.perform(post("/api/v1/families")
-                            .with(user(mockLoginUser(1L, UserRole.GUEST)))
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
@@ -163,7 +128,7 @@ public class FamilyControllerTest {
                     .build();
 
             mockMvc.perform(post("/api/v1/families/applications")
-                            .with(user(mockLoginUser(1L, UserRole.GUEST)))
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -179,7 +144,7 @@ public class FamilyControllerTest {
         @WithMockUser(roles = "MEMBER")
         public void should_fail_roadApply_not_reader() throws Exception {
             mockMvc.perform(get("/api/v1/families/me/applications")
-                            .with(user(mockLoginUser(1L, UserRole.MEMBER)))
+                            .with(user(mockMember()))
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.success").value(false))
@@ -200,7 +165,7 @@ public class FamilyControllerTest {
             given(familyService.loadJoinRequestSummary(any())).willReturn(joinRequestSummary);
 
             mockMvc.perform(get("/api/v1/families/me/applications")
-                            .with(user(mockLoginUser(1L, UserRole.LEADER)))
+                            .with(user(mockLeader()))
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
@@ -252,7 +217,7 @@ public class FamilyControllerTest {
                     .willReturn(response);
 
             mockMvc.perform(post("/api/v1/families/me/applications/{requestId}", requestId)
-                            .with(user(mockLoginUser(1L, UserRole.LEADER)))
+                            .with(user(mockLeader()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                     )
@@ -291,7 +256,7 @@ public class FamilyControllerTest {
             given(familyService.createInvitationCode(any())).willReturn(response);
 
             mockMvc.perform(patch("/api/v1/families/me/invitation-code")
-                            .with(user(mockLoginUser(1L, UserRole.LEADER))))
+                            .with(user(mockLeader())))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
@@ -322,7 +287,7 @@ public class FamilyControllerTest {
             given(familyService.getMembers(any())).willReturn(listItems);
 
             mockMvc.perform(get("/api/v1/families/me/members")
-                            .with(user(mockLoginUser(1L, UserRole.MEMBER))))
+                            .with(user(mockMember())))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
@@ -346,7 +311,7 @@ public class FamilyControllerTest {
         @DisplayName("성공 케이스")
         public void should_success_disband_family() throws Exception {
             mockMvc.perform(delete("/api/v1/families/me")
-                            .with(user(mockLoginUser(1L, UserRole.LEADER))))
+                            .with(user(mockLeader())))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
@@ -382,7 +347,7 @@ public class FamilyControllerTest {
             given(familyService.kickMember(any(), any())).willReturn(response);
 
             mockMvc.perform(delete("/api/v1/families/me/members/{userId}", userId)
-                            .with(user(mockLoginUser(1L, UserRole.LEADER))))
+                            .with(user(mockLeader())))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
@@ -407,7 +372,7 @@ public class FamilyControllerTest {
         @DisplayName("성공 케이스")
         public void should_success_leave_family() throws Exception {
             mockMvc.perform(delete("/api/v1/families/me/membership")
-                            .with(user(mockLoginUser(1L, UserRole.MEMBER))))
+                            .with(user(mockMember())))
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
@@ -451,7 +416,7 @@ public class FamilyControllerTest {
             given(familyService.pickConfig(any(), any())).willReturn(response);
 
             mockMvc.perform(patch("/api/v1/families/me/picks/config")
-                            .with(user(mockLoginUser(1L, UserRole.LEADER)))
+                            .with(user(mockLeader()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request))
                     )
@@ -485,7 +450,7 @@ public class FamilyControllerTest {
             given(familyService.resetConfig(any())).willReturn(response);
 
             mockMvc.perform(post("/api/v1/families/me/picks/reset")
-                            .with(user(mockLoginUser(1L, UserRole.LEADER))))
+                            .with(user(mockLeader())))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.resetMember").value(6))
