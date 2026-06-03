@@ -332,12 +332,37 @@ public class UserServiceTest {
     @Nested
     @DisplayName("유저 정보 수정")
     class UserProfile {
-        UserProfileDto.UpdateRequest request = UserProfileDto.UpdateRequest.builder()
-                .nickname("testNickname")
-                .birthDate(LocalDate.parse("2000-05-06"))
-                .build();
+        @Test
+        @DisplayName("변경할 데이터가 없는 경우")
+        public void should_fail_user_profile_when_nickname_unavailable() {
+            UserProfileDto.UpdateRequest request = UserProfileDto.UpdateRequest.builder()
+                    .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
 
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.updateProfile(request, userId));
+
+            assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
+            assertEquals("변경할 데이터가 존재하지 않습니다.", exception.getDetailMessage());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_user_profile() {
+            UserProfileDto.UpdateRequest request = UserProfileDto.UpdateRequest.builder()
+                    .nickname("테스트닉네임")
+                    .build();
+
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
+            UserProfileDto.UpdateResponse response = assertDoesNotThrow(() -> userService.updateProfile(request, userId));
+
+            assertEquals("테스트닉네임", response.nickname());
+
+        }
 
     }
 }
