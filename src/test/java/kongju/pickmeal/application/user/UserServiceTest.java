@@ -37,6 +37,7 @@ import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.user.data.UserHealthDto;
 import kongju.pickmeal.core.user.repository.UserRepository;
+import kongju.pickmeal.application.user.data.UserProfileDto;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
 import kongju.pickmeal.core.user.repository.UserHealthRepository;
 import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
@@ -65,6 +66,9 @@ public class UserServiceTest {
 
     @Mock
     private IngredientRepository ingredientRepository;
+
+    @Mock
+    private UserReader userReader;
 
     @InjectMocks
     private UserService userService;
@@ -159,8 +163,11 @@ public class UserServiceTest {
                     .diseases(diseases)
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDisease(request, user()));
+                    () -> userService.updateDisease(request, userId));
 
             assertEquals(ErrorCode.DUPLICATE_RESOURCE, exception.getErrorCode());
             assertEquals("중복되는 병명이 있습니다.", exception.getDetailMessage());
@@ -175,8 +182,11 @@ public class UserServiceTest {
                     .diseases(List.of(disease))
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDisease(request, user()));
+                    () -> userService.updateDisease(request, userId));
 
             assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
             assertEquals("질병 분류와 상세 병명이 일치하지 않습니다.", exception.getDetailMessage());
@@ -191,7 +201,10 @@ public class UserServiceTest {
                     .diseases(List.of(disease))
                     .build();
 
-            assertDoesNotThrow(() -> userService.updateDisease(request, user()));
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
+            assertDoesNotThrow(() -> userService.updateDisease(request, userId));
 
             verify(userDiseaseRepository).saveAll(any());
         }
@@ -218,8 +231,11 @@ public class UserServiceTest {
                     .preferences(List.of(preference1, preference2))
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateIngredientPreference(request, user()));
+                    () -> userService.updateIngredientPreference(request, userId));
 
             assertEquals(ErrorCode.DUPLICATE_RESOURCE, exception.getErrorCode());
         }
@@ -235,8 +251,11 @@ public class UserServiceTest {
                     .preferences(preferences)
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateIngredientPreference(request, user()));
+                    () -> userService.updateIngredientPreference(request, userId));
 
             assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
             assertEquals("선호 재료는 최대 15개까지 설정 가능합니다.", exception.getDetailMessage());
@@ -253,8 +272,11 @@ public class UserServiceTest {
 
             given(ingredientRepository.findById(1L)).willReturn(Optional.empty());
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateIngredientPreference(request, user()));
+                    () -> userService.updateIngredientPreference(request, userId));
 
             assertEquals(ErrorCode.INGREDIENT_NOT_FOUND, exception.getErrorCode());
             assertEquals("존재하지 않는 재료 아이디: [1]", exception.getDetailMessage());
@@ -273,9 +295,12 @@ public class UserServiceTest {
                     .name("감자")
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             given(ingredientRepository.findById(1L)).willReturn(Optional.ofNullable(ingredient));
 
-            assertDoesNotThrow(() -> userService.updateIngredientPreference(request, user()));
+            assertDoesNotThrow(() -> userService.updateIngredientPreference(request, userId));
 
             verify(userIngredientPreferenceRepository).saveAll(any());
         }
@@ -294,8 +319,11 @@ public class UserServiceTest {
                     .weight(BigDecimal.valueOf(55))
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             given(userHealthRepository.findByUser(any())).willReturn(Optional.empty());
-            assertDoesNotThrow(() -> userService.updateHealth(request, user()));
+            assertDoesNotThrow(() -> userService.updateHealth(request, userId));
             verify(userHealthRepository).save(any());
         }
 
@@ -304,6 +332,12 @@ public class UserServiceTest {
     @Nested
     @DisplayName("유저 정보 수정")
     class UserProfile {
+        UserProfileDto.UpdateRequest request = UserProfileDto.UpdateRequest.builder()
+                .nickname("testNickname")
+                .birthDate(LocalDate.parse("2000-05-06"))
+                .build();
+
+
 
     }
 }

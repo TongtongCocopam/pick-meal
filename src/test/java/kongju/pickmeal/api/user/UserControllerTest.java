@@ -10,42 +10,47 @@ import org.junit.jupiter.api.DisplayName;
 import org.springframework.http.MediaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.security.core.Authentication;
+import org.springframework.context.annotation.Import;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
-import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.type.Gender;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.support.fixture.UserFixture;
 import kongju.pickmeal.application.user.UserService;
 import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
+import kongju.pickmeal.support.fixture.TestSecurityConfig;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.application.user.data.UserHealthDto;
 import kongju.pickmeal.application.user.data.UserProfileDto;
+import kongju.pickmeal.api.exception.GlobalExceptionHandler;
+import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
 
+import static kongju.pickmeal.support.fixture.SecurityFixture.mockGuest;
 import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
 
 
 @WebMvcTest(UserController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
+@Import({
+        CustomAccessDeniedHandler.class,
+        GlobalExceptionHandler.class,
+        TestSecurityConfig.class
+})
 public class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;
-
     // 스프링을 띄운 상태에서 사용
     @MockitoBean
     private UserService userService;
@@ -139,12 +144,14 @@ public class UserControllerTest {
                     .detailName(DiseaseName.ANEMIA)
                     .description("대충 병")
                     .build();
+
             UserDietProfileDto.UpdateDiseaseRequest request = UserDietProfileDto.UpdateDiseaseRequest.builder()
                     .diseases(List.of(disease))
                     .build();
 
 
             mockMvc.perform(patch("/api/v1/users/me/diseases")
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -186,6 +193,7 @@ public class UserControllerTest {
                     .build();
 
             mockMvc.perform(patch("/api/v1/users/me/ingredient-preferences")
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -220,6 +228,7 @@ public class UserControllerTest {
                     .build();
 
             mockMvc.perform(patch("/api/v1/users/me/health")
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
@@ -257,14 +266,10 @@ public class UserControllerTest {
                     .nickname("test_name")
                     .build();
 
-            given(userService.updateProfile(any(UserProfileDto.UpdateRequest.class), nullable(User.class))).willReturn(response);
+            given(userService.updateProfile(request, 1L)).willReturn(response);
 
-            User user = UserFixture.user();
-
-            Authentication authentication =
-                    new UsernamePasswordAuthenticationToken(user, null, List.of());
             mockMvc.perform(patch("/api/v1/users/me/profile")
-                            .with(authentication(authentication))
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
