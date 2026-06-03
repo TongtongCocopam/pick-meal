@@ -1,12 +1,10 @@
 package kongju.pickmeal.infrastructure.config;
 
-import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
-import kongju.pickmeal.api.security.CustomAuthenticationEntryPoint;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,10 +13,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import kongju.pickmeal.core.service.JwtService;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.api.security.JwtTokenFilter;
+import kongju.pickmeal.core.user.repository.UserRepository;
+import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
+import kongju.pickmeal.api.security.CustomAuthenticationEntryPoint;
 
 
 @Configuration
@@ -71,6 +72,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
+                // UsernamePasswordAuthenticationFilter전에 jwt먼저 실행
                 .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

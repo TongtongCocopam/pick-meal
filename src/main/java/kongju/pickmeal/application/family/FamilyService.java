@@ -11,15 +11,17 @@ import org.springframework.stereotype.Service;
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.type.UserRole;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.user.repository.UserRepository;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class FamilyService {
+    private final UserReader userReader;
     private final UserRepository userRepository;
     private final FamilyRepository familyRepository;
     private final FamilyJoinRepository familyJoinRepository;
@@ -29,21 +31,23 @@ public class FamilyService {
      * 가족 만들기
      *
      * @param request 가족 이름
-     * @param user    그룹을 만든 유저
+     * @param userId  그룹을 만든 유저
      * @return 그룹 이름과 초대코드 반환
      */
-    public FamilyDto.CreateResponse createFamily(FamilyDto.CreateRequest request, User user) {
+    public FamilyDto.CreateResponse createFamily(FamilyDto.CreateRequest request, Long userId) {
         // 초대 코드 생성
         String invitationCode = invitationCodeGenerator.generateUniqueCode();
         // 가족 엔티티 생성
         Family family = Family.builder()
                 .familyName(request.familyName())
                 .invitationCode(invitationCode)
-                .leaderId(user.getId())
+                .leaderId(userId)
                 .build();
         // 저장
         familyRepository.save(family);
         // 현재 유저를 리더로 가족 아이디와 연결
+        User user = userReader.getById(userId);
+
         user.joinFamilyLeader(family);
 
         return FamilyDto.CreateResponse.builder()
@@ -56,9 +60,11 @@ public class FamilyService {
      * 가족 합류 신청
      *
      * @param request 초대 코드
-     * @param user    신청한 유저 정보
+     * @param userId  신청한 유저 정보
      */
-    public void joinRequest(FamilyJoinRequestDto.CreateRequest request, User user) {
+    public void joinRequest(FamilyJoinRequestDto.CreateRequest request, Long userId) {
+        User user = userReader.getById(userId);
+
         // 가족 여부 확인
         Family family = validationJoinRequest(request.invitationCode(), user);
 
@@ -101,10 +107,12 @@ public class FamilyService {
     /**
      * 가족 신청 목록 불러오기
      *
-     * @param user 리더 정보
+     * @param userId 리더 정보
      * @return 신청 리스트 반환
      */
-    public List<FamilyJoinRequestDto.Summary> loadJoinRequestSummary(User user) {
+    public List<FamilyJoinRequestDto.Summary> loadJoinRequestSummary(Long userId) {
+        User user = userReader.getById(userId);
+
         // 가족이 없는지 확인
         Family family = validationFamily(user.getFamily());
 
@@ -118,7 +126,7 @@ public class FamilyService {
     /**
      * 가족 있는지 여부 확인
      *
-     * @param family 해당 유저 객체
+     * @param family 해당 유저의 가족 객체
      * @return 가족 아이디 반환
      */
     private Family validationFamily(Family family) {
@@ -133,14 +141,16 @@ public class FamilyService {
      *
      * @param requestId 요청 아이디
      * @param request   승인, 거절 여부
-     * @param user      리더 user객체
+     * @param userId    리더 userId
      * @return 승인, 닉네임, 요청 아이디
      */
     public FamilyJoinRequestDto.ProcessResponse processJoinRequest(
             Long requestId,
             FamilyJoinRequestDto.ProcessRequest request,
-            User user
+            Long userId
     ) {
+        User user = userReader.getById(userId);
+
         validateDecision(request.decision());
 
         // 존재하는 요청 아이디인지 확인하고 테이블 불러오기
@@ -156,7 +166,7 @@ public class FamilyService {
 
             return toProcessRequest(
                     requestId,
-                    joinRequestUser.getNickName(),
+                    joinRequestUser.getNickname(),
                     JoinRequestStatus.REJECTED
             );
         }
@@ -169,7 +179,7 @@ public class FamilyService {
 
         return toProcessRequest(
                 requestId,
-                joinRequestUser.getNickName(),
+                joinRequestUser.getNickname(),
                 JoinRequestStatus.APPROVED
         );
     }
@@ -189,7 +199,7 @@ public class FamilyService {
      * 요청 기록 확인
      *
      * @param requestId 요청 아이디
-     * @param family  가족 객체
+     * @param family    가족 객체
      * @return 요청 테이블
      */
     private FamilyJoinRequest getFamilyJoinRequest(Long requestId, Family family) {
@@ -232,11 +242,12 @@ public class FamilyService {
 
     /**
      * 가족이 있는지 체크 후 가족 객체 반환
+     *
      * @param user 가족 체크할 유저 객체
      * @return family 객체
      */
     private Family validationFamily(User user) {
-        if(user.getFamily() == null) {
+        if (user.getFamily() == null) {
             throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
         }
 
@@ -249,10 +260,12 @@ public class FamilyService {
     /**
      * 초대 코드 재발급
      *
-     * @param user 재발급 리더
+     * @param userId 재발급 리더
      * @return 재발급한 초대코드
      */
-    public FamilyInvitationDto.CodeResponse createInvitationCode(User user) {
+    public FamilyInvitationDto.CodeResponse createInvitationCode(Long userId) {
+        User user = userReader.getById(userId);
+
         String invitationCode = invitationCodeGenerator.generateUniqueCode();
 
         Family family = validationFamily(user);
@@ -268,10 +281,11 @@ public class FamilyService {
     /**
      * 가족 멤버 리스트 불러오기
      *
-     * @param user 가족이 있는 유저
+     * @param userId 가족이 있는 유저
      * @return 가족 구성원 리스트
      */
-    public List<FamilyMemberDto.ListItem> getMembers(User user) {
+    public List<FamilyMemberDto.ListItem> getMembers(Long userId) {
+        User user = userReader.getById(userId);
         // 가족이 있는지 확인
         Family family = validationFamily(user);
 
@@ -280,7 +294,7 @@ public class FamilyService {
                 .stream()
                 .map(member -> FamilyMemberDto.ListItem.builder()
                         .id(member.getId())
-                        .nickname(member.getNickName())
+                        .nickname(member.getNickname())
                         .build())
                 .toList();
     }
@@ -288,9 +302,10 @@ public class FamilyService {
     /**
      * 가족 그룹 삭제
      *
-     * @param user 유저 객체
+     * @param userId 유저 객체
      */
-    public void disbandFamily(User user) {
+    public void disbandFamily(Long userId) {
+        User user = userReader.getById(userId);
         // 가족 그룹이 있는지 확인하고 family가져오기
         Family family = validationFamily(user);
 
@@ -307,29 +322,31 @@ public class FamilyService {
         user.deleteFamilyLeader();
     }
 
-    public FamilyMemberDto.KickResponse kickMember(Long userId, User user) {
+    public FamilyMemberDto.KickResponse kickMember(Long userId, Long leaderId) {
         // 아이디 확인? 굳이
-        User member = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        User member = userReader.getById(userId);
+
+        User leader = userReader.getById(leaderId);
 
         // 패밀리 멤버가 맞는지 확인
-        if (!userRepository.existsByIdAndFamily(userId, user.getFamily())) {
+        if (!userRepository.existsByIdAndFamily(userId, leader.getFamily())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "해당 가족의 리더가 아닙니다.");
         }
 
         // 멤버 제거, 권한 제거
         member.deleteFamilyMember();
         return FamilyMemberDto.KickResponse.builder()
-                .kickedNickname(member.getNickName())
+                .kickedNickname(member.getNickname())
                 .build();
     }
 
     /**
      * 가족 그룹을 탈퇴하는 경우
      *
-     * @param user 탈퇴 유저
+     * @param userId 탈퇴 유저
      */
-    public void leaveMember(User user) {
+    public void leaveMember(Long userId) {
+        User user = userReader.getById(userId);
         // 가족이 없는 경우
         validationFamily(user);
 
@@ -340,11 +357,13 @@ public class FamilyService {
     /**
      * 선택권 분배
      *
-     * @param user    리더
+     * @param userId  리더
      * @param request 선택권 개수
      * @return 자동 분배 여부
      */
-    public FamilyPickDto.ConfigResponse pickConfig(User user, FamilyPickDto.UpdateConfigRequest request) {
+    public FamilyPickDto.ConfigResponse pickConfig(Long userId, FamilyPickDto.UpdateConfigRequest request) {
+        User user = userReader.getById(userId);
+
         // 자동 분배가 true인지 확인
         boolean isAuto = request.isAutoAllocations();
 
@@ -362,8 +381,7 @@ public class FamilyService {
 
             pickAllocations
                     .forEach(pick -> {
-                        User member = userRepository.findById(pick.userId())
-                                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                        User member = userReader.getById(pick.userId());
 
                         if (!Objects.equals(member.getFamily(), user.getFamily())) {
                             throw new BusinessException(ErrorCode.NOT_YOUR_FAMILY_MEMBER);
@@ -378,7 +396,14 @@ public class FamilyService {
                 .build();
     }
 
-    public FamilyPickDto.ResetResponse resetConfig(User user) {
+    /**
+     * 선택권 초기화
+     * @param userId 리더 id
+     * @return 초기화된 멤버 수
+     */
+    public FamilyPickDto.ResetResponse resetConfig(Long userId) {
+        User user = userReader.getById(userId);
+
         // 멤버 목록 불러와 선택권 초기화
         List<User> userList = userRepository.findAllByFamily(user.getFamily());
 

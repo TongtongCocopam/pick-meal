@@ -3,14 +3,14 @@ package kongju.pickmeal.core.user;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import kongju.pickmeal.core.family.Family;
-import kongju.pickmeal.core.user.type.UserRole;
 import lombok.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.LastModifiedDate;
 
+import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.core.user.type.UserRole;
 import kongju.pickmeal.core.common.BaseTimeEntity;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
@@ -24,7 +24,7 @@ import kongju.pickmeal.common.exception.BusinessException;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
     @Column(nullable = false, unique = true)
-    private String nickName;
+    private String nickname;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
@@ -47,8 +47,8 @@ public class User extends BaseTimeEntity {
     private Family family;
 
     @Builder
-    public User(String nickName, LocalDate birthDate, String loginId, String email, String password){
-        this.nickName = nickName;
+    public User(String nickname, LocalDate birthDate, String loginId, String email, String password){
+        this.nickname = nickname;
         this.birthDate = birthDate;
         this.loginId = loginId;
         this.email = email;
@@ -62,7 +62,7 @@ public class User extends BaseTimeEntity {
             throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
         }
         this.family = family;
-        this.role = UserRole.READER;
+        this.role = UserRole.LEADER;
     }
 
     public void joinFamilyMember(Family family){
@@ -81,5 +81,13 @@ public class User extends BaseTimeEntity {
     public void deleteFamilyMember(){
         this.role = UserRole.GUEST;
         this.family = null;
+    }
+
+    public void updateNickname(String nickname){
+        this.nickname = nickname;
+    }
+
+    public void updateBirthDate(LocalDate birthDate){
+        this.birthDate = birthDate;
     }
 }

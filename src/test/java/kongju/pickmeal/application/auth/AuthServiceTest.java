@@ -28,12 +28,12 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.service.JwtService;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.api.security.JwtTokenFilter;
 import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.user.repository.UserRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 

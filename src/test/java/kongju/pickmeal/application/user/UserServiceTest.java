@@ -1,16 +1,12 @@
 package kongju.pickmeal.application.user;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.time.LocalDate;
-import java.util.Collections;
 import java.util.Optional;
+import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.stream.LongStream;
 
-import kongju.pickmeal.application.user.data.UserHealthDto;
-import kongju.pickmeal.core.diet.Ingredient;
-import kongju.pickmeal.core.user.*;
-import kongju.pickmeal.core.user.type.Gender;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.mockito.ArgumentCaptor;
@@ -18,18 +14,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
+import kongju.pickmeal.core.user.*;
+import kongju.pickmeal.core.diet.Ingredient;
+import kongju.pickmeal.core.user.type.Gender;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.application.user.data.UserDto;
@@ -37,13 +35,16 @@ import kongju.pickmeal.core.diet.IngredientRepository;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.application.user.data.UserHealthDto;
+import kongju.pickmeal.core.user.repository.UserRepository;
+import kongju.pickmeal.application.user.data.UserProfileDto;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
+import kongju.pickmeal.core.user.repository.UserHealthRepository;
+import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
+import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
-import static kongju.pickmeal.fixture.MemberFixture.createRequest;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
 
 
 @ExtendWith(SpringExtension.class)
@@ -65,6 +66,9 @@ public class UserServiceTest {
 
     @Mock
     private IngredientRepository ingredientRepository;
+
+    @Mock
+    private UserReader userReader;
 
     @InjectMocks
     private UserService userService;
@@ -103,7 +107,7 @@ public class UserServiceTest {
         @DisplayName("비밀번호와 비밀번호 확인이 다르면 회원가입에 실패한다")
         void should_fail_when_password_mismatch() {
             // 비밀번호와 확인용 비밀번호를 다르게 설정
-            UserDto.SignupRequest request = createRequest("test1234", "test0000!!", "wrong!!", "test@test.com", "test@test.com", "tester", LocalDate.now());
+            UserDto.SignupRequest request = createRequest("test1234", "test0000!!", "wrong!!", "test@test.com", "tester", LocalDate.now());
 
             assertThatThrownBy(() -> userService.signup(request))
                     .isInstanceOf(BusinessException.class)
@@ -135,7 +139,7 @@ public class UserServiceTest {
             // 가져온 객체 꺼내기
             User savedUser = user.getValue();
             assertThat(savedUser.getPassword()).isEqualTo("hash_pw");
-            assertThat(response.nickName()).isEqualTo(request.nickName());
+            assertThat(response.nickname()).isEqualTo(request.nickname());
         }
     }
 
@@ -159,8 +163,11 @@ public class UserServiceTest {
                     .diseases(diseases)
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDisease(request, user()));
+                    () -> userService.updateDisease(request, userId));
 
             assertEquals(ErrorCode.DUPLICATE_RESOURCE, exception.getErrorCode());
             assertEquals("중복되는 병명이 있습니다.", exception.getDetailMessage());
@@ -175,8 +182,11 @@ public class UserServiceTest {
                     .diseases(List.of(disease))
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateDisease(request, user()));
+                    () -> userService.updateDisease(request, userId));
 
             assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
             assertEquals("질병 분류와 상세 병명이 일치하지 않습니다.", exception.getDetailMessage());
@@ -191,7 +201,10 @@ public class UserServiceTest {
                     .diseases(List.of(disease))
                     .build();
 
-            assertDoesNotThrow(() -> userService.updateDisease(request, user()));
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
+            assertDoesNotThrow(() -> userService.updateDisease(request, userId));
 
             verify(userDiseaseRepository).saveAll(any());
         }
@@ -218,8 +231,11 @@ public class UserServiceTest {
                     .preferences(List.of(preference1, preference2))
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateIngredientPreference(request, user()));
+                    () -> userService.updateIngredientPreference(request, userId));
 
             assertEquals(ErrorCode.DUPLICATE_RESOURCE, exception.getErrorCode());
         }
@@ -235,8 +251,11 @@ public class UserServiceTest {
                     .preferences(preferences)
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateIngredientPreference(request, user()));
+                    () -> userService.updateIngredientPreference(request, userId));
 
             assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
             assertEquals("선호 재료는 최대 15개까지 설정 가능합니다.", exception.getDetailMessage());
@@ -253,8 +272,11 @@ public class UserServiceTest {
 
             given(ingredientRepository.findById(1L)).willReturn(Optional.empty());
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> userService.updateIngredientPreference(request, user()));
+                    () -> userService.updateIngredientPreference(request, userId));
 
             assertEquals(ErrorCode.INGREDIENT_NOT_FOUND, exception.getErrorCode());
             assertEquals("존재하지 않는 재료 아이디: [1]", exception.getDetailMessage());
@@ -273,9 +295,12 @@ public class UserServiceTest {
                     .name("감자")
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             given(ingredientRepository.findById(1L)).willReturn(Optional.ofNullable(ingredient));
 
-            assertDoesNotThrow(() -> userService.updateIngredientPreference(request, user()));
+            assertDoesNotThrow(() -> userService.updateIngredientPreference(request, userId));
 
             verify(userIngredientPreferenceRepository).saveAll(any());
         }
@@ -294,9 +319,49 @@ public class UserServiceTest {
                     .weight(BigDecimal.valueOf(55))
                     .build();
 
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
             given(userHealthRepository.findByUser(any())).willReturn(Optional.empty());
-            assertDoesNotThrow(() -> userService.updateHealth(request, user()));
+            assertDoesNotThrow(() -> userService.updateHealth(request, userId));
             verify(userHealthRepository).save(any());
+        }
+
+    }
+
+    @Nested
+    @DisplayName("유저 정보 수정")
+    class UserProfile {
+        @Test
+        @DisplayName("변경할 데이터가 없는 경우")
+        public void should_fail_user_profile_when_nickname_unavailable() {
+            UserProfileDto.UpdateRequest request = UserProfileDto.UpdateRequest.builder()
+                    .build();
+
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.updateProfile(request, userId));
+
+            assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
+            assertEquals("변경할 데이터가 존재하지 않습니다.", exception.getDetailMessage());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_user_profile() {
+            UserProfileDto.UpdateRequest request = UserProfileDto.UpdateRequest.builder()
+                    .nickname("테스트닉네임")
+                    .build();
+
+            Long userId = 1L;
+            given(userReader.getById(userId)).willReturn(user());
+
+            UserProfileDto.UpdateResponse response = assertDoesNotThrow(() -> userService.updateProfile(request, userId));
+
+            assertEquals("테스트닉네임", response.nickname());
+
         }
 
     }
