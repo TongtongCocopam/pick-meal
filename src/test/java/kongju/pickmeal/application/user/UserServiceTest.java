@@ -1,16 +1,12 @@
 package kongju.pickmeal.application.user;
 
-import java.math.BigDecimal;
 import java.util.List;
-import java.time.LocalDate;
-import java.util.Collections;
 import java.util.Optional;
+import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.stream.LongStream;
 
-import kongju.pickmeal.application.user.data.UserHealthDto;
-import kongju.pickmeal.core.diet.Ingredient;
-import kongju.pickmeal.core.user.*;
-import kongju.pickmeal.core.user.type.Gender;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.mockito.ArgumentCaptor;
@@ -21,14 +17,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
+import kongju.pickmeal.core.user.*;
+import kongju.pickmeal.core.diet.Ingredient;
+import kongju.pickmeal.core.user.type.Gender;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.application.user.data.UserDto;
@@ -36,12 +35,15 @@ import kongju.pickmeal.core.diet.IngredientRepository;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.application.user.data.UserHealthDto;
+import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
+import kongju.pickmeal.core.user.repository.UserHealthRepository;
+import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
+import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 
 @ExtendWith(SpringExtension.class)
