@@ -4,19 +4,19 @@ import java.io.IOException;
 
 import jakarta.servlet.FilterChain;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.jspecify.annotations.NonNull;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import kongju.pickmeal.core.service.JwtService;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.user.repository.UserRepository;
 
 
 @RequiredArgsConstructor // final이 붙은 필드를 모아서 생성자를 자동으로 만들어줌
