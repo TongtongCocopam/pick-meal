@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import kongju.pickmeal.core.user.User;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.user.repository.UserRepository;
 
 
 @Component
