@@ -129,6 +129,7 @@ public class UserControllerTest {
                     .when(userService).updateDisease(any(), any());
 
             mockMvc.perform(patch("/api/v1/users/me/diseases")
+                            .with(user(mockGuest()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -173,6 +174,7 @@ public class UserControllerTest {
                     .when(userService).updateIngredientPreference(any(), any());
 
             mockMvc.perform(patch("/api/v1/users/me/ingredient-preferences")
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -211,6 +213,7 @@ public class UserControllerTest {
             UserHealthDto.UpdateRequest request = UserHealthDto.UpdateRequest.builder().build();
 
             mockMvc.perform(patch("/api/v1/users/me/health")
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
@@ -248,6 +251,23 @@ public class UserControllerTest {
                     .build();
 
             mockMvc.perform(patch("/api/v1/users/me/profile")
+                            .with(user(mockGuest()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.message").exists());
+        }
+
+        @Test
+        @DisplayName("생일 날짜가 미래인 경우")
+        public void should_fail_user_profile_when_birthdate_unavailable()  throws Exception {
+            UserProfileDto.UpdateRequest request = UserProfileDto.UpdateRequest.builder()
+                    .birthDate(LocalDate.parse("2300-06-08"))
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/users/me/profile")
+                            .with(user(mockGuest()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
