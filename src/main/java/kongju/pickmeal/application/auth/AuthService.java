@@ -11,11 +11,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.auth.RefreshToken;
 import kongju.pickmeal.core.service.JwtService;
-import kongju.pickmeal.core.user.UserRepository;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 
