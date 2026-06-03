@@ -8,10 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
-import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.application.user.UserService;
 import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
+import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.application.user.data.UserHealthDto;
 import kongju.pickmeal.application.user.data.UserProfileDto;
 import kongju.pickmeal.application.user.data.UserDietProfileDto;
@@ -34,9 +34,9 @@ public class UserController {
     @PatchMapping("/me/diseases")
     public ResponseEntity<ApiResponse<Void>> updateDietProfile(
             @RequestBody @Valid UserDietProfileDto.UpdateDiseaseRequest request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        userService.updateDisease(request, user);
+        userService.updateDisease(request, userDetails.getId());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -46,9 +46,9 @@ public class UserController {
     @PatchMapping("/me/ingredient-preferences")
     public ResponseEntity<ApiResponse<Void>> updateIngredientPreferences(
             @RequestBody @Valid UserDietProfileDto.UpdateIngredientPreferenceRequest request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        userService.updateIngredientPreference(request, user);
+        userService.updateIngredientPreference(request, userDetails.getId());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
@@ -57,9 +57,9 @@ public class UserController {
     @PatchMapping("/me/health")
     public ResponseEntity<ApiResponse<Void>> updateHealth(
             @RequestBody @Valid UserHealthDto.UpdateRequest request,
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        userService.updateHealth(request, user);
+        userService.updateHealth(request, userDetails.getId());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -69,9 +69,9 @@ public class UserController {
     @PatchMapping("/me/profile")
     public ResponseEntity<ApiResponse<UserProfileDto.UpdateResponse>> updateProfile(
             @RequestBody @Valid UserProfileDto.UpdateRequest request,
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        UserProfileDto.UpdateResponse response = userService.updateProfile(request, user);
+        UserProfileDto.UpdateResponse response = userService.updateProfile(request, userDetails.getId());
 
         return ResponseEntity
                 .status(HttpStatus.OK)

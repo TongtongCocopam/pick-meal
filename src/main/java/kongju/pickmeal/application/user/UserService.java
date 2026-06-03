@@ -29,6 +29,7 @@ import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 @Transactional
 @RequiredArgsConstructor
 public class UserService {
+    private final UserReader userReader;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final IngredientRepository ingredientRepository;
@@ -113,9 +114,11 @@ public class UserService {
      * 유저 건강 정보, 선호 식품 정보를 업데이트 하는 메서드
      *
      * @param request 질병 리스트, 기호 식품 리스트
-     * @param user    신청 유저 객체
+     * @param userId    신청 유저 객체
      */
-    public void updateDisease(UserDietProfileDto.UpdateDiseaseRequest request, User user) {
+    public void updateDisease(UserDietProfileDto.UpdateDiseaseRequest request, Long userId) {
+        User user = userReader.getById(userId);
+
         if (request == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "변경할 데이터가 존재하지 않습니다.");
         }
@@ -164,7 +167,9 @@ public class UserService {
         }
     }
 
-    public void updateIngredientPreference(UserDietProfileDto.UpdateIngredientPreferenceRequest request, User user) {
+    public void updateIngredientPreference(UserDietProfileDto.UpdateIngredientPreferenceRequest request, Long userId) {
+        User user = userReader.getById(userId);
+
         if (request == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "변경할 데이터가 존재하지 않습니다.");
         }
@@ -239,9 +244,11 @@ public class UserService {
     /**
      * 성별, 몸무게, 키 등 정보 수정
      * @param request 유저 정보
-     * @param user 유저
+     * @param userId 유저
      */
-    public void updateHealth(UserHealthDto.UpdateRequest request, User user) {
+    public void updateHealth(UserHealthDto.UpdateRequest request, Long userId) {
+        User user = userReader.getById(userId);
+
         UserHealthProfile health = userHealthRepository.findByUser(user)
                 .orElseGet(() -> UserHealthProfile.builder()
                         .user(user)
@@ -260,10 +267,12 @@ public class UserService {
     /**
      * 닉네임, 생일 수정
      * @param request 유저 정보
-     * @param user 유저
+     * @param userId 유저
      * @return 수정된 결과
      */
-    public UserProfileDto.UpdateResponse updateProfile(UserProfileDto.UpdateRequest request, User user) {
+    public UserProfileDto.UpdateResponse updateProfile(UserProfileDto.UpdateRequest request, Long userId) {
+        User user = userReader.getById(userId);
+
         String nickname = request.nickname();
         LocalDate birthDate = request.birthDate();
 
