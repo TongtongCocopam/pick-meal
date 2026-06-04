@@ -2,6 +2,7 @@ package kongju.pickmeal.core.user;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 import lombok.*;
 import jakarta.persistence.*;
@@ -89,5 +90,9 @@ public class User extends BaseTimeEntity {
 
     public void updateBirthDate(LocalDate birthDate){
         this.birthDate = birthDate;
+    }
+
+    public void updatePassword(String password){
+        this.password = password;
     }
 }
