@@ -11,15 +11,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import kongju.pickmeal.core.user.*;
 import kongju.pickmeal.core.diet.Ingredient;
+import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.core.diet.IngredientRepository;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.user.data.UserHealthDto;
 import kongju.pickmeal.core.user.repository.UserRepository;
-import kongju.pickmeal.application.user.data.UserProfileDto;
-import kongju.pickmeal.application.user.data.UserDietProfileDto;
 import kongju.pickmeal.core.user.repository.UserHealthRepository;
 import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
@@ -114,7 +111,7 @@ public class UserService {
      * 유저 건강 정보, 선호 식품 정보를 업데이트 하는 메서드
      *
      * @param request 질병 리스트, 기호 식품 리스트
-     * @param userId    신청 유저 객체
+     * @param userId  신청 유저 객체
      */
     public void updateDisease(UserDietProfileDto.UpdateDiseaseRequest request, Long userId) {
         User user = userReader.getById(userId);
@@ -243,8 +240,9 @@ public class UserService {
 
     /**
      * 성별, 몸무게, 키 등 정보 수정
+     *
      * @param request 유저 정보
-     * @param userId 유저
+     * @param userId  유저
      */
     public void updateHealth(UserHealthDto.UpdateRequest request, Long userId) {
         User user = userReader.getById(userId);
@@ -266,8 +264,9 @@ public class UserService {
 
     /**
      * 닉네임, 생일 수정
+     *
      * @param request 유저 정보
-     * @param userId 유저
+     * @param userId  유저
      * @return 수정된 결과
      */
     public UserProfileDto.UpdateResponse updateProfile(UserProfileDto.UpdateRequest request, Long userId) {
@@ -276,16 +275,16 @@ public class UserService {
         String nickname = request.nickname();
         LocalDate birthDate = request.birthDate();
 
-        if(nickname == null && birthDate == null) {
+        if (nickname == null && birthDate == null) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "변경할 데이터가 존재하지 않습니다.");
         }
 
         // null인 것만 빼고 적용
-        if(nickname != null){
+        if (nickname != null) {
             user.updateNickname(nickname);
         }
 
-        if(birthDate != null){
+        if (birthDate != null) {
             user.updateBirthDate(birthDate);
         }
 
@@ -296,5 +295,31 @@ public class UserService {
                 .email(user.getEmail())
                 .loginId(user.getLoginId())
                 .build();
+    }
+
+    /**
+     * 비밀번호 변경
+     * @param request 변경할 비밀번호, 기존 비밀번호
+     * @param userId 유저
+     */
+    public void updatePassword(UserPasswordDto.UpdateRequest request, Long userId) {
+        User user = userReader.getById(userId);
+        // 현재 비빌번호 일치 확인
+        if(!passwordEncoder.matches(request.currentPassword(), user.getPassword())){
+            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
+        }
+
+        // 새 비밀번호 확인과 일치하는지 확인하고 저장
+        if(!request.newPassword().equals(request.confirmPassword())){
+            throw new BusinessException(ErrorCode.MISMATCH_CONFIRM_PASSWORD);
+        }
+
+        // 현재 비밀번호와 새 비밀번호가 같은지 확인
+        if(passwordEncoder.matches(request.newPassword(), user.getPassword())){
+            throw new BusinessException(ErrorCode.SAME_AS_OLD_PASSWORD);
+        }
+
+        String password = passwordEncoder.encode(request.newPassword());
+        user.updatePassword(password);
     }
 }
