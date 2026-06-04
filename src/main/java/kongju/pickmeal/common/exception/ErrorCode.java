@@ -21,7 +21,8 @@ public enum ErrorCode {
     INVALID_DATE_FORMAT(HttpStatus.BAD_REQUEST, "날짜 형식이 올바르지 않습니다."),
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다."),
     SAME_AS_OLD_PASSWORD(HttpStatus.BAD_REQUEST, "새 비밀번호가 현재 비밀번호와 동일합니다."),
-    WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호 보안 정책에 부합하지 않습니다."),
+    MISMATCH_CONFIRM_PASSWORD(HttpStatus.BAD_REQUEST, "새 비밀번호와 확인용 비밀번호가 일치하지 않습니다."),
+//    WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호 보안 정책에 부합하지 않습니다."),
 
     ALREADY_HAS_FAMILY(HttpStatus.BAD_REQUEST, "이미 소속된 가족이 있습니다."),
     FAMILY_NOT_FOUND(HttpStatus.NOT_FOUND, "가입된 가족 정보가 없습니다."),

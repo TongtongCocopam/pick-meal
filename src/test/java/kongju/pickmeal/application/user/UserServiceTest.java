@@ -9,8 +9,8 @@ import java.util.stream.LongStream;
 
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
-import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,17 +28,14 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import kongju.pickmeal.core.user.*;
 import kongju.pickmeal.core.diet.Ingredient;
 import kongju.pickmeal.core.user.type.Gender;
+import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.type.DiseaseName;
-import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.core.diet.IngredientRepository;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.user.data.UserHealthDto;
 import kongju.pickmeal.core.user.repository.UserRepository;
-import kongju.pickmeal.application.user.data.UserProfileDto;
-import kongju.pickmeal.application.user.data.UserDietProfileDto;
 import kongju.pickmeal.core.user.repository.UserHealthRepository;
 import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
@@ -364,5 +361,90 @@ public class UserServiceTest {
 
         }
 
+    }
+
+    @Nested
+    @DisplayName("유저 정보 수정")
+    class UpdatePassword{
+        @Test
+        @DisplayName("현재 비밀번호와 불일치")
+        public void should_fail_update_password_when_current_password_is_incorrect()  {
+            UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
+                    .currentPassword("incorrect12!")
+                    .newPassword("test1234!!")
+                    .confirmPassword("test1234!!")
+                    .build();
+
+            Long userId = 1L;
+            User user = user();
+            given(userReader.getById(userId)).willReturn(user());
+
+            given(passwordEncoder.matches(request.currentPassword(), user.getPassword())).willReturn(false);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.updatePassword(request, userId));
+
+            assertEquals(ErrorCode.PASSWORD_MISMATCH, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("새 비밀번호 확인 불일치")
+        public void should_fail_update_password_when_new_password_is_incorrect()  {
+            UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
+                    .currentPassword("password1234")
+                    .newPassword("test1234!!")
+                    .confirmPassword("incorrect12!!")
+                    .build();
+
+            Long userId = 1L;
+            User user = user();
+            given(userReader.getById(userId)).willReturn(user());
+            given(passwordEncoder.matches(request.currentPassword(), user.getPassword())).willReturn(true);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.updatePassword(request, userId));
+
+            assertEquals(ErrorCode.MISMATCH_CONFIRM_PASSWORD, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("이전 비밀번호와 동일")
+        public void should_fail_update_password_when_eq_current_password()  {
+            UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
+                    .currentPassword("password1234")
+                    .newPassword("password1234")
+                    .confirmPassword("password1234")
+                    .build();
+
+            Long userId = 1L;
+            User user = user();
+            given(userReader.getById(userId)).willReturn(user());
+            given(passwordEncoder.matches(request.currentPassword(), user.getPassword())).willReturn(true);
+            given(passwordEncoder.matches(request.newPassword(), user.getPassword())).willReturn(true);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.updatePassword(request, userId));
+
+            assertEquals(ErrorCode.SAME_AS_OLD_PASSWORD, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_update_password() {
+            UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
+                    .currentPassword("password1234")
+                    .newPassword("test1234!!")
+                    .confirmPassword("test1234!!")
+                    .build();
+
+            Long userId = 1L;
+            User user = user();
+            given(userReader.getById(userId)).willReturn(user());
+            given(passwordEncoder.matches(request.currentPassword(), user.getPassword())).willReturn(true);
+            given(passwordEncoder.matches(request.newPassword(), user.getPassword())).willReturn(false);
+
+            assertDoesNotThrow(() -> userService.updatePassword(request, userId));
+            verify(passwordEncoder).encode(request.newPassword());
+        }
     }
 }

@@ -8,13 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
+import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.application.user.UserService;
-import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.api.security.CustomUserDetails;
-import kongju.pickmeal.application.user.data.UserHealthDto;
-import kongju.pickmeal.application.user.data.UserProfileDto;
-import kongju.pickmeal.application.user.data.UserDietProfileDto;
 
 
 @RestController
@@ -78,4 +75,13 @@ public class UserController {
                 .body(ApiResponse.success(response));
     }
 
+    @PatchMapping("/me/password")
+    public ResponseEntity<ApiResponse<Void>> updatePassword(
+            @RequestBody @Valid UserPasswordDto.UpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        userService.updatePassword(request, userDetails.getId());
+        return ResponseEntity
+                .ok(ApiResponse.success());
+    }
 }
