@@ -23,19 +23,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 import kongju.pickmeal.core.user.type.Gender;
+import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserService;
-import kongju.pickmeal.application.user.data.UserDto;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.support.fixture.TestSecurityConfig;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.user.data.UserHealthDto;
-import kongju.pickmeal.application.user.data.UserProfileDto;
 import kongju.pickmeal.api.exception.GlobalExceptionHandler;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
-import kongju.pickmeal.application.user.data.UserDietProfileDto;
 
 import static kongju.pickmeal.support.fixture.SecurityFixture.mockGuest;
 import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
@@ -130,8 +127,8 @@ public class UserControllerTest {
 
             mockMvc.perform(patch("/api/v1/users/me/diseases")
                             .with(user(mockGuest()))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false))
                     .andExpect(jsonPath("$.error.message").exists());
@@ -261,7 +258,7 @@ public class UserControllerTest {
 
         @Test
         @DisplayName("생일 날짜가 미래인 경우")
-        public void should_fail_user_profile_when_birthdate_unavailable()  throws Exception {
+        public void should_fail_user_profile_when_birthdate_unavailable() throws Exception {
             UserProfileDto.UpdateRequest request = UserProfileDto.UpdateRequest.builder()
                     .birthDate(LocalDate.parse("2300-06-08"))
                     .build();
@@ -297,5 +294,46 @@ public class UserControllerTest {
                     .andExpect(jsonPath("$.data.nickname").value("test_name"));
         }
 
+    }
+
+    @Nested
+    @DisplayName("비밀변호 변경")
+    class UpdatePassword {
+        @Test
+        @DisplayName("비밀번호 양식 불일치")
+        public void should_fail_update_password_when_password_invalid() throws Exception {
+            UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
+                    .currentPassword("testpassword12!")
+                    .newPassword("df2!")
+                    .confirmPassword("df2!")
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/users/me/password")
+                            .with(user(mockGuest()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andDo(print())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.message").exists());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_update_password() throws Exception {
+            UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
+                    .currentPassword("testpassword12!")
+                    .newPassword("test1234!!")
+                    .confirmPassword("test1234!!")
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/users/me/password")
+                            .with(user(mockGuest()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andDo(print())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
     }
 }
