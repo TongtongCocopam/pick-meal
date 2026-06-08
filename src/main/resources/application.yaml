@@ -59,6 +59,15 @@ jwt:
   access-expiration: 1800000 # 30분
   refresh-expiration: 1209600000 # 14일
 
+# 공공 데이터 포털 api
+external:
+  recipe:
+    base-url: "http://211.237.50.150:7080/openapi"
+    api-key: ${PUBLIC_DATA_API_KEY}
+    type: json
+    recipe-info-api-url: Grid_20150827000000000226_1
+    recipe-ingredient-api-url: Grid_20150827000000000227_1
+
 # 로깅 설정
 logging:
   level:
