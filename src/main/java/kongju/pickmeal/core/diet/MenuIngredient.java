@@ -1,6 +1,7 @@
 package kongju.pickmeal.core.diet;
 
 import lombok.Getter;
+import lombok.Builder;
 import lombok.AccessLevel;
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
@@ -36,6 +37,34 @@ public class MenuIngredient extends BaseEntity {
     private Double quantity;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private IngredientUnit unit;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    public MenuIngredient(Menu menu, Ingredient ingredient, String quantityText,
+                          Double quantity, IngredientUnit unit
+    ) {
+        this.menu = menu;
+        this.ingredient = ingredient;
+        this.quantityText = quantityText;
+        this.quantity = quantity;
+        this.unit = unit;
+    }
+
+    public static MenuIngredient create(
+            Menu menu,
+            Ingredient ingredient,
+            String quantityText,
+            Double quantity,
+            IngredientUnit unit
+    ){
+        return MenuIngredient.builder()
+                .menu(menu)
+                .ingredient(ingredient)
+                .quantityText(quantityText)
+                .quantity(quantity)
+                .unit(unit)
+                .build();
+    }
+
+
 }
