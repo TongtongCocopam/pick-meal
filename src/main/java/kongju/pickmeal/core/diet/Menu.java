@@ -44,10 +44,16 @@ public class Menu extends BaseTimeEntity {
     @JoinColumn(name = "family_id")
     private Family family;
 
+    @Column(name = "external_recipe_id", unique = true)
+    private Long externalRecipeId;
+
     @Builder(access = AccessLevel.PRIVATE)
-    public Menu(String menuName, MenuCategory category, DishType dishType,
-                BigDecimal kcal, BigDecimal carbs, BigDecimal protein,
-                BigDecimal fat, BigDecimal sodium, Family family) {
+    public Menu(
+            Long externalRecipeId, String menuName, MenuCategory category,
+            DishType dishType, BigDecimal kcal, BigDecimal carbs,
+            BigDecimal protein, BigDecimal fat, BigDecimal sodium,
+            Family family) {
+        this.externalRecipeId = externalRecipeId;
         this.menuName = menuName;
         this.category = category;
         this.dishType = dishType;
@@ -60,6 +66,7 @@ public class Menu extends BaseTimeEntity {
     }
 
     public static Menu createDefaultMenu(
+            Long externalRecipeId,
             String menuName,
             MenuCategory category,
             DishType dishType,
@@ -70,6 +77,7 @@ public class Menu extends BaseTimeEntity {
             BigDecimal sodium
     ) {
         return Menu.builder()
+                .externalRecipeId(externalRecipeId)
                 .menuName(menuName)
                 .category(category)
                 .dishType(dishType)
@@ -83,6 +91,7 @@ public class Menu extends BaseTimeEntity {
     }
 
     public static Menu createFamilyMenu(
+            Long externalRecipeId,
             String menuName,
             MenuCategory category,
             DishType dishType,
@@ -94,6 +103,7 @@ public class Menu extends BaseTimeEntity {
             Family family
     ) {
         return Menu.builder()
+                .externalRecipeId(externalRecipeId)
                 .menuName(menuName)
                 .category(category)
                 .dishType(dishType)
