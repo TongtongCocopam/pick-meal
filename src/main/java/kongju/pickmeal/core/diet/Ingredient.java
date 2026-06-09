@@ -17,8 +17,14 @@ public class Ingredient extends BaseTimeEntity {
     @Size(min = 1, max = 100)
     String name;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     public Ingredient(String name) {
         this.name = name;
+    }
+
+    public static Ingredient create(String name) {
+        return Ingredient.builder()
+                .name(name)
+                .build();
     }
 }
