@@ -6,11 +6,19 @@ import kongju.pickmeal.core.diet.Menu;
 import kongju.pickmeal.core.diet.Ingredient;
 import kongju.pickmeal.core.diet.MenuIngredient;
 import kongju.pickmeal.core.diet.type.IngredientUnit;
+import kongju.pickmeal.core.diet.type.IngredientType;
 import kongju.pickmeal.infrastructure.external.recipe.data.ingredient.RecipeIngredientRow;
+
 
 @Component
 public class IngredientMapper {
 
+    /**
+     * 재료 이름 공백 제거와 null체크
+     *
+     * @param ingredientName 재료 이름
+     * @return 재료 이름 string반환
+     */
     public String normalizeIngredientName(String ingredientName) {
         if (ingredientName == null || ingredientName.isBlank()) {
             return null;
@@ -18,6 +26,14 @@ public class IngredientMapper {
         return ingredientName.trim();
     }
 
+    /**
+     * 메뉴 재료 연결 테이블에 넣을 형식으로 변환
+     *
+     * @param row        재료 정보
+     * @param menu       메뉴 객체
+     * @param ingredient 재료 객체
+     * @return 메뉴 재료 객체 반환
+     */
     public MenuIngredient toMenuIngredient(
             RecipeIngredientRow row,
             Menu menu,
@@ -29,10 +45,17 @@ public class IngredientMapper {
                 ingredient,
                 row.quantityText(),
                 parseQuantity(row.quantityText()),
-                parseUnit(row.quantityText())
+                parseUnit(row.quantityText()),
+                parseIngredientType(row.ingredientTypeName())
         );
     }
 
+    /**
+     * 용량 단위 떼고 double로 변환
+     *
+     * @param quantityText 용량
+     * @return 재료 용량 반환
+     */
     private Double parseQuantity(String quantityText) {
         if (quantityText == null || quantityText.isBlank()) {
             return null;
@@ -58,7 +81,12 @@ public class IngredientMapper {
         }
     }
 
-
+    /**
+     * 용량 단위 뽑아내기
+     *
+     * @param quantityText 용량
+     * @return 단위
+     */
     private IngredientUnit parseUnit(String quantityText) {
         if (quantityText == null || quantityText.isBlank()) {
             return null;
@@ -77,5 +105,25 @@ public class IngredientMapper {
         if (text.contains("약간")) return IngredientUnit.PINCH;
 
         return null;
+    }
+
+    /**
+     * 주재료인지 부재료인지 판단
+     * @param ingredientType 재료 타입
+     * @return enum타입 반환
+     */
+    private IngredientType parseIngredientType(String ingredientType) {
+        if (ingredientType == null || ingredientType.isBlank()) {
+            return IngredientType.ETC;
+        }
+
+        String type = ingredientType.trim().toLowerCase();
+
+        return switch (type) {
+            case "주재료" -> IngredientType.MAIN;
+            case "양념" -> IngredientType.SEASONING;
+            case "부재료" -> IngredientType.SUB;
+            default -> IngredientType.ETC;
+        };
     }
 }
