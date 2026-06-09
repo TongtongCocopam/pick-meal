@@ -35,6 +35,9 @@ public enum ErrorCode {
     FAMILY_MEMBER_EXISTS(HttpStatus.BAD_REQUEST, "구성원을 모두 방출한 후에 삭제할 수 있습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
 
+    EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
+    EXTERNAL_API_EMPTY_RESPONSE(HttpStatus.BAD_GATEWAY, "외부 API 응답이 비어 있습니다."),
+
     ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 요청입니다."),
     DIET_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 식단이 이미 존재합니다."),
     DIET_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 식단 정보가 없습니다."),
