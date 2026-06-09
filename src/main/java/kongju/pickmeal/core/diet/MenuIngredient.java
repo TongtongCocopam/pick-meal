@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import kongju.pickmeal.core.common.BaseEntity;
 import kongju.pickmeal.core.diet.type.IngredientUnit;
+import kongju.pickmeal.core.diet.type.IngredientType;
 
 
 @Entity
@@ -39,15 +40,20 @@ public class MenuIngredient extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private IngredientUnit unit;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ingredient_type", length = 20)
+    private IngredientType ingredientType;
+
     @Builder(access = AccessLevel.PRIVATE)
     public MenuIngredient(Menu menu, Ingredient ingredient, String quantityText,
-                          Double quantity, IngredientUnit unit
+                          Double quantity, IngredientUnit unit,  IngredientType ingredientType
     ) {
         this.menu = menu;
         this.ingredient = ingredient;
         this.quantityText = quantityText;
         this.quantity = quantity;
         this.unit = unit;
+        this.ingredientType = ingredientType;
     }
 
     public static MenuIngredient create(
@@ -55,7 +61,8 @@ public class MenuIngredient extends BaseEntity {
             Ingredient ingredient,
             String quantityText,
             Double quantity,
-            IngredientUnit unit
+            IngredientUnit unit,
+            IngredientType ingredientType
     ){
         return MenuIngredient.builder()
                 .menu(menu)
@@ -63,6 +70,7 @@ public class MenuIngredient extends BaseEntity {
                 .quantityText(quantityText)
                 .quantity(quantity)
                 .unit(unit)
+                .ingredientType(ingredientType)
                 .build();
     }
 
