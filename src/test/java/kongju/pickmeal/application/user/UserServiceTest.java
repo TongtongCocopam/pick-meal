@@ -31,13 +31,13 @@ import kongju.pickmeal.core.user.type.Gender;
 import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.type.DiseaseName;
-import kongju.pickmeal.core.diet.IngredientRepository;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.user.repository.UserHealthRepository;
 import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
+import kongju.pickmeal.core.diet.repository.IngredientRepository;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
