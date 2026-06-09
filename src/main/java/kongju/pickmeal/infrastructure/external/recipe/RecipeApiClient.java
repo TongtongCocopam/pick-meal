@@ -3,8 +3,12 @@ package kongju.pickmeal.infrastructure.external.recipe;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.ResourceAccessException;
 
+import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.infrastructure.config.RecipeApiProperties;
+import org.springframework.web.client.RestClientResponseException;
 import kongju.pickmeal.infrastructure.external.recipe.data.info.RecipeInfoApiResponse;
 import kongju.pickmeal.infrastructure.external.recipe.data.ingredient.RecipeIngredientApiResponse;
 
@@ -19,32 +23,58 @@ public class RecipeApiClient {
     private final RestClient restClient;
     private final RecipeApiProperties properties;
 
-    // get요청 보내기
+    /**
+     * 레시피 기본 정보 가져오기
+     * @param startIdx 시작 인덱스
+     * @param endIdx 종료 인덱스
+     * @return dto List
+     */
     public RecipeInfoApiResponse fetchRecipeInfos(int startIdx, int endIdx) {
-        return restClient.get()
-                // URL만들기
-                .uri("{baseUrl}/{apiKey}/{type}/{apiUrl}/{start}/{end}",
-                        properties.getBaseUrl(),
-                        properties.getApiKey(),
-                        properties.getType(),
-                        properties.getRecipeInfoApiUrl(),
-                        startIdx,
-                        endIdx)
-                .retrieve()
-                .body(RecipeInfoApiResponse.class);
+        String url = "%s/%s/%s/%s/%d/%d".formatted(
+                properties.getBaseUrl(),
+                properties.getApiKey(),
+                properties.getType(),
+                properties.getRecipeInfoApiUrl(),
+                startIdx,
+                endIdx
+        );
+        try {
+            return restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(RecipeInfoApiResponse.class);
+
+        } catch (RestClientResponseException | ResourceAccessException e) {
+            throw new BusinessException(ErrorCode.EXTERNAL_API_ERROR);
+
+        }
     }
 
-    // 응답 받기
+    /**
+     * 레시피 재료 정보 가져오기
+     * @param startIdx 시작 인덱스
+     * @param endIdx 종료 인덱스
+     * @return dto List
+     */
     public RecipeIngredientApiResponse fetchRecipeIngredients(int startIdx, int endIdx) {
-        return restClient.get()
-                .uri("{baseUrl}/{apiKey}/{type}/{apiUrl}/{start}/{end}",
-                        properties.getBaseUrl(),
-                        properties.getApiKey(),
-                        properties.getType(),
-                        properties.getRecipeIngredientApiUrl(),
-                        startIdx,
-                        endIdx)
-                .retrieve()
-                .body(RecipeIngredientApiResponse.class);
+        String url = "%s/%s/%s/%s/%d/%d".formatted(
+                properties.getBaseUrl(),
+                properties.getApiKey(),
+                properties.getType(),
+                properties.getRecipeIngredientApiUrl(),
+                startIdx,
+                endIdx
+        );
+        try {
+
+            return restClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(RecipeIngredientApiResponse.class);
+
+        } catch (RestClientResponseException | ResourceAccessException e) {
+            throw new BusinessException(ErrorCode.EXTERNAL_API_ERROR);
+
+        }
     }
 }
