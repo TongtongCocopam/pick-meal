@@ -13,6 +13,11 @@ import kongju.pickmeal.infrastructure.external.recipe.data.info.RecipeInfoRow;
 @Component
 public class MenuMapper {
 
+    /**
+     * 메뉴 테이블에 넣을 수 있도록 변환
+     * @param row 메뉴 정보
+     * @return 메뉴 객체
+     */
     public Menu toMenu(RecipeInfoRow row) {
         return Menu.createDefaultMenu(
                 row.recipeId(),
@@ -27,6 +32,11 @@ public class MenuMapper {
         );
     }
 
+    /**
+     * 카테고리 양식에 맞게 enum타입으로 변환
+     * @param nationName 카테고리 이름
+     * @return 카테고리 enum
+     */
     private MenuCategory mapCategory(String nationName) {
         if ("한식".equals(nationName)) {
             return MenuCategory.KOREAN;
@@ -43,6 +53,12 @@ public class MenuMapper {
         return MenuCategory.ETC;
     }
 
+    /**
+     * 메뉴 종류에 맞게 enum타입으로 변환
+     * 국, 탕 찌개 등
+     * @param typeName 종류
+     * @return 종류 enum타입
+     */
     private DishType mapDishType(String typeName) {
         if ("밥".equals(typeName)) {
             return DishType.RICE;
@@ -59,6 +75,11 @@ public class MenuMapper {
         return DishType.ETC;
     }
 
+    /**
+     * 칼로리 정보
+     * @param value 칼로리
+     * @return db형태에 맞게 변환
+     */
     private BigDecimal parseBigDecimal(String value) {
         if (value == null || value.isBlank()) {
             return null;
