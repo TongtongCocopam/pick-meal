@@ -288,9 +288,7 @@ public class UserServiceTest {
                     .preferences(List.of(preference))
                     .build();
 
-            Ingredient ingredient = Ingredient.builder()
-                    .name("감자")
-                    .build();
+            Ingredient ingredient = Ingredient.create("감자");
 
             Long userId = 1L;
             given(userReader.getById(userId)).willReturn(user());
