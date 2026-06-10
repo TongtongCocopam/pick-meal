@@ -1,15 +1,19 @@
-package kongju.pickmeal.core.family;
+package kongju.pickmeal.infrastructure.repository.jpa.family;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.core.family.ApplyStatus;
+import kongju.pickmeal.core.family.FamilyJoinRequest;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 
-public interface FamilyJoinRepository extends JpaRepository<FamilyJoinRequest, Long> {
+
+public interface FamilyJoinJpaRepository extends JpaRepository<FamilyJoinRequest, Long> {
 
     @Query("SELECT COUNT(ja) > 0 " +
             "FROM FamilyJoinRequest ja WHERE ja.user = :user AND " +
