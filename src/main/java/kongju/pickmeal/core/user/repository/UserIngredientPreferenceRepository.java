@@ -1,9 +1,12 @@
 package kongju.pickmeal.core.user.repository;
 
+import java.util.List;
+
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserIngredientPreference;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface UserIngredientPreferenceRepository extends JpaRepository<UserIngredientPreference, Long> {
+
+public interface UserIngredientPreferenceRepository{
     void deleteAllByUser(User user);
+    List<UserIngredientPreference> saveAll(List<UserIngredientPreference> userIngredientPreferenceList);
 }
