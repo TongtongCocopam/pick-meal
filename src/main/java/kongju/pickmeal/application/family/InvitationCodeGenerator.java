@@ -5,12 +5,12 @@ import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import kongju.pickmeal.core.family.FamilyRepository;
+import kongju.pickmeal.core.family.repository.FamilyRepository;
 
 @Component
 @RequiredArgsConstructor
 public class InvitationCodeGenerator {
-    private FamilyRepository familyRepository;
+    private final FamilyRepository familyRepository;
 
     /**
      * 중복이 아닐때까지 생성
