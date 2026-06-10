@@ -9,11 +9,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.common.ApiResponse.ApiResponse;
 
 
 @Component

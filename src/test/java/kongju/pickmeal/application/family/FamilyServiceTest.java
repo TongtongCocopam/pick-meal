@@ -26,8 +26,10 @@ import kongju.pickmeal.core.user.type.UserRole;
 import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
-import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.user.repository.UserRepository;
+import kongju.pickmeal.core.family.repository.FamilyRepository;
+import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 import static kongju.pickmeal.support.fixture.FamilyFixture.family;

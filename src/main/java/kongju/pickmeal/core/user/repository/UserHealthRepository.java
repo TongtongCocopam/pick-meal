@@ -4,9 +4,9 @@ import java.util.Optional;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserHealthProfile;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 
-public interface UserHealthRepository extends JpaRepository<UserHealthProfile, Long> {
+public interface UserHealthRepository {
     Optional<UserHealthProfile> findByUser(User user);
+    UserHealthProfile save(UserHealthProfile userHealth);
 }
