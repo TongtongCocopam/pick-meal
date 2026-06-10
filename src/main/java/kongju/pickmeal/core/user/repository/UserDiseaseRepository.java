@@ -1,9 +1,13 @@
 package kongju.pickmeal.core.user.repository;
 
+import java.util.List;
+
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserDisease;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface UserDiseaseRepository extends JpaRepository<UserDisease, Long> {
+
+public interface UserDiseaseRepository {
     void deleteAllByUser(User user);
+
+    List<UserDisease> saveAll(List<UserDisease> userDiseases);
 }
