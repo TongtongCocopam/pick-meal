@@ -8,6 +8,8 @@ import kongju.pickmeal.core.diet.Ingredient;
 import kongju.pickmeal.core.diet.MenuIngredient;
 import kongju.pickmeal.core.diet.repository.MenuIngredientRepository;
 
+import java.util.List;
+
 
 @Repository
 @RequiredArgsConstructor
@@ -22,5 +24,10 @@ public class MenuIngredientRepositoryAdapter implements MenuIngredientRepository
     @Override
     public MenuIngredient save(MenuIngredient menuIngredient) {
         return menuIngredientJpaRepository.save(menuIngredient);
+    }
+
+    @Override
+    public List<MenuIngredient> saveAll(List<MenuIngredient> menuIngredients) {
+        return menuIngredientJpaRepository.saveAll(menuIngredients);
     }
 }

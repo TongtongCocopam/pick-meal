@@ -62,11 +62,18 @@ jwt:
 # 공공 데이터 포털 api
 external:
   recipe:
-    base-url: http://211.237.50.150:7080/openapi
-    api-key: ${PUBLIC_DATA_API_KEY:sample}
-    type: json
-    recipe-info-api-url: Grid_20150827000000000226_1
-    recipe-ingredient-api-url: Grid_20150827000000000227_1
+    public-data:
+      base-url: http://211.237.50.150:7080/openapi
+      api-key: ${PUBLIC_DATA_API_KEY:sample}
+      type: json
+      recipe-info-api-url: Grid_20150827000000000226_1
+      recipe-ingredient-api-url: Grid_20150827000000000227_1
+
+    food-safety:
+      base-url: http://openapi.foodsafetykorea.go.kr/api/
+      api-key: ${FOOD_SAFETY_API_KEY:sample}
+      service-id: COOKRCP01
+      type: json
 
 # 로깅 설정
 logging:
