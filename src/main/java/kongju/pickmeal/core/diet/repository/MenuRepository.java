@@ -10,4 +10,5 @@ public interface MenuRepository{
     Optional<Menu> findByExternalRecipeId(Long externalRecipeId);
     boolean existsByExternalRecipeId(Long externalRecipeId);
     List<Menu> saveAll(List<Menu> menus);
+    Menu save(Menu menu);
 }

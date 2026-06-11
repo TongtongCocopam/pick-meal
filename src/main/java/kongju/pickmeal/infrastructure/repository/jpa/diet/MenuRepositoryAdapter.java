@@ -29,4 +29,9 @@ public class MenuRepositoryAdapter implements MenuRepository {
     public List<Menu> saveAll(List<Menu> menus) {
         return menuJpaRepository.saveAll(menus);
     }
+
+    @Override
+    public Menu save(Menu menu) {
+        return menuJpaRepository.save(menu);
+    }
 }
