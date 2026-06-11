@@ -1,4 +1,4 @@
-package kongju.pickmeal.infrastructure.external.recipe.service;
+package kongju.pickmeal.infrastructure.external.recipe.publicdata.service;
 
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
@@ -12,10 +12,10 @@ import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.diet.repository.MenuRepository;
 import kongju.pickmeal.core.diet.repository.IngredientRepository;
 import kongju.pickmeal.core.diet.repository.MenuIngredientRepository;
-import kongju.pickmeal.infrastructure.external.recipe.RecipeApiClient;
-import kongju.pickmeal.infrastructure.external.recipe.mapper.IngredientMapper;
-import kongju.pickmeal.infrastructure.external.recipe.data.ingredient.RecipeIngredientRow;
-import kongju.pickmeal.infrastructure.external.recipe.data.ingredient.RecipeIngredientApiResponse;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.mapper.IngredientMapper;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.PublicDataRecipeApiClient;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.ingredient.RecipeIngredientRow;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.ingredient.RecipeIngredientApiResponse;
 
 import java.util.Optional;
 
@@ -25,7 +25,7 @@ import java.util.Optional;
 public class IngredientImportService {
 
     private final MenuRepository menuRepository;
-    private final RecipeApiClient recipeApiClient;
+    private final PublicDataRecipeApiClient publicDataRecipeApiClient;
     private final IngredientMapper ingredientMapper;
     private final IngredientRepository ingredientRepository;
     private final MenuIngredientRepository menuIngredientRepository;
@@ -37,7 +37,7 @@ public class IngredientImportService {
      */
     public void importIngredients(int startIdx, int endIdx) {
         RecipeIngredientApiResponse response =
-                recipeApiClient.fetchRecipeIngredients(startIdx, endIdx);
+                publicDataRecipeApiClient.fetchRecipeIngredients(startIdx, endIdx);
 
         if (response == null || response.grid() == null || response.grid().row() == null) {
             throw new BusinessException(ErrorCode.EXTERNAL_API_EMPTY_RESPONSE);

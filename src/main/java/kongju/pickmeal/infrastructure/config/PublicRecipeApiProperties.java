@@ -6,8 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
 @Setter
-@ConfigurationProperties(prefix = "external.recipe")
-public class RecipeApiProperties {
+@ConfigurationProperties(prefix = "external.recipe.public-data")
+public class PublicRecipeApiProperties {
     private String baseUrl;
     private String apiKey;
     private String type;
