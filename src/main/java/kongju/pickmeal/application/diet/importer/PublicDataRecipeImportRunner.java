@@ -5,14 +5,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 
-import kongju.pickmeal.infrastructure.external.recipe.service.MenuImportService;
-import kongju.pickmeal.infrastructure.external.recipe.service.IngredientImportService;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.service.MenuImportService;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.service.IngredientImportService;
 
 
-@Profile("local")
+@Profile("public-data-import")
 @Component
 @RequiredArgsConstructor
-public class RecipeImportRunner implements CommandLineRunner {
+public class PublicDataRecipeImportRunner implements CommandLineRunner {
 
     private final MenuImportService menuImportService;
     private final IngredientImportService ingredientImportService;
@@ -29,4 +29,5 @@ public class RecipeImportRunner implements CommandLineRunner {
             ingredientImportService.importIngredients(start, end);
         }
     }
+
 }

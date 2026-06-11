@@ -1,20 +1,20 @@
-package kongju.pickmeal.infrastructure.external.recipe.service;
+package kongju.pickmeal.infrastructure.external.recipe.publicdata.service;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
-import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.infrastructure.external.recipe.data.info.RecipeInfoRow;
 import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import kongju.pickmeal.core.diet.Menu;
+import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.diet.repository.MenuRepository;
-import kongju.pickmeal.infrastructure.external.recipe.RecipeApiClient;
-import kongju.pickmeal.infrastructure.external.recipe.mapper.MenuMapper;
-import kongju.pickmeal.infrastructure.external.recipe.data.info.RecipeInfoApiResponse;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.mapper.MenuMapper;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.info.RecipeInfoRow;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.PublicDataRecipeApiClient;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.info.RecipeInfoApiResponse;
 
 
 @Service
@@ -23,7 +23,7 @@ import kongju.pickmeal.infrastructure.external.recipe.data.info.RecipeInfoApiRes
 public class MenuImportService {
     private final MenuMapper menuMapper;
     private final MenuRepository menuRepository;
-    private final RecipeApiClient recipeApiClient;
+    private final PublicDataRecipeApiClient publicDataRecipeApiClient;
 
     /**
      * 메뉴 정보 api를 통해 가져와서 db에 저장
@@ -32,7 +32,7 @@ public class MenuImportService {
      */
     public void importMenus(int startIdx, int endIdx) {
         RecipeInfoApiResponse response =
-                recipeApiClient.fetchRecipeInfos(startIdx, endIdx);
+                publicDataRecipeApiClient.fetchRecipeInfos(startIdx, endIdx);
 
         if (response == null || response.grid() == null || response.grid().row() == null) {
             throw new BusinessException(ErrorCode.EXTERNAL_API_EMPTY_RESPONSE);

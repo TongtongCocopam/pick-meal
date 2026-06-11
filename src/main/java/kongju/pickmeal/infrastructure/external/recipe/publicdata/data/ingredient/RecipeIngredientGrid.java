@@ -1,4 +1,4 @@
-package kongju.pickmeal.infrastructure.external.recipe.data.ingredient;
+package kongju.pickmeal.infrastructure.external.recipe.publicdata.data.ingredient;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package kongju.pickmeal.infrastructure.external.recipe;
+package kongju.pickmeal.infrastructure.external.recipe.publicdata;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -7,10 +7,10 @@ import org.springframework.web.client.ResourceAccessException;
 
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.infrastructure.config.RecipeApiProperties;
 import org.springframework.web.client.RestClientResponseException;
-import kongju.pickmeal.infrastructure.external.recipe.data.info.RecipeInfoApiResponse;
-import kongju.pickmeal.infrastructure.external.recipe.data.ingredient.RecipeIngredientApiResponse;
+import kongju.pickmeal.infrastructure.config.PublicRecipeApiProperties;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.info.RecipeInfoApiResponse;
+import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.ingredient.RecipeIngredientApiResponse;
 
 
 /**
@@ -19,9 +19,9 @@ import kongju.pickmeal.infrastructure.external.recipe.data.ingredient.RecipeIngr
  */
 @Component
 @RequiredArgsConstructor
-public class RecipeApiClient {
+public class PublicDataRecipeApiClient {
     private final RestClient restClient;
-    private final RecipeApiProperties properties;
+    private final PublicRecipeApiProperties properties;
 
     /**
      * 레시피 기본 정보 가져오기
@@ -46,7 +46,6 @@ public class RecipeApiClient {
 
         } catch (RestClientResponseException | ResourceAccessException e) {
             throw new BusinessException(ErrorCode.EXTERNAL_API_ERROR);
-
         }
     }
 
