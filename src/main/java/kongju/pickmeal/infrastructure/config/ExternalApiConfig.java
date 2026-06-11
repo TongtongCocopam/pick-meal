@@ -7,10 +7,13 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 
 @Configuration
-@EnableConfigurationProperties(RecipeApiProperties.class)
+@EnableConfigurationProperties({
+        PublicRecipeApiProperties.class,
+        FoodSafetyRecipeApiProperties.class
+})
 public class ExternalApiConfig {
     @Bean
-    public RestClient restClient(){
+    public RestClient restClient() {
         return RestClient.builder().build();
     }
 }
