@@ -1,4 +1,4 @@
-package kongju.pickmeal.core.diet;
+package kongju.pickmeal.core.menu;
 
 import lombok.Builder;
 import lombok.AccessLevel;
