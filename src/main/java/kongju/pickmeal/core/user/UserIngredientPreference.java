@@ -5,7 +5,7 @@ import lombok.AccessLevel;
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 
-import kongju.pickmeal.core.diet.Ingredient;
+import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.common.BaseTimeEntity;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 

@@ -3,9 +3,9 @@ package kongju.pickmeal.infrastructure.external.recipe.publicdata.mapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import kongju.pickmeal.core.diet.Menu;
-import kongju.pickmeal.core.diet.Ingredient;
-import kongju.pickmeal.core.diet.MenuIngredient;
+import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.Ingredient;
+import kongju.pickmeal.core.menu.MenuIngredient;
 import kongju.pickmeal.infrastructure.external.recipe.parser.IngredientMenuParser;
 import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.ingredient.RecipeIngredientRow;
 

@@ -3,11 +3,11 @@ package kongju.pickmeal.infrastructure.external.recipe.foodsafety;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import kongju.pickmeal.core.diet.Menu;
-import kongju.pickmeal.core.diet.Ingredient;
-import kongju.pickmeal.core.diet.MenuIngredient;
-import kongju.pickmeal.core.diet.type.MenuCategory;
-import kongju.pickmeal.core.diet.type.IngredientType;
+import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.Ingredient;
+import kongju.pickmeal.core.menu.MenuIngredient;
+import kongju.pickmeal.core.menu.type.MenuCategory;
+import kongju.pickmeal.core.menu.type.IngredientType;
 import kongju.pickmeal.infrastructure.external.recipe.parser.IngredientMenuParser;
 import kongju.pickmeal.infrastructure.external.recipe.foodsafety.data.FoodSafetyRecipeRow;
 

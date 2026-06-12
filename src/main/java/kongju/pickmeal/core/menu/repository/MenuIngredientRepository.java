@@ -1,10 +1,10 @@
-package kongju.pickmeal.core.diet.repository;
+package kongju.pickmeal.core.menu.repository;
 
 import java.util.List;
 
-import kongju.pickmeal.core.diet.Menu;
-import kongju.pickmeal.core.diet.Ingredient;
-import kongju.pickmeal.core.diet.MenuIngredient;
+import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.Ingredient;
+import kongju.pickmeal.core.menu.MenuIngredient;
 
 
 public interface MenuIngredientRepository {

@@ -1,4 +1,4 @@
-package kongju.pickmeal.core.diet;
+package kongju.pickmeal.core.menu;
 
 import java.math.BigDecimal;
 
@@ -9,9 +9,9 @@ import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 
 import kongju.pickmeal.core.family.Family;
-import kongju.pickmeal.core.diet.type.DishType;
+import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.common.BaseTimeEntity;
-import kongju.pickmeal.core.diet.type.MenuCategory;
+import kongju.pickmeal.core.menu.type.MenuCategory;
 
 
 @Entity

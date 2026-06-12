@@ -1,4 +1,4 @@
-package kongju.pickmeal.core.diet;
+package kongju.pickmeal.core.menu;
 
 import lombok.Getter;
 import lombok.Builder;
@@ -7,8 +7,8 @@ import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 
 import kongju.pickmeal.core.common.BaseEntity;
-import kongju.pickmeal.core.diet.type.IngredientUnit;
-import kongju.pickmeal.core.diet.type.IngredientType;
+import kongju.pickmeal.core.menu.type.IngredientUnit;
+import kongju.pickmeal.core.menu.type.IngredientType;
 
 
 @Entity

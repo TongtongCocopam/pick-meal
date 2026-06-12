@@ -1,4 +1,4 @@
-package kongju.pickmeal.application.diet.importer;
+package kongju.pickmeal.application.menu.importer;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
