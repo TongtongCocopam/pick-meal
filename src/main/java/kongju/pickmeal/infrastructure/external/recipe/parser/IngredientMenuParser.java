@@ -7,10 +7,10 @@ import java.math.RoundingMode;
 
 import org.springframework.stereotype.Component;
 
-import kongju.pickmeal.core.diet.type.DishType;
-import kongju.pickmeal.core.diet.type.MenuCategory;
-import kongju.pickmeal.core.diet.type.IngredientType;
-import kongju.pickmeal.core.diet.type.IngredientUnit;
+import kongju.pickmeal.core.menu.type.DishType;
+import kongju.pickmeal.core.menu.type.MenuCategory;
+import kongju.pickmeal.core.menu.type.IngredientType;
+import kongju.pickmeal.core.menu.type.IngredientUnit;
 
 
 @Component

@@ -6,8 +6,8 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import kongju.pickmeal.core.diet.Menu;
-import kongju.pickmeal.core.diet.repository.MenuRepository;
+import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.repository.MenuRepository;
 
 
 @Repository

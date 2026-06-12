@@ -7,10 +7,10 @@ import lombok.RequiredArgsConstructor;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
-import kongju.pickmeal.core.diet.Menu;
+import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.core.diet.repository.MenuRepository;
+import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.infrastructure.external.recipe.publicdata.mapper.MenuMapper;
 import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.info.RecipeInfoRow;
 import kongju.pickmeal.infrastructure.external.recipe.publicdata.PublicDataRecipeApiClient;

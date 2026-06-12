@@ -1,4 +1,4 @@
-package kongju.pickmeal.core.diet.type;
+package kongju.pickmeal.core.menu.type;
 
 public enum IngredientType {
     MAIN,

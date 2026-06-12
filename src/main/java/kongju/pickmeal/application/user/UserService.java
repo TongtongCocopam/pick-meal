@@ -10,13 +10,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import kongju.pickmeal.core.user.*;
-import kongju.pickmeal.core.diet.Ingredient;
+import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.repository.UserRepository;
-import kongju.pickmeal.core.diet.repository.IngredientRepository;
+import kongju.pickmeal.core.menu.repository.IngredientRepository;
 import kongju.pickmeal.core.user.repository.UserHealthRepository;
 import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;

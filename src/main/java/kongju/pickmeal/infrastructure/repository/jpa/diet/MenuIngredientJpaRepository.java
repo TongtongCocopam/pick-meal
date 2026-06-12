@@ -1,8 +1,8 @@
 package kongju.pickmeal.infrastructure.repository.jpa.diet;
 
-import kongju.pickmeal.core.diet.Menu;
-import kongju.pickmeal.core.diet.Ingredient;
-import kongju.pickmeal.core.diet.MenuIngredient;
+import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.Ingredient;
+import kongju.pickmeal.core.menu.MenuIngredient;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 

@@ -3,10 +3,10 @@ package kongju.pickmeal.infrastructure.repository.jpa.diet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import kongju.pickmeal.core.diet.Menu;
-import kongju.pickmeal.core.diet.Ingredient;
-import kongju.pickmeal.core.diet.MenuIngredient;
-import kongju.pickmeal.core.diet.repository.MenuIngredientRepository;
+import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.Ingredient;
+import kongju.pickmeal.core.menu.MenuIngredient;
+import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 
 import java.util.List;
 
