@@ -5,8 +5,8 @@ import java.util.Objects;
 import java.time.LocalDateTime;
 
 import lombok.RequiredArgsConstructor;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
@@ -113,6 +113,7 @@ public class FamilyService {
      * @param userId 리더 정보
      * @return 신청 리스트 반환
      */
+    @Transactional(readOnly = true)
     public List<FamilyJoinRequestDto.Summary> loadJoinRequestSummary(Long userId) {
         User user = userReader.getById(userId);
 
@@ -287,6 +288,7 @@ public class FamilyService {
      * @param userId 가족이 있는 유저
      * @return 가족 구성원 리스트
      */
+    @Transactional(readOnly = true)
     public List<FamilyMemberDto.ListItem> getMembers(Long userId) {
         User user = userReader.getById(userId);
         // 가족이 있는지 확인
