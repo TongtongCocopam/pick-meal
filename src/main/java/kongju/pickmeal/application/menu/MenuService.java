@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.Arrays;
 
 import lombok.RequiredArgsConstructor;
-import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.menu.type.DishType;
@@ -22,7 +22,7 @@ import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class MenuService {
     private final MenuRepository menuRepository;
@@ -50,7 +50,6 @@ public class MenuService {
                 .dishTypes(dishTypes)
                 .build();
     }
-
 
     public MenuDto.ListItemResponse searchMenus(
             MenuCategory category, DishType dishType, Pageable pageable
