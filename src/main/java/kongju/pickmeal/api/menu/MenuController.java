@@ -41,7 +41,7 @@ public class MenuController {
                 .ok(ApiResponse.success(response));
     }
 
-    @GetMapping("/menus/{menuId}")
+    @GetMapping("/{menuId}")
     public ResponseEntity<ApiResponse<MenuDto.DetailResponse>> getMenuDetail(
             @PathVariable Long menuId
     ) {
