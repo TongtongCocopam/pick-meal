@@ -4,9 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.type.DishType;
+import kongju.pickmeal.core.menu.type.MenuCategory;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
 
 
@@ -33,5 +37,10 @@ public class MenuRepositoryAdapter implements MenuRepository {
     @Override
     public Menu save(Menu menu) {
         return menuJpaRepository.save(menu);
+    }
+
+    @Override
+    public Page<Menu> searchByFilters(MenuCategory category, DishType dishType, Pageable pageable) {
+        return menuJpaRepository.searchByFilters(category, dishType, pageable);
     }
 }
