@@ -30,7 +30,6 @@ public class Family extends BaseTimeEntity {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-
     @Builder
     public Family(String familyName, String invitationCode, Long leaderId) {
         this.familyName = familyName;

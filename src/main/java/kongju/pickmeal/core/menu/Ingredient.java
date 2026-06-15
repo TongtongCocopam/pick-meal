@@ -1,5 +1,6 @@
 package kongju.pickmeal.core.menu;
 
+import lombok.Getter;
 import lombok.Builder;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,7 @@ import kongju.pickmeal.core.common.BaseTimeEntity;
 
 
 @Entity
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Ingredient extends BaseTimeEntity {
     @Column(unique = true, nullable = false)

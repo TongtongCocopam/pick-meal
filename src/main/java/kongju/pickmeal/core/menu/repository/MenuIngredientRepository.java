@@ -13,4 +13,7 @@ public interface MenuIngredientRepository {
     MenuIngredient save(MenuIngredient menuIngredient);
 
     List<MenuIngredient> saveAll(List<MenuIngredient> menuIngredients);
+
+    List<MenuIngredient> findAllByMenuWithIngredient(Menu menu);
+
 }
