@@ -9,6 +9,7 @@ import kongju.pickmeal.core.menu.MenuIngredient;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @Repository
@@ -29,5 +30,10 @@ public class MenuIngredientRepositoryAdapter implements MenuIngredientRepository
     @Override
     public List<MenuIngredient> saveAll(List<MenuIngredient> menuIngredients) {
         return menuIngredientJpaRepository.saveAll(menuIngredients);
+    }
+
+    @Override
+    public List<MenuIngredient> findAllByMenuWithIngredient(Menu menu) {
+        return menuIngredientJpaRepository.findAllByMenuWithIngredient(menu);
     }
 }
