@@ -12,14 +12,20 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 
 import kongju.pickmeal.core.menu.type.DishType;
+import kongju.pickmeal.support.fixture.MenuFixture;
 import kongju.pickmeal.core.menu.type.MenuCategory;
 import kongju.pickmeal.application.menu.MenuService;
+import kongju.pickmeal.application.menu.data.MenuDto;
 import kongju.pickmeal.application.menu.data.MenuFilterDto;
+
+import static kongju.pickmeal.support.fixture.SecurityFixture.mockGuest;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 
 @WebMvcTest(MenuController.class)
@@ -62,7 +68,6 @@ public class MenuControllerTest {
 
             given(menuService.getFilterMetadata()).willReturn(response);
 
-            // when & then
             mockMvc.perform(get("/api/v1/menus/filter-options"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
@@ -76,5 +81,28 @@ public class MenuControllerTest {
         }
 
     }
+
+    @Nested
+    @DisplayName("메뉴 상세 정보")
+    class MenuDetail {
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_menu_detail() throws Exception {
+            Long menuId = 1L;
+            MenuDto.DetailResponse response = MenuFixture.menuDetailResponse();
+
+            given(menuService.detailMenu(menuId)).willReturn(response);
+
+            mockMvc.perform(get("/api/v1/menus/{menuId}", menuId)
+                            .with(user(mockGuest())))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+
+
+        }
+
+    }
+
 
 }
