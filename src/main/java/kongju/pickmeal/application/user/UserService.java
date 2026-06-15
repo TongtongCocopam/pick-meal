@@ -5,8 +5,8 @@ import java.time.LocalDate;
 import java.util.regex.Pattern;
 
 import lombok.RequiredArgsConstructor;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import kongju.pickmeal.core.user.*;
@@ -164,6 +164,11 @@ public class UserService {
         }
     }
 
+    /**
+     * 재료 선호도 업데이트
+     * @param request 선호도 정보
+     * @param userId 유저 아이디
+     */
     public void updateIngredientPreference(UserDietProfileDto.UpdateIngredientPreferenceRequest request, Long userId) {
         User user = userReader.getById(userId);
 

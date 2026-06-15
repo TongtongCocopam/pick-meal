@@ -4,9 +4,9 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import lombok.RequiredArgsConstructor;
-import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.auth.RefreshToken;
