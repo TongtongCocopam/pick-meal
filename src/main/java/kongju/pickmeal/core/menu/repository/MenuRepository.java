@@ -16,6 +16,6 @@ public interface MenuRepository{
     boolean existsByExternalRecipeId(Long externalRecipeId);
     List<Menu> saveAll(List<Menu> menus);
     Menu save(Menu menu);
-    Page<Menu> searchByFilters(MenuCategory category, DishType dishType, Pageable pageable);
+    Page<Menu> searchByFilters(MenuCategory category, DishType dishType, String keyword, Pageable pageable);
     Optional<Menu> findById(Long id);
 }
