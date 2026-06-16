@@ -33,9 +33,10 @@ public class MenuController {
     public ResponseEntity<ApiResponse<MenuDto.ListItemResponse>> getMenuItems(
             @RequestParam(required = false) MenuCategory category,
             @RequestParam(required = false) DishType dishType,
+            @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        MenuDto.ListItemResponse response = menuService.searchMenus(category, dishType, pageable);
+        MenuDto.ListItemResponse response = menuService.searchMenus(category, dishType, keyword, pageable);
 
         return ResponseEntity
                 .ok(ApiResponse.success(response));

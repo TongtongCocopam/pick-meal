@@ -40,8 +40,8 @@ public class MenuRepositoryAdapter implements MenuRepository {
     }
 
     @Override
-    public Page<Menu> searchByFilters(MenuCategory category, DishType dishType, Pageable pageable) {
-        return menuJpaRepository.searchByFilters(category, dishType, pageable);
+    public Page<Menu> searchByFilters(MenuCategory category, DishType dishType, String keyword, Pageable pageable) {
+        return menuJpaRepository.searchByFilters(category, dishType, keyword, pageable);
     }
 
     @Override

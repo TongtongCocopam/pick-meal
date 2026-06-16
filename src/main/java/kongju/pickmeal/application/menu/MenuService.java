@@ -28,6 +28,11 @@ public class MenuService {
     private final MenuRepository menuRepository;
     private final MenuIngredientRepository menuIngredientRepository;
 
+    /**
+     * 필터링 카테고리 목록 가저오기
+     *
+     * @return 카테고리, 디시타입 리스트
+     */
     public MenuFilterDto.MetadataResponse getFilterMetadata() {
         List<MenuFilterDto.CategoryResponse> categories = Arrays.stream(MenuCategory.values())
                 .map(category -> MenuFilterDto.CategoryResponse.builder()
@@ -51,11 +56,22 @@ public class MenuService {
                 .build();
     }
 
+    /**
+     * 메뉴 찾기
+     *
+     * @param category 카테고리
+     * @param dishType 요리 타입
+     * @param keyword  키워드
+     * @param pageable 페이지
+     * @return 검색 결과
+     */
     public MenuDto.ListItemResponse searchMenus(
-            MenuCategory category, DishType dishType, Pageable pageable
+            MenuCategory category, DishType dishType, String keyword, Pageable pageable
     ) {
+        String nKeyword = normalizeKeyword(keyword);
+
         // 카테고리나 디쉬 타입이 있다면 쿼리로 불러오기
-        Page<Menu> menuPage = menuRepository.searchByFilters(category, dishType, pageable);
+        Page<Menu> menuPage = menuRepository.searchByFilters(category, dishType, nKeyword, pageable);
 
         List<MenuDto.MenuInfoResponse> menuInfoList = menuPage.stream()
                 .map(menu -> MenuDto.MenuInfoResponse.builder()
@@ -80,6 +96,25 @@ public class MenuService {
                 .build();
     }
 
+    /**
+     * 공백 제거
+     *
+     * @param keyword 키워드
+     * @return 키워드
+     */
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim();
+    }
+
+    /**
+     * 메뉴 상세 내용
+     *
+     * @param menuId 메뉴 아이디
+     * @return 메뉴 상세 정보
+     */
     public MenuDto.DetailResponse detailMenu(Long menuId) {
         // id로 메뉴 찾기
         Menu menu = menuRepository.findById(menuId)

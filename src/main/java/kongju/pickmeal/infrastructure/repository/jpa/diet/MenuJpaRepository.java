@@ -15,11 +15,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface MenuJpaRepository extends JpaRepository<Menu, Long> {
     Optional<Menu> findByExternalRecipeId(Long externalRecipeId);
+
     boolean existsByExternalRecipeId(Long externalRecipeId);
+
     @Query("""
                     select m from Menu m
                     where(:category is null or m.category = :category)
                     and (:dishType is null or m.dishType = :dishType)
+                    and (:keyword is null or lower(m.menuName) like lower(concat('%', :keyword, '%') ) )
             """)
-    Page<Menu> searchByFilters(@Param("category") MenuCategory category, @Param("dishType") DishType dishType, Pageable pageable);
+    Page<Menu> searchByFilters(
+            @Param("category") MenuCategory category,
+            @Param("dishType") DishType dishType,
+            @Param("keyword") String keyword, Pageable pageable);
 }
