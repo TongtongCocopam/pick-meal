@@ -28,7 +28,7 @@ public class FamilyController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
 
-        FamilyDto.CreateResponse response = familyService.createFamily(request, userDetails.getId());
+        FamilyDto.CreateResponse response = familyService.createFamily(request, userDetails.id());
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response));
@@ -39,7 +39,7 @@ public class FamilyController {
             @RequestBody @Valid FamilyJoinRequestDto.CreateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        familyService.joinRequest(request, userDetails.getId());
+        familyService.joinRequest(request, userDetails.id());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
@@ -50,7 +50,7 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<List<FamilyJoinRequestDto.Summary>>> requestListFamily(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<FamilyJoinRequestDto.Summary> joinRequestSummary = familyService.loadJoinRequestSummary(userDetails.getId());
+        List<FamilyJoinRequestDto.Summary> joinRequestSummary = familyService.loadJoinRequestSummary(userDetails.id());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -64,7 +64,7 @@ public class FamilyController {
             @RequestBody @Valid FamilyJoinRequestDto.ProcessRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        FamilyJoinRequestDto.ProcessResponse response = familyService.processJoinRequest(requestId, request, userDetails.getId());
+        FamilyJoinRequestDto.ProcessResponse response = familyService.processJoinRequest(requestId, request, userDetails.id());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(response));
@@ -75,7 +75,7 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<FamilyInvitationDto.CodeResponse>> updateInvitationCode(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        FamilyInvitationDto.CodeResponse response = familyService.createInvitationCode(userDetails.getId());
+        FamilyInvitationDto.CodeResponse response = familyService.createInvitationCode(userDetails.id());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -87,7 +87,7 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<List<FamilyMemberDto.ListItem>>> getFamilyMembers(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<FamilyMemberDto.ListItem> listItems = familyService.getMembers(userDetails.getId());
+        List<FamilyMemberDto.ListItem> listItems = familyService.getMembers(userDetails.id());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -99,7 +99,7 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<Void>> disbandMyFamily(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        familyService.disbandFamily(userDetails.getId());
+        familyService.disbandFamily(userDetails.id());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
@@ -111,7 +111,7 @@ public class FamilyController {
             @PathVariable Long userId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        FamilyMemberDto.KickResponse response = familyService.kickMember(userId, userDetails.getId());
+        FamilyMemberDto.KickResponse response = familyService.kickMember(userId, userDetails.id());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -123,7 +123,7 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<Void>> leaveFamilyMember(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        familyService.leaveMember(userDetails.getId());
+        familyService.leaveMember(userDetails.id());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -136,7 +136,7 @@ public class FamilyController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid FamilyPickDto.UpdateConfigRequest request
     ) {
-        FamilyPickDto.ConfigResponse response = familyService.pickConfig(userDetails.getId(), request);
+        FamilyPickDto.ConfigResponse response = familyService.pickConfig(userDetails.id(), request);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -148,7 +148,7 @@ public class FamilyController {
     public ResponseEntity<ApiResponse<FamilyPickDto.ResetResponse>> resetAllocation(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        FamilyPickDto.ResetResponse response = familyService.resetConfig(userDetails.getId());
+        FamilyPickDto.ResetResponse response = familyService.resetConfig(userDetails.id());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success(response));

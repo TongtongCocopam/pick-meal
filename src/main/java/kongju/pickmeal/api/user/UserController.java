@@ -33,7 +33,7 @@ public class UserController {
             @RequestBody @Valid UserDietProfileDto.UpdateDiseaseRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        userService.updateDisease(request, userDetails.getId());
+        userService.updateDisease(request, userDetails.id());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -45,7 +45,7 @@ public class UserController {
             @RequestBody @Valid UserDietProfileDto.UpdateIngredientPreferenceRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        userService.updateIngredientPreference(request, userDetails.getId());
+        userService.updateIngredientPreference(request, userDetails.id());
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(ApiResponse.success());
@@ -56,7 +56,7 @@ public class UserController {
             @RequestBody @Valid UserHealthDto.UpdateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        userService.updateHealth(request, userDetails.getId());
+        userService.updateHealth(request, userDetails.id());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -68,7 +68,7 @@ public class UserController {
             @RequestBody @Valid UserProfileDto.UpdateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        UserProfileDto.UpdateResponse response = userService.updateProfile(request, userDetails.getId());
+        UserProfileDto.UpdateResponse response = userService.updateProfile(request, userDetails.id());
 
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -80,7 +80,7 @@ public class UserController {
             @RequestBody @Valid UserPasswordDto.UpdateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        userService.updatePassword(request, userDetails.getId());
+        userService.updatePassword(request, userDetails.id());
         return ResponseEntity
                 .ok(ApiResponse.success());
     }

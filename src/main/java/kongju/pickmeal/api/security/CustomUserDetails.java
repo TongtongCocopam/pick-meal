@@ -3,9 +3,7 @@ package kongju.pickmeal.api.security;
 import java.util.List;
 import java.util.Collection;
 
-import lombok.Getter;
 import lombok.Builder;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -13,13 +11,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import kongju.pickmeal.core.user.type.UserRole;
 
 
-@Getter
 @Builder
-@RequiredArgsConstructor
-public class CustomUserDetails implements UserDetails {
-    private final Long id;
-    private final UserRole role;
-
+public record CustomUserDetails(Long id, UserRole role) implements UserDetails {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));

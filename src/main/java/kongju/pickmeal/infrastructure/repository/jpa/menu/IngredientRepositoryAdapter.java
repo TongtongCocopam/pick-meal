@@ -1,4 +1,4 @@
-package kongju.pickmeal.infrastructure.repository.jpa.diet;
+package kongju.pickmeal.infrastructure.repository.jpa.menu;
 
 import java.util.Optional;
 

@@ -1,4 +1,4 @@
-package kongju.pickmeal.infrastructure.repository.jpa.diet;
+package kongju.pickmeal.infrastructure.repository.jpa.menu;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -9,7 +9,6 @@ import kongju.pickmeal.core.menu.MenuIngredient;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 
 import java.util.List;
-import java.util.Optional;
 
 
 @Repository
