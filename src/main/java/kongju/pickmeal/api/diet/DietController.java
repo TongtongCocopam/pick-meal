@@ -27,7 +27,7 @@ public class DietController {
     public ResponseEntity<ApiResponse<MenuPickDto.CreateResponse>> createMenuPick(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid MenuPickDto.CreateRequest request) {
-        MenuPickDto.CreateResponse response = dietService.menuPick(userDetails, request);
+        MenuPickDto.CreateResponse response = dietService.menuPick(userDetails.id(), request);
 
         return ResponseEntity
                 .ok(ApiResponse.success(response));
