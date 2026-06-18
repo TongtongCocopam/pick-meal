@@ -7,7 +7,6 @@ import org.springframework.http.MediaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -20,6 +19,8 @@ import kongju.pickmeal.support.fixture.TestSecurityConfig;
 import kongju.pickmeal.api.exception.GlobalExceptionHandler;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 
+import static kongju.pickmeal.support.fixture.SecurityFixture.mockMember;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -58,7 +59,20 @@ public class DietControllerTest {
                     .andExpect(jsonPath("$.success").value(false))
                     .andDo(print());
         }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_menu_pick() throws Exception {
+            MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
+                    .build();
+
+            mockMvc.perform(post("/api/v1/diets/menu-picks")
+                            .with(user(mockMember()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andDo(print());
+        }
     }
-
-
 }
