@@ -2,7 +2,6 @@ package kongju.pickmeal.core.user;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 import lombok.*;
 import jakarta.persistence.*;
@@ -38,8 +37,7 @@ public class User extends BaseTimeEntity {
     private String password;
     @Column(nullable = false)
     private String email;
-    @Setter
-    private Long pickCount;
+
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
@@ -55,7 +53,6 @@ public class User extends BaseTimeEntity {
         this.email = email;
         this.password = password;
         this.role = UserRole.GUEST;
-        this.pickCount = 0L;
     }
 
     public void joinFamilyLeader(Family family){

@@ -53,7 +53,9 @@ public enum ErrorCode {
     DISH_TYPE_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 요리 종류입니다."),
     CATEGORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 카테고리입니다."),
     TIME_SLOT_ALREADY_FILLED(HttpStatus.CONFLICT, "해당 시간에는 이미 메뉴가 배정되었습니다."),
+
     TOO_MANY_SELECTIONS(HttpStatus.BAD_REQUEST, "선택권 개수를 초과하였습니다."),
+
     NOT_A_CANDIDATE(HttpStatus.BAD_REQUEST, "이미 식단으로 확정된 메뉴입니다."),
     AI_PROCESS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI 식단 생성에 실패했습니다."),
     AI_RESPONSE_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답이 지연되고 있습니다."),

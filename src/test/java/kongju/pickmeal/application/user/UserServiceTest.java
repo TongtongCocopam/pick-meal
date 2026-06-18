@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.stream.LongStream;
 
+import kongju.pickmeal.core.user.repository.*;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -34,11 +35,7 @@ import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.core.user.repository.UserRepository;
-import kongju.pickmeal.core.user.repository.UserHealthRepository;
-import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
 import kongju.pickmeal.core.menu.repository.IngredientRepository;
-import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
@@ -63,6 +60,9 @@ public class UserServiceTest {
 
     @Mock
     private IngredientRepository ingredientRepository;
+
+    @Mock
+    private UserPickCountRepository userPickCountRepository;
 
     @Mock
     private UserReader userReader;
@@ -104,7 +104,13 @@ public class UserServiceTest {
         @DisplayName("비밀번호와 비밀번호 확인이 다르면 회원가입에 실패한다")
         void should_fail_when_password_mismatch() {
             // 비밀번호와 확인용 비밀번호를 다르게 설정
-            UserDto.SignupRequest request = createRequest("test1234", "test0000!!", "wrong!!", "test@test.com", "tester", LocalDate.now());
+            UserDto.SignupRequest request = createRequest(
+                    "test1234",
+                    "test0000!!",
+                    "wrong!!",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.now());
 
             assertThatThrownBy(() -> userService.signup(request))
                     .isInstanceOf(BusinessException.class)
@@ -363,10 +369,10 @@ public class UserServiceTest {
 
     @Nested
     @DisplayName("유저 정보 수정")
-    class UpdatePassword{
+    class UpdatePassword {
         @Test
         @DisplayName("현재 비밀번호와 불일치")
-        public void should_fail_update_password_when_current_password_is_incorrect()  {
+        public void should_fail_update_password_when_current_password_is_incorrect() {
             UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
                     .currentPassword("incorrect12!")
                     .newPassword("test1234!!")
@@ -387,7 +393,7 @@ public class UserServiceTest {
 
         @Test
         @DisplayName("새 비밀번호 확인 불일치")
-        public void should_fail_update_password_when_new_password_is_incorrect()  {
+        public void should_fail_update_password_when_new_password_is_incorrect() {
             UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
                     .currentPassword("password1234")
                     .newPassword("test1234!!")
@@ -407,7 +413,7 @@ public class UserServiceTest {
 
         @Test
         @DisplayName("이전 비밀번호와 동일")
-        public void should_fail_update_password_when_eq_current_password()  {
+        public void should_fail_update_password_when_eq_current_password() {
             UserPasswordDto.UpdateRequest request = UserPasswordDto.UpdateRequest.builder()
                     .currentPassword("password1234")
                     .newPassword("password1234")

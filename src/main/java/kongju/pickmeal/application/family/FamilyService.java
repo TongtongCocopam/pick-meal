@@ -1,5 +1,6 @@
 package kongju.pickmeal.application.family;
 
+import java.util.UUID;
 import java.util.List;
 import java.util.Objects;
 import java.time.LocalDateTime;
@@ -10,15 +11,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.user.UserPickCount;
 import kongju.pickmeal.core.user.type.UserRole;
 import kongju.pickmeal.application.family.data.*;
+import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
-
+import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 
 @Service
 @Transactional
@@ -29,6 +33,8 @@ public class FamilyService {
     private final FamilyRepository familyRepository;
     private final FamilyJoinRepository familyJoinRepository;
     private final InvitationCodeGenerator invitationCodeGenerator;
+    private final UserPickCountRepository userPickCountRepository;
+    private final PickCountHistoryRepository pickCountHistoryRepository;
 
     /**
      * 가족 만들기
@@ -327,8 +333,14 @@ public class FamilyService {
         user.deleteFamilyLeader();
     }
 
+    /**
+     * 멤버 방출
+     * @param userId 방출할 멤버
+     * @param leaderId 리더
+     * @return 방출 멤버 이름
+     */
     public FamilyMemberDto.KickResponse kickMember(Long userId, Long leaderId) {
-        // 아이디 확인? 굳이
+        // 아이디 확인
         User member = userReader.getById(userId);
 
         User leader = userReader.getById(leaderId);
@@ -378,7 +390,10 @@ public class FamilyService {
 
             // 멤버들 기본값에 따라 설정
             userRepository.findAllByFamily(user.getFamily())
-                    .forEach(member -> member.setPickCount(defaultCount));
+                    .forEach(member -> {
+                        distributePickCount(member, defaultCount);
+                        distributePickCountHistory(userId, defaultCount);
+                    });
 
         } else {
             // false라면 멤버별 선택권 넣기
@@ -391,14 +406,44 @@ public class FamilyService {
                         if (!Objects.equals(member.getFamily(), user.getFamily())) {
                             throw new BusinessException(ErrorCode.NOT_YOUR_FAMILY_MEMBER);
                         }
+                        Long count = pick.pickCount();
 
-                        member.setPickCount(pick.pickCount());
+                        distributePickCount(member, count);
+                        distributePickCountHistory(userId, count);
                     });
         }
 
         return FamilyPickDto.ConfigResponse.builder()
                 .isAutoAllocations(isAuto)
                 .build();
+    }
+
+    /**
+     * 선택권 분배
+     * @param user 유저
+     * @param count 선택권 개수
+     */
+    private void distributePickCount(User user, Long count) {
+        UserPickCount userPickCount = userPickCountRepository.findByUser(user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        userPickCount.resetCount();
+        userPickCount.restoreCount(count);
+    }
+
+    /**
+     * 선택권 분배 히스토리 생성
+     * @param userId 유저 id
+     * @param count 선택권 개수
+     */
+    private void distributePickCountHistory(Long userId, Long count) {
+        User user = userReader.getById(userId);
+        UUID transactionId = UUID.randomUUID();
+
+        PickCountHistory resetHistory = PickCountHistory.reset(user, transactionId);
+        PickCountHistory creditHistory = PickCountHistory.credit(user, count, transactionId);
+
+        pickCountHistoryRepository.saveAll(List.of(resetHistory, creditHistory));
     }
 
     /**
@@ -412,12 +457,38 @@ public class FamilyService {
         // 멤버 목록 불러와 선택권 초기화
         List<User> userList = userRepository.findAllByFamily(user.getFamily());
 
-        userList.forEach(member -> member.setPickCount(0L));
+        userList.forEach(member -> {
+            resetPickCount(member);
+            resetPickCountHistory(member.getId());
+        });
 
         return FamilyPickDto.ResetResponse.builder()
                 .resetMember(userList.size())
                 .resetAt(String.valueOf(LocalDateTime.now()))
                 .build();
+    }
+
+    /**
+     * 선택권 초기화
+     * @param user 유저
+     */
+    private void resetPickCount(User user) {
+        UserPickCount userPickCount = userPickCountRepository.findByUser(user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        userPickCount.resetCount();
+    }
+
+    /**
+     * 선택권 초기화 히스토리
+     * @param userId 유저 아이디
+     */
+    private void resetPickCountHistory(Long userId) {
+        User user = userReader.getById(userId);
+        UUID transactionId = UUID.randomUUID();
+
+        PickCountHistory resetHistory = PickCountHistory.reset(user, transactionId);
+        pickCountHistoryRepository.save(resetHistory);
     }
 
 }

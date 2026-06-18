@@ -1,5 +1,6 @@
 package kongju.pickmeal.application.family;
 
+import java.util.UUID;
 import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
@@ -22,14 +23,18 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import kongju.pickmeal.core.family.*;
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.user.UserPickCount;
 import kongju.pickmeal.core.user.type.UserRole;
 import kongju.pickmeal.application.family.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
+import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 import static kongju.pickmeal.support.fixture.FamilyFixture.family;
@@ -46,6 +51,10 @@ public class FamilyServiceTest {
     private InvitationCodeGenerator invitationCodeGenerator;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private UserPickCountRepository userPickCountRepository;
+    @Mock
+    private PickCountHistoryRepository pickCountHistoryRepository;
     @Mock
     private UserReader userReader;
 
@@ -737,11 +746,16 @@ public class FamilyServiceTest {
 
             given(userReader.getById(userId)).willReturn(user2);
 
-            familyService.pickConfig(leaderId, request);
+            UserPickCount userPickCount = UserPickCount.initialize(user2);
 
-            assertEquals(2L, user2.getPickCount());
+            given(userPickCountRepository.findByUser(any())).willReturn(Optional.ofNullable(userPickCount));
+
+            given(pickCountHistoryRepository.saveAll(any())).willReturn(List.of());
+
+            FamilyPickDto.ConfigResponse response = familyService.pickConfig(leaderId, request);
+
+            assertEquals(false, response.isAutoAllocations());
         }
-
     }
 
     @Nested
@@ -751,18 +765,25 @@ public class FamilyServiceTest {
         @DisplayName("유저가 한명 밖에 없을 경우")
         public void should_success_reset_allocation_user_not_found() {
             Long leaderId = 1L;
+
             User user = user();
             Family family = family();
             user.joinFamilyLeader(family);
 
             given(userReader.getById(leaderId)).willReturn(user);
-
-            user.setPickCount(5L);
             given(userRepository.findAllByFamily(any())).willReturn(List.of(user));
+
+            UserPickCount userPickCount = UserPickCount.initialize(user);
+            given(userPickCountRepository.findByUser(any())).willReturn(Optional.of(userPickCount));
+
+            PickCountHistory resetHistory = PickCountHistory.reset(user, UUID.randomUUID());
+            given(pickCountHistoryRepository.save(any())).willReturn(resetHistory);
 
             familyService.resetConfig(leaderId);
 
-            assertThat(user.getPickCount()).isEqualTo(0);
+            verify(userReader).getById(leaderId);
+            verify(userRepository).findAllByFamily(family);
+            verify(pickCountHistoryRepository).save(any());
         }
 
         @Test
@@ -776,8 +797,6 @@ public class FamilyServiceTest {
 
             given(userReader.getById(leaderId)).willReturn(leader);
 
-            leader.setPickCount(5L);
-
             User member1 = user("test1", "test1@mail", "test1", "password1234");
             member1.joinFamilyLeader(family);
 
@@ -786,11 +805,20 @@ public class FamilyServiceTest {
 
             given(userRepository.findAllByFamily(any())).willReturn(List.of(leader, member1, member2));
 
+            UserPickCount userPickCount = UserPickCount.initialize(member1);
+            given(userPickCountRepository.findByUser(any())).willReturn(Optional.of(userPickCount));
+
+            UserPickCount userPickCount1 = UserPickCount.initialize(member2);
+            given(userPickCountRepository.findByUser(any())).willReturn(Optional.of(userPickCount1));
+
+            given(pickCountHistoryRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
+
             familyService.resetConfig(leaderId);
 
-            assertThat(leader.getPickCount()).isEqualTo(0);
-            assertThat(member1.getPickCount()).isEqualTo(0);
-            assertThat(member2.getPickCount()).isEqualTo(0);
+            verify(userReader).getById(leaderId);
+            verify(userPickCountRepository).findByUser(member1);
+            verify(userPickCountRepository).findByUser(member2);
+            verify(pickCountHistoryRepository, times(3)).save(any(PickCountHistory.class));
         }
 
     }
