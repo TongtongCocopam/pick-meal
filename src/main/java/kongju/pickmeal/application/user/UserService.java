@@ -4,6 +4,7 @@ import java.util.*;
 import java.time.LocalDate;
 import java.util.regex.Pattern;
 
+import kongju.pickmeal.core.user.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,11 +16,7 @@ import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.menu.repository.IngredientRepository;
-import kongju.pickmeal.core.user.repository.UserHealthRepository;
-import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
-import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 
 @Service
@@ -33,6 +30,7 @@ public class UserService {
     private final UserDiseaseRepository userDiseaseRepository;
     private final UserHealthRepository userHealthRepository;
     private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
+    private final UserPickCountRepository userPickCountRepository;
 
     private static final Pattern PASSWORD_PATTERN =
             Pattern.compile("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d\\W]{8,16}$");
@@ -66,6 +64,9 @@ public class UserService {
                 .birthDate(request.birthDate())
                 .nickname(request.nickname())
                 .build();
+
+        UserPickCount userPickCount = UserPickCount.initialize(user);
+        userPickCountRepository.save(userPickCount);
 
         User savedUser = userRepository.save(user);
 
