@@ -425,7 +425,7 @@ public class FamilyService {
      */
     private void distributePickCount(User user, Long count) {
         UserPickCount userPickCount = userPickCountRepository.findByUser(user)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "유저 선택권 정보를 찾을 수 없습니다."));
 
         userPickCount.resetCount();
         userPickCount.restoreCount(count);
@@ -474,7 +474,7 @@ public class FamilyService {
      */
     private void resetPickCount(User user) {
         UserPickCount userPickCount = userPickCountRepository.findByUser(user)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "유저 선택권 정보를 찾을 수 없습니다."));
 
         userPickCount.resetCount();
     }
