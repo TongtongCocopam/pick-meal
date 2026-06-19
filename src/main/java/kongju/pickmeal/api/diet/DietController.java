@@ -1,17 +1,15 @@
 package kongju.pickmeal.api.diet;
 
 import jakarta.validation.Valid;
-import kongju.pickmeal.api.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import kongju.pickmeal.application.diet.DietService;
+import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 
@@ -31,5 +29,17 @@ public class DietController {
 
         return ResponseEntity
                 .ok(ApiResponse.success(response));
+    }
+
+    @PatchMapping("/menu-picks/{pickId}")
+    @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<MenuPickDto.UpdateResponse>> updatePickItem(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long pickId,
+            @RequestBody @Valid MenuPickDto.UpdateRequest request
+    ) {
+        MenuPickDto.UpdateResponse response = dietService.updatePickMenu(userDetails.id(), pickId, request);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

@@ -32,9 +32,21 @@ public class UserMenuPick extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private MealType meal_type;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     public UserMenuPick(User user, Menu menu) {
         this.user = user;
+        this.menu = menu;
+        this.meal_date = LocalDateTime.now();
+    }
+
+    public static UserMenuPick create(User user, Menu menu){
+        return UserMenuPick.builder()
+                .menu(menu)
+                .user(user)
+                .build();
+    }
+
+    public void update(Menu menu) {
         this.menu = menu;
     }
 }

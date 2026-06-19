@@ -45,8 +45,12 @@ public enum ErrorCode {
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "메뉴 정보를 찾을 수 없습니다."),
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "배정할 메뉴 후보를 찾을 수 없습니다."),
     INGREDIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "재료 정보가 존재하지 않습니다."),
-    CANDIDATE_NOT_FOUND(HttpStatus.NOT_FOUND, "수정할 후보 메뉴를 찾을 수 없습니다."),
-    MISSING_REPLACEMENT_DATA(HttpStatus.BAD_REQUEST, "교체할 메뉴 정보가 없습니다."),
+//    CANDIDATE_NOT_FOUND(HttpStatus.NOT_FOUND, "수정할 후보 메뉴를 찾을 수 없습니다."),
+
+    MENU_PICK_NOT_CHANGED(HttpStatus.BAD_REQUEST, "이전과 동일한 메뉴 입니다."),
+
+    MENU_PICK_NOT_FOUND(HttpStatus.BAD_REQUEST, "교체할 메뉴 정보가 없습니다."),
+
     INVALID_MENU_DATA(HttpStatus.BAD_REQUEST, "식단 구성 정보가 올바르지 않습니다."),
     INVALID_MENU_ID(HttpStatus.BAD_REQUEST, "잘못된 메뉴 선택입니다."),
     ALLERGY_CONFLICT(HttpStatus.CONFLICT, "가족의 알러지 재료가 포함된 메뉴입니다."),

@@ -151,14 +151,8 @@ public class DietServiceTest {
 
             given(userMenuPickRepository.saveAll(anyList()))
                     .willReturn(
-                            List.of(UserMenuPick.builder()
-                                            .user(user)
-                                            .menu(menu1)
-                                            .build(),
-                                    UserMenuPick.builder()
-                                            .user(user)
-                                            .menu(menu2)
-                                            .build()));
+                            List.of(UserMenuPick.create(user, menu1),
+                                    UserMenuPick.create(user, menu2)));
 
             MenuPickDto.CreateResponse response = dietService.menuPick(userId, request);
 
@@ -166,4 +160,116 @@ public class DietServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("선택한 메뉴 변경")
+    class UpdatePickMenu{
+        @Test
+        @DisplayName("유저 찾기 실패")
+        public void should_fail_update_pick_menu_when_user_not_found() {
+            Long userId = 1L;
+            Long pickId = 2L;
+            MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
+                    .menuId(1L)
+                    .build();
+
+            given(userReader.getById(any())).willThrow(new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.updatePickMenu(userId, pickId, request));
+
+            assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("이전 선택했던 메뉴 정보 없음")
+        public void should_fail_update_pick_menu_when_prev_choice_not_found() {
+            Long userId = 1L;
+            Long pickId = 1L;
+            MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
+                    .menuId(1L)
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+            given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.updatePickMenu(userId, pickId, request));
+
+            assertEquals(ErrorCode.MENU_PICK_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("메뉴 찾기 실패")
+        public void should_fail_update_pick_menu_when_menu_not_found() {
+            Long userId = 1L;
+            Long pickId = 1L;
+            MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
+                    .menuId(2L)
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+
+            Menu menu = MenuFixture.menu();
+            UserMenuPick userMenuPick = UserMenuPick.create(user,menu);
+            given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
+
+            given(menuRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.updatePickMenu(userId, pickId, request));
+
+            assertEquals(ErrorCode.MENU_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("이전과 동일한 메뉴")
+        public void should_fail_update_pick_menu_when_not_change_menu() {
+            Long userId = 1L;
+            Long pickId = 1L;
+            MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
+                    .menuId(1L)
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+
+            Menu menu = MenuFixture.menu();
+            given(menuRepository.findById(pickId)).willReturn(Optional.of(menu));
+            UserMenuPick userMenuPick = UserMenuPick.create(user,menu);
+            given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.updatePickMenu(userId, pickId, request));
+
+            assertEquals(ErrorCode.MENU_PICK_NOT_CHANGED, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_update_pick_menu() {
+            Long userId = 1L;
+            Long pickId = 1L;
+            MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
+                    .menuId(2L)
+                    .build();
+
+            // 유저
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+
+            // 교체할 메뉴
+            Menu menu = MenuFixture.menu();
+            given(menuRepository.findById(any())).willReturn(Optional.of(menu));
+
+            Menu menu1 = MenuFixture.menu("마라탕");
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu1);
+            given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
+
+            MenuPickDto.UpdateResponse response = dietService.updatePickMenu(userId, pickId, request);
+
+            assertEquals(menu.getMenuName(), response.menuName());
+        }
+    }
 }

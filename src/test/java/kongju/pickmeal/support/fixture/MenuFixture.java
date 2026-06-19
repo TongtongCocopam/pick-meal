@@ -24,6 +24,20 @@ public class MenuFixture {
                 );
     }
 
+    public static Menu menu(String menuName){
+        return Menu.createDefaultMenu(
+                null,
+                menuName,
+                MenuCategory.KOREAN,
+                DishType.STEW,
+                BigDecimal.valueOf(45.2),
+                BigDecimal.valueOf(5.3),
+                BigDecimal.valueOf(3.1),
+                BigDecimal.valueOf(1.2),
+                BigDecimal.valueOf(350.0)
+        );
+    }
+
     public static MenuDto.DetailResponse menuDetailResponse(){
         return MenuDto.DetailResponse.builder()
                 .menuId(1L)
