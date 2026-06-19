@@ -83,7 +83,6 @@ public class DietServiceTest {
                     .build();
 
             given(userReader.getById(any())).willThrow(new BusinessException(ErrorCode.USER_NOT_FOUND));
-            ;
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
@@ -111,7 +110,6 @@ public class DietServiceTest {
             given(userPickCountRepository.findByUser(any())).willReturn(Optional.of(userPickCount));
 
             given(pickCountHistoryRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
-            ;
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
