@@ -20,11 +20,16 @@ import kongju.pickmeal.api.exception.GlobalExceptionHandler;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 
 import static kongju.pickmeal.support.fixture.SecurityFixture.mockMember;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+
+import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 
 @WebMvcTest(DietController.class)
@@ -67,6 +72,54 @@ public class DietControllerTest {
                     .build();
 
             mockMvc.perform(post("/api/v1/diets/menu-picks")
+                            .with(user(mockMember()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andDo(print());
+        }
+    }
+
+    @Nested
+    @DisplayName("선택한 메뉴 변경")
+    class UpdatePickMenu{
+        @Test
+        @DisplayName("GUEST 권한은 메뉴 선택 변경에 실패")
+        @WithMockUser(roles = "GUEST")
+        public void should_fail_update_pick_menu_when_not_family()  throws Exception {
+            Long pickId = 1L;
+
+            MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
+                    .menuId(2L)
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/diets/menu-picks/{pickId}", pickId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andDo(print());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_fail_update_pick_menu() throws Exception {
+            Long pickId = 1L;
+
+            MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
+                    .menuId(2L)
+                    .build();
+
+            MenuPickDto.UpdateResponse response = MenuPickDto.UpdateResponse.builder()
+                    .menuId(2L)
+                    .menuName("마라탕")
+                    .build();
+
+            given(dietService.updatePickMenu(any(), eq(pickId), any(MenuPickDto.UpdateRequest.class)))
+                    .willReturn(response);
+
+            mockMvc.perform(patch("/api/v1/diets/menu-picks/{pickId}", pickId)
                             .with(user(mockMember()))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
