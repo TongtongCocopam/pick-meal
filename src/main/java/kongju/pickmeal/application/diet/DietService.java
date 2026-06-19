@@ -57,10 +57,7 @@ public class DietService {
                     debitPickCount(user, count);
                     debitHistory(user, count, UUID.randomUUID());
 
-                    return UserMenuPick.builder()
-                            .user(user)
-                            .menu(menu)
-                            .build();
+                    return UserMenuPick.create(user, menu);
                 })
                 .toList();
 
@@ -101,5 +98,38 @@ public class DietService {
     private void debitHistory(User user, Long count, UUID transactionId) {
         PickCountHistory pickCountHistory = PickCountHistory.debit(user, count, transactionId);
         pickCountHistoryRepository.save(pickCountHistory);
+    }
+
+    /**
+     * 선택한 메뉴를 변경하는 기능
+     *
+     * @param userId  유저 아이디
+     * @param request 변경할 메뉴
+     * @return 메뉴 아이디와 이름
+     */
+    public MenuPickDto.UpdateResponse updatePickMenu(Long userId, Long pickId, MenuPickDto.UpdateRequest request) {
+        Long menuId = request.menuId();
+        // 유저 찾고, 변경하고자 하는 사람과 일치하는 지 확인
+        User user = userReader.getById(userId);
+
+        // 선택했던 메뉴 정보 가져오기
+        UserMenuPick userMenuPick = userMenuPickRepository.findByMenuIdAndUser(pickId, user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MENU_PICK_NOT_FOUND));
+
+        // 교체할 메뉴 찾기
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+
+        // 메뉴 선택 연결 테이블 외래키 변경
+        if(userMenuPick.getMenu() == menu) {
+            throw new BusinessException(ErrorCode.MENU_PICK_NOT_CHANGED);
+        }
+
+        userMenuPick.update(menu);
+
+        return MenuPickDto.UpdateResponse.builder()
+                .menuId(menuId)
+                .menuName(menu.getMenuName())
+                .build();
     }
 }
