@@ -1,8 +1,10 @@
 package kongju.pickmeal.application.diet.data;
 
-import lombok.Builder;
-
 import java.util.List;
+
+import lombok.Builder;
+import jakarta.validation.constraints.NotNull;
+
 
 public class MenuPickDto {
     @Builder
@@ -22,6 +24,16 @@ public class MenuPickDto {
             Long menuId,
             String menuName
     ){}
-}
 
-// 메뉴 선택권 개수 체크하여 판단
+    @Builder
+    public record UpdateRequest(
+            @NotNull
+            Long menuId
+    ){}
+
+    @Builder
+    public record UpdateResponse(
+            Long menuId,
+            String menuName
+    ){}
+}
