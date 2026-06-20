@@ -10,4 +10,6 @@ public interface UserMenuPickRepository {
     List<UserMenuPick> saveAll(List<UserMenuPick> userMenuPicks);
 
     Optional<UserMenuPick> findByMenuIdAndUser(Long menuId, User user);
+
+    void delete(UserMenuPick userMenuPick);
 }

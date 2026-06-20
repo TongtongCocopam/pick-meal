@@ -22,7 +22,12 @@ public class UserMenuPickRepositoryAdapter implements UserMenuPickRepository {
     }
 
     @Override
-    public Optional<UserMenuPick> findByMenuIdAndUser(Long menuId, User user){
+    public Optional<UserMenuPick> findByMenuIdAndUser(Long menuId, User user) {
         return userMenuPickJpaRepository.findByMenuIdAndUser(menuId, user);
+    }
+
+    @Override
+    public void delete(UserMenuPick userMenuPick) {
+        userMenuPickJpaRepository.delete(userMenuPick);
     }
 }
