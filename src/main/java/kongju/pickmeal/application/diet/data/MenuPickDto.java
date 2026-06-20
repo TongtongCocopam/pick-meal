@@ -36,4 +36,9 @@ public class MenuPickDto {
             Long menuId,
             String menuName
     ){}
+
+    @Builder
+    public record DeleteResponse(
+            Long menuId
+    ){}
 }

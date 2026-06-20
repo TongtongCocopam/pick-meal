@@ -22,7 +22,6 @@ public enum ErrorCode {
     PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다."),
     SAME_AS_OLD_PASSWORD(HttpStatus.BAD_REQUEST, "새 비밀번호가 현재 비밀번호와 동일합니다."),
     MISMATCH_CONFIRM_PASSWORD(HttpStatus.BAD_REQUEST, "새 비밀번호와 확인용 비밀번호가 일치하지 않습니다."),
-//    WEAK_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호 보안 정책에 부합하지 않습니다."),
 
     ALREADY_HAS_FAMILY(HttpStatus.BAD_REQUEST, "이미 소속된 가족이 있습니다."),
     FAMILY_NOT_FOUND(HttpStatus.NOT_FOUND, "가입된 가족 정보가 없습니다."),
@@ -45,7 +44,6 @@ public enum ErrorCode {
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "메뉴 정보를 찾을 수 없습니다."),
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "배정할 메뉴 후보를 찾을 수 없습니다."),
     INGREDIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "재료 정보가 존재하지 않습니다."),
-//    CANDIDATE_NOT_FOUND(HttpStatus.NOT_FOUND, "수정할 후보 메뉴를 찾을 수 없습니다."),
 
     MENU_PICK_NOT_CHANGED(HttpStatus.BAD_REQUEST, "이전과 동일한 메뉴 입니다."),
 
