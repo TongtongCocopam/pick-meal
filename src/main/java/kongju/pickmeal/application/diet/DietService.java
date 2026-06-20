@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,8 +52,7 @@ public class DietService {
         // 유저가 선택한 메뉴들을 유저 픽 연결 테이블에 넣기
         List<UserMenuPick> userMenuPickList = menuIds.stream()
                 .map(menuId -> {
-                    Menu menu = menuRepository.findById(menuId)
-                            .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+                    Menu menu = getMenu(menuId);
 
                     debitPickCount(user, count);
                     debitHistory(user, count, UUID.randomUUID());
@@ -79,10 +79,11 @@ public class DietService {
 
     /**
      * 선택권 차감
-     * @param user 사용 유저
+     *
+     * @param user  사용 유저
      * @param count 개수
      */
-    private void debitPickCount(User user, Long count){
+    private void debitPickCount(User user, Long count) {
         UserPickCount userPickCount = userPickCountRepository.findByUser(user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "유저 선택권 정보를 찾을 수 없습니다."));
 
@@ -91,8 +92,9 @@ public class DietService {
 
     /**
      * 선택권 사용 기록
-     * @param user 유저
-     * @param count 개수
+     *
+     * @param user          유저
+     * @param count         개수
      * @param transactionId 사용 아이디
      */
     private void debitHistory(User user, Long count, UUID transactionId) {
@@ -113,15 +115,13 @@ public class DietService {
         User user = userReader.getById(userId);
 
         // 선택했던 메뉴 정보 가져오기
-        UserMenuPick userMenuPick = userMenuPickRepository.findByMenuIdAndUser(pickId, user)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MENU_PICK_NOT_FOUND));
+        UserMenuPick userMenuPick = getUserMenuPick(pickId, user);
 
         // 교체할 메뉴 찾기
-        Menu menu = menuRepository.findById(menuId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+        Menu menu = getMenu(menuId);
 
         // 메뉴 선택 연결 테이블 외래키 변경
-        if(userMenuPick.getMenu() == menu) {
+        if (userMenuPick.getMenu() == menu) {
             throw new BusinessException(ErrorCode.MENU_PICK_NOT_CHANGED);
         }
 
@@ -132,4 +132,47 @@ public class DietService {
                 .menuName(menu.getMenuName())
                 .build();
     }
+
+    /**
+     * 메뉴 가져오기
+     * @param menuId 메뉴 아이디
+     * @return 메뉴
+     */
+    private @NonNull Menu getMenu(Long menuId) {
+        return menuRepository.findById(menuId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+    }
+
+    /**
+     * 메뉴 선택 객체
+     * @param pickId 메뉴 아이디
+     * @param user 유저
+     * @return 메뉴 선택
+     */
+    private @NonNull UserMenuPick getUserMenuPick(Long pickId, User user) {
+        return userMenuPickRepository.findByMenuIdAndUser(pickId, user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "메뉴 선택 내역이 존재하지 않습니다."));
+    }
+
+    /**
+     * 메뉴 선택 삭제
+     * @param userId 유저 아이디
+     * @param pickId 선택한 메뉴
+     * @return 메뉴 아이디
+     */
+    public MenuPickDto.DeleteResponse deletePickMenu(Long userId, Long pickId) {
+        // 유저 찾기
+        User user = userReader.getById(userId);
+
+        // 유저, 메뉴 아이디와 맞는 테이블 찾아 제거
+        UserMenuPick userMenuPick = getUserMenuPick(pickId, user);
+
+        Long menuId = userMenuPick.getMenu().getId();
+        userMenuPickRepository.delete(userMenuPick);
+
+        return MenuPickDto.DeleteResponse.builder()
+                .menuId(menuId)
+                .build();
+    }
+
 }

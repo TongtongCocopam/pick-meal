@@ -13,7 +13,6 @@ import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 
 
-
 @RestController
 @RequestMapping("/api/v1/diets")
 @RequiredArgsConstructor
@@ -40,6 +39,16 @@ public class DietController {
     ) {
         MenuPickDto.UpdateResponse response = dietService.updatePickMenu(userDetails.id(), pickId, request);
 
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @DeleteMapping("/menu-picks/{pickId}")
+    @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<MenuPickDto.DeleteResponse>>  deletePickItem(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long pickId
+    ){
+        MenuPickDto.DeleteResponse response = dietService.deletePickMenu(userDetails.id(), pickId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
