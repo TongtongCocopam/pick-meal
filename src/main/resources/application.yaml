@@ -34,7 +34,10 @@ spring:
         queue-capacity: 100
       thread-name-prefix: diet-async-
 
-# 외부 API 설정 (OpenFeign / OpenAI)
+  ai:
+    openai:
+      api-key=${OPENAI_API_KEY}
+
 feign:
   client:
     config:
@@ -74,6 +77,7 @@ external:
       api-key: ${FOOD_SAFETY_API_KEY:sample}
       service-id: COOKRCP01
       type: json
+
 
 # 로깅 설정
 logging:
