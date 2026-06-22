@@ -1,5 +1,6 @@
 package kongju.pickmeal.infrastructure.repository.jpa.user;
 
+import java.util.List;
 import java.util.Optional;
 
 import kongju.pickmeal.core.user.User;
@@ -9,5 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserHealthJpaRepository extends JpaRepository<UserHealthProfile, Long> {
     Optional<UserHealthProfile> findByUser(User user);
+
+    List<UserHealthProfile> findAllByUserIn(List<User> user);
 
 }

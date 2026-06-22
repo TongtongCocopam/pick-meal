@@ -1,5 +1,6 @@
 package kongju.pickmeal.infrastructure.repository.jpa.user;
 
+import java.util.List;
 import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
@@ -23,5 +24,10 @@ public class UserHealthRepositoryAdapter implements UserHealthRepository {
     @Override
     public UserHealthProfile save(UserHealthProfile userHealth) {
         return userHealthJpaRepository.save(userHealth);
+    }
+
+    @Override
+    public List<UserHealthProfile> findAllByUserIn(List<User> user) {
+        return userHealthJpaRepository.findAllByUserIn(user);
     }
 }

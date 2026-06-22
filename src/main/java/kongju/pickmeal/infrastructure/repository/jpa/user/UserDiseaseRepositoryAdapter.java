@@ -1,6 +1,7 @@
 package kongju.pickmeal.infrastructure.repository.jpa.user;
 
 import java.util.List;
+import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -23,5 +24,10 @@ public class UserDiseaseRepositoryAdapter implements UserDiseaseRepository {
     @Override
     public List<UserDisease> saveAll(List<UserDisease> userDiseases) {
         return userDiseaseJpaRepository.saveAll(userDiseases);
+    }
+
+    @Override
+    public List<UserDisease> findAllByUserIn(List<User> user) {
+        return userDiseaseJpaRepository.findAllByUserIn(user);
     }
 }
