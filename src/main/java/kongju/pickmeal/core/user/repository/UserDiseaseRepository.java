@@ -1,7 +1,6 @@
 package kongju.pickmeal.core.user.repository;
 
 import java.util.List;
-import java.util.Optional;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserDisease;
@@ -12,5 +11,5 @@ public interface UserDiseaseRepository {
 
     List<UserDisease> saveAll(List<UserDisease> userDiseases);
 
-    List<UserDisease> findAllByUserIn(List<User> user);
+    List<UserDisease> findAllByUserIn(List<User> users);
 }
