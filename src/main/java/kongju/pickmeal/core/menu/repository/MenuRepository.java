@@ -18,4 +18,5 @@ public interface MenuRepository{
     Menu save(Menu menu);
     Page<Menu> searchByFilters(MenuCategory category, DishType dishType, String keyword, Pageable pageable);
     Optional<Menu> findById(Long id);
+    List<Menu> findAll();
 }
