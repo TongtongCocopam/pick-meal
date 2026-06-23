@@ -48,4 +48,9 @@ public class MenuRepositoryAdapter implements MenuRepository {
     public Optional<Menu> findById(Long id) {
         return menuJpaRepository.findById(id);
     }
+
+    @Override
+    public List<Menu> findAll() {
+        return menuJpaRepository.findAll();
+    }
 }
