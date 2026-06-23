@@ -27,7 +27,7 @@ public class UserHealthRepositoryAdapter implements UserHealthRepository {
     }
 
     @Override
-    public List<UserHealthProfile> findAllByUserIn(List<User> user) {
-        return userHealthJpaRepository.findAllByUserIn(user);
+    public List<UserHealthProfile> findAllByUserInFetchUser(List<User> users) {
+        return userHealthJpaRepository.findAllByUserInFetchUser(users);
     }
 }

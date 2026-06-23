@@ -10,5 +10,5 @@ import kongju.pickmeal.core.user.UserHealthProfile;
 public interface UserHealthRepository {
     Optional<UserHealthProfile> findByUser(User user);
     UserHealthProfile save(UserHealthProfile userHealth);
-    List<UserHealthProfile> findAllByUserIn(List<User> user);
+    List<UserHealthProfile> findAllByUserInFetchUser(List<User> users);
 }

@@ -6,11 +6,18 @@ import java.util.Optional;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserHealthProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 
 public interface UserHealthJpaRepository extends JpaRepository<UserHealthProfile, Long> {
     Optional<UserHealthProfile> findByUser(User user);
 
-    List<UserHealthProfile> findAllByUserIn(List<User> user);
+    @Query("""
+                    select uhp
+                    from UserHealthProfile uhp
+                    join fetch uhp.user
+                    where uhp.user in :users
+            """)
+    List<UserHealthProfile> findAllByUserInFetchUser(List<User> users);
 
 }
