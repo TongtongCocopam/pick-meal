@@ -2,6 +2,7 @@ package kongju.pickmeal.core.user;
 
 import java.math.BigDecimal;
 
+import lombok.Getter;
 import lombok.Builder;
 import lombok.AccessLevel;
 import jakarta.persistence.*;
@@ -12,6 +13,7 @@ import kongju.pickmeal.core.common.BaseEntity;
 
 
 @Entity
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserHealthProfile extends BaseEntity {
     @Enumerated(EnumType.STRING)
