@@ -2,11 +2,12 @@ package kongju.pickmeal.core.ai;
 
 import java.util.List;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 
+import kongju.pickmeal.core.menu.type.DishType;
 import lombok.Builder;
 
-import kongju.pickmeal.core.menu.Menu;
-import kongju.pickmeal.core.diet.UserMenuPick;
+import kongju.pickmeal.core.user.type.Gender;
 import kongju.pickmeal.core.diet.type.MealType;
 
 
@@ -17,10 +18,15 @@ public class AiDietGenerateDto {
             LocalDate startDate,
             LocalDate endDate,
             List<MenuCandidate> menuCandidates,
-            List<UserMenuPick> userMenuPicks,
-            List<String> healthConditions,
+            List<UserMenu> userMenuPicks,
+
+            List<HealthCondition> healthConditions,
+            List<Disease> disease,
+
             List<String> preferredIngredients,
-            List<String> dislikedIngredients
+            List<String> dislikedIngredients,
+            List<String> allergyIngredients
+
     ) {
     }
 
@@ -48,10 +54,37 @@ public class AiDietGenerateDto {
     ) {
     }
 
+    @Builder
+    public record Disease(
+            // 질병 이름 상세설명
+            String diseaseName,
+            String description
+    ){}
+
+
+    @Builder
+    public record HealthCondition(
+            // 성별, 연령, 키, 몸무게
+            Gender gender,
+            BigDecimal weight,
+            BigDecimal height,
+            int age
+    ){}
 
     @Builder
     public record MenuCandidate(
-            Menu menu,
+            Long menuId,
+            String menuName,
+            DishType dishType,
+            List<String> ingredients
+    ) {
+    }
+
+    @Builder
+    public record UserMenu(
+            Long userMenuPickId,
+            Long menuId,
+            String menuName,
             List<String> ingredients
     ) {
     }
