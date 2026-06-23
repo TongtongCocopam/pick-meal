@@ -12,4 +12,6 @@ public interface UserMenuPickRepository {
     Optional<UserMenuPick> findByMenuIdAndUser(Long menuId, User user);
 
     void delete(UserMenuPick userMenuPick);
+
+    List<UserMenuPick> findAllByUserInFetchMenu(List<User> users);
 }

@@ -30,4 +30,9 @@ public class UserMenuPickRepositoryAdapter implements UserMenuPickRepository {
     public void delete(UserMenuPick userMenuPick) {
         userMenuPickJpaRepository.delete(userMenuPick);
     }
+
+    @Override
+    public List<UserMenuPick> findAllByUserInFetchMenu(List<User> users) {
+        return userMenuPickJpaRepository.findAllByUserInFetchMenu(users);
+    }
 }
