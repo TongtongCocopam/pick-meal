@@ -23,4 +23,6 @@ public interface UserRepository {
     boolean existsByIdAndFamily(Long id, Family family);
 
     User save(User user);
+
+    List<User> findAllFamily(Family family);
 }
