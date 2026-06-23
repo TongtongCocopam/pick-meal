@@ -1,5 +1,6 @@
 package kongju.pickmeal.core.user;
 
+import lombok.Getter;
 import lombok.Builder;
 import lombok.AccessLevel;
 import jakarta.persistence.*;
@@ -10,6 +11,7 @@ import kongju.pickmeal.core.common.BaseTimeEntity;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 
 @Entity
+@Getter
 @Table(
         name = "user_ingredient_preference",
         uniqueConstraints = {
