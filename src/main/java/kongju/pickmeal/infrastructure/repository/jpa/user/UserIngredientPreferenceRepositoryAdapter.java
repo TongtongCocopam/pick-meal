@@ -24,4 +24,9 @@ public class UserIngredientPreferenceRepositoryAdapter implements UserIngredient
     public List<UserIngredientPreference> saveAll(List<UserIngredientPreference> userIngredientPreferenceList) {
         return userIngredientPreferenceJpaRepository.saveAll(userIngredientPreferenceList);
     }
+
+    @Override
+    public List<UserIngredientPreference> findAllByUserInFetchIngredient(List<User> users) {
+        return userIngredientPreferenceJpaRepository.findAllByUserInFetchIngredient(users);
+    }
 }
