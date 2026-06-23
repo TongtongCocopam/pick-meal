@@ -16,4 +16,7 @@ public interface MenuIngredientRepository {
 
     List<MenuIngredient> findAllByMenuWithIngredient(Menu menu);
 
+    List<MenuIngredient> findAllByIngredientWithMenu(Ingredient ingredient);
+
+    List<MenuIngredient> findAllByMenuInFetchIngredient(List<Menu> menus);
 }
