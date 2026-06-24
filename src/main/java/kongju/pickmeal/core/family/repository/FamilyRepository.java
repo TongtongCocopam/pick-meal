@@ -15,4 +15,6 @@ public interface FamilyRepository {
     Optional<Family> findById(Long familyId);
 
     void delete(Family family);
+
+    Optional<Family> findByIdForUpdate(Long familyId);
 }
