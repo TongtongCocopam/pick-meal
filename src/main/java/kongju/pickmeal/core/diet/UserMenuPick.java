@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 import jakarta.persistence.*;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.menu.Menu;
-import kongju.pickmeal.core.diet.type.MealType;
 import kongju.pickmeal.core.common.BaseTimeEntity;
 
 
@@ -27,16 +26,13 @@ public class UserMenuPick extends BaseTimeEntity {
     @JoinColumn(name = "menu_id")
     private Menu menu;
 
-    private LocalDateTime meal_date;
-
-    @Enumerated(EnumType.STRING)
-    private MealType meal_type;
+    private LocalDateTime mealDate;
 
     @Builder(access = AccessLevel.PRIVATE)
-    public UserMenuPick(User user, Menu menu) {
+    private UserMenuPick(User user, Menu menu) {
         this.user = user;
         this.menu = menu;
-        this.meal_date = LocalDateTime.now();
+        this.mealDate = LocalDateTime.now();
     }
 
     public static UserMenuPick create(User user, Menu menu){
