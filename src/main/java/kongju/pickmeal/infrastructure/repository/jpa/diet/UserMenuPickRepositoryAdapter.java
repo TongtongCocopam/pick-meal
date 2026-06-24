@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.diet.UserMenuPick;
-import kongju.pickmeal.core.diet.UserMenuPickRepository;
+import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 
 
 @Repository

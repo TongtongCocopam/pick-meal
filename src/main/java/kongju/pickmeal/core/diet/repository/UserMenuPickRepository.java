@@ -1,9 +1,10 @@
-package kongju.pickmeal.core.diet;
+package kongju.pickmeal.core.diet.repository;
 
 import java.util.List;
 import java.util.Optional;
 
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.diet.UserMenuPick;
 
 
 public interface UserMenuPickRepository {
