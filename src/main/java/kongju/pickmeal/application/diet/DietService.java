@@ -2,6 +2,8 @@ package kongju.pickmeal.application.diet;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDate;
+import java.time.YearMonth;
 
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -10,17 +12,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.diet.UserMenuPick;
 import kongju.pickmeal.core.user.UserPickCount;
+import kongju.pickmeal.core.diet.DietGeneration;
 import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
-import kongju.pickmeal.core.diet.UserMenuPickRepository;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
+import kongju.pickmeal.core.diet.type.DietGenerationStatus;
+import kongju.pickmeal.core.family.repository.FamilyRepository;
+import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
+import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 
 
 @Service
@@ -29,9 +37,13 @@ import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 public class DietService {
     private final UserReader userReader;
     private final MenuRepository menuRepository;
+    private final FamilyRepository familyRepository;
     private final UserMenuPickRepository userMenuPickRepository;
     private final UserPickCountRepository userPickCountRepository;
+    private final DietGenerationRepository dietGenerationRepository;
     private final PickCountHistoryRepository pickCountHistoryRepository;
+
+    private final AiDietService aiDietService;
 
     /**
      * 메뉴 선택
@@ -135,6 +147,7 @@ public class DietService {
 
     /**
      * 메뉴 가져오기
+     *
      * @param menuId 메뉴 아이디
      * @return 메뉴
      */
@@ -145,8 +158,9 @@ public class DietService {
 
     /**
      * 메뉴 선택 객체
+     *
      * @param pickId 메뉴 아이디
-     * @param user 유저
+     * @param user   유저
      * @return 메뉴 선택
      */
     private @NonNull UserMenuPick getUserMenuPick(Long pickId, User user) {
@@ -156,6 +170,7 @@ public class DietService {
 
     /**
      * 메뉴 선택 삭제
+     *
      * @param userId 유저 아이디
      * @param pickId 선택한 메뉴
      * @return 메뉴 아이디
@@ -173,6 +188,97 @@ public class DietService {
         return MenuPickDto.DeleteResponse.builder()
                 .menuId(menuId)
                 .build();
+    }
+
+    /**
+     * ai식단 생성 시 실행
+     *
+     * @param userId  유저 id
+     * @param request 요청 데이터
+     * @return UUID, 식단 생성 상태
+     */
+    public DietGenerationDto.GenerateResponse requestGeneration(
+            Long userId,
+            DietGenerationDto.GenerateRequest request
+    ) {
+        User user = userReader.getById(userId);
+        // 중복 제거를 위해 락 걸기
+        Family family = familyRepository.findByIdForUpdate(user.getFamily().getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
+
+
+        LocalDate startDate = request.startDate();
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+
+        validateGenerationRequest(family, startDate, endDate);
+
+        DietGeneration generation = DietGeneration.createPending(
+                family,
+                startDate,
+                endDate,
+                request.dailyMealCount()
+        );
+
+        DietGeneration saveGeneration = dietGenerationRepository.save(generation);
+
+        aiDietService.generateDietAsync(
+                userId,
+                saveGeneration.getId(),
+                request
+        );
+
+        return DietGenerationDto.GenerateResponse.builder()
+                .generationId(generation.getId())
+                .status(generation.getStatus())
+                .build();
+    }
+
+    /**
+     * 식단 요청 유효한지 검증
+     * @param family 가족
+     * @param startDate 시작
+     * @param endDate 종료 날짜
+     */
+    private void validateGenerationRequest(
+            Family family,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        List<DietGenerationStatus> activeStatuses = List.of(
+                DietGenerationStatus.PENDING,
+                DietGenerationStatus.PROCESSING,
+                DietGenerationStatus.COMPLETED
+        );
+
+        // 사이 기간 중 생성된 식단이 있는지 확인
+        boolean alreadyExists = dietGenerationRepository.existsOverlappingGeneration(
+                family,
+                startDate,
+                endDate,
+                activeStatuses
+        );
+
+        if (alreadyExists) {
+            throw new BusinessException(ErrorCode.DIET_ALREADY_GENERATED);
+        }
+
+        YearMonth targetMonth = YearMonth.from(startDate);
+        LocalDate monthStart = targetMonth.atDay(1);
+        LocalDate monthEnd = targetMonth.atEndOfMonth();
+
+        // 기간 동안 몇 번 생성 했는지 확인
+        long monthlyCount = dietGenerationRepository.countByFamilyAndPeriod(
+                family,
+                monthStart,
+                monthEnd,
+                activeStatuses
+        );
+
+        // 2번 제한
+        if (monthlyCount >= 2) {
+            throw new BusinessException(ErrorCode.DIET_GENERATION_MONTHLY_LIMIT_EXCEEDED);
+        }
+
     }
 
 }

@@ -37,8 +37,9 @@ public enum ErrorCode {
     EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
     EXTERNAL_API_EMPTY_RESPONSE(HttpStatus.BAD_GATEWAY, "외부 API 응답이 비어 있습니다."),
 
-    ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 요청입니다."),
-    DIET_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 식단이 이미 존재합니다."),
+//    ALREADY_PROCESSED(HttpStatus.CONFLICT, "이미 처리된 요청입니다."),
+    DIET_ALREADY_GENERATED(HttpStatus.CONFLICT, "이미 생성 요청하였습니다."),
+    DIET_GENERATION_MONTHLY_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "이번 달 식단 생성 횟수를 초과하였습니다."),
     DIET_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 식단 정보가 없습니다."),
     DIET_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "대상 식단을 찾을 수 없습니다."),
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "메뉴 정보를 찾을 수 없습니다."),
@@ -60,7 +61,7 @@ public enum ErrorCode {
 
     NOT_A_CANDIDATE(HttpStatus.BAD_REQUEST, "이미 식단으로 확정된 메뉴입니다."),
     AI_PROCESS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI 식단 생성에 실패했습니다."),
-    AI_RESPONSE_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답이 지연되고 있습니다."),
+//    AI_RESPONSE_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답이 지연되고 있습니다."),
     AI_DATA_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "생성된 데이터가 유효하지 않습니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서버 점검 중입니다."),
     GATEWAY_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "응답 시간이 초과되었습니다."),

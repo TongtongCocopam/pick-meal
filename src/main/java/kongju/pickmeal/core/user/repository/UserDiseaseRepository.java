@@ -10,4 +10,6 @@ public interface UserDiseaseRepository {
     void deleteAllByUser(User user);
 
     List<UserDisease> saveAll(List<UserDisease> userDiseases);
+
+    List<UserDisease> findAllByUserIn(List<User> users);
 }

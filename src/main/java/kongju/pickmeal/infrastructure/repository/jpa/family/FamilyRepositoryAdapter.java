@@ -38,4 +38,9 @@ public class FamilyRepositoryAdapter implements FamilyRepository {
     public void delete(Family family) {
         familyJpaRepository.delete(family);
     }
+
+    @Override
+    public Optional<Family> findByIdForUpdate(Long familyId) {
+        return familyJpaRepository.findByIdForUpdate(familyId);
+    }
 }

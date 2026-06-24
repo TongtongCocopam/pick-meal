@@ -1,6 +1,7 @@
 package kongju.pickmeal.api.diet;
 
 import jakarta.validation.Valid;
+import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -49,6 +50,15 @@ public class DietController {
             @PathVariable Long pickId
     ){
         MenuPickDto.DeleteResponse response = dietService.deletePickMenu(userDetails.id(), pickId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/ai-generate")
+    public ResponseEntity<ApiResponse<DietGenerationDto.GenerateResponse>> generate(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid DietGenerationDto.GenerateRequest request
+    ) {
+        DietGenerationDto.GenerateResponse response = dietService.requestGeneration(userDetails.id(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

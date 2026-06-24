@@ -1,5 +1,6 @@
 package kongju.pickmeal.core.user;
 
+import lombok.Getter;
 import lombok.Builder;
 import lombok.AccessLevel;
 import jakarta.persistence.*;
@@ -11,6 +12,7 @@ import kongju.pickmeal.core.user.type.DiseaseCategory;
 
 
 @Entity
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserDisease extends BaseEntity {
 

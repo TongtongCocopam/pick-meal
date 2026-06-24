@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.diet.UserMenuPick;
-import kongju.pickmeal.core.diet.UserMenuPickRepository;
+import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 
 
 @Repository
@@ -29,5 +29,10 @@ public class UserMenuPickRepositoryAdapter implements UserMenuPickRepository {
     @Override
     public void delete(UserMenuPick userMenuPick) {
         userMenuPickJpaRepository.delete(userMenuPick);
+    }
+
+    @Override
+    public List<UserMenuPick> findAllByUserInFetchMenu(List<User> users) {
+        return userMenuPickJpaRepository.findAllByUserInFetchMenu(users);
     }
 }

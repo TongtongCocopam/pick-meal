@@ -50,4 +50,9 @@ public class UserRepositoryAdapter implements UserRepository {
     public User save(User user) {
         return userJpaRepository.save(user);
     }
+
+    @Override
+    public List<User> findAllFamily(Family family) {
+        return userJpaRepository.findAllByFamily(family);
+    }
 }
