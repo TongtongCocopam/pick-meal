@@ -4,11 +4,11 @@ import java.util.List;
 import java.time.LocalDate;
 import java.math.BigDecimal;
 
-import kongju.pickmeal.core.menu.type.DishType;
 import lombok.Builder;
 
 import kongju.pickmeal.core.user.type.Gender;
 import kongju.pickmeal.core.diet.type.MealType;
+import kongju.pickmeal.core.menu.type.DishType;
 
 
 public class AiDietGenerateDto {
@@ -27,30 +27,6 @@ public class AiDietGenerateDto {
             List<String> dislikedIngredients,
             List<String> allergyIngredients
 
-    ) {
-    }
-
-    @Builder
-    public record Result(
-            LocalDate startDate,
-            LocalDate endDate,
-            String summary,
-            List<DayPlan> days
-    ) {
-    }
-
-    @Builder
-    public record DayPlan(
-            LocalDate date,
-            List<MealPlan> meals
-    ) {
-    }
-
-    @Builder
-    public record MealPlan(
-            MealType mealType,
-            Long menuId,
-            String reason
     ) {
     }
 
@@ -85,7 +61,24 @@ public class AiDietGenerateDto {
             Long userMenuPickId,
             Long menuId,
             String menuName,
+            DishType dishType,
             List<String> ingredients
+    ) {
+    }
+
+    @Builder
+    public record Result(
+            LocalDate startDate,
+            LocalDate endDate,
+            List<MealPlan> mealPlans
+    ) {
+    }
+
+    @Builder
+    public record MealPlan(
+            LocalDate date,
+            MealType mealType,
+            Long menuId
     ) {
     }
 }
