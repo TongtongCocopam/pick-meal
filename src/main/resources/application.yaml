@@ -36,7 +36,10 @@ spring:
 
   ai:
     openai:
-      api-key=${OPENAI_API_KEY}
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        model: gpt-4o-mini
+        temperature: 0.3
 
 feign:
   client:
