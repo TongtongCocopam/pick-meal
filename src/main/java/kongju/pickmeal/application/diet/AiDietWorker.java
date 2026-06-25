@@ -13,6 +13,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import kongju.pickmeal.core.diet.Diet;
 import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.family.Family;
@@ -30,6 +31,7 @@ import kongju.pickmeal.core.user.UserHealthProfile;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.UserIngredientPreference;
+import kongju.pickmeal.core.diet.repository.DietRepository;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.user.repository.UserHealthRepository;
@@ -49,6 +51,7 @@ public class AiDietWorker {
     private final MenuRepository menuRepository;
 
     private final UserRepository userRepository;
+    private final DietRepository dietRepository;
     private final UserHealthRepository userHealthRepository;
     private final UserDiseaseRepository userDiseaseRepository;
     private final UserMenuPickRepository userMenuPickRepository;
@@ -78,11 +81,10 @@ public class AiDietWorker {
         AiDietGenerateDto.Command command = prepareAiDietGeneration(userId, request);
         // ai호출
         AiDietGenerateDto.Result result = dietAiGenerator.generate(command);
-
         // 검증
         validateAiDietResult(result, command);
         // 저장
-        // saveAiDietResult(result, preparation);
+         saveAiDietResult(generation, result, command);
         // 상태변경
         generation.completed();
     }
@@ -107,8 +109,7 @@ public class AiDietWorker {
         List<AiDietGenerateDto.HealthCondition> healthConditions = getFamilyHealthConditions(users);
         List<AiDietGenerateDto.UserMenu> userMenus = getUserMenus(users);
 
-        IngredientPreferenceSummary preferenceSummary =
-                getIngredientPreferenceSummary(users);
+        IngredientPreferenceSummary preferenceSummary = getIngredientPreferenceSummary(users);
 
         List<AiDietGenerateDto.MenuCandidate> menuCandidates = getMenuCandidates(
                 request.dailyMealCount(),
@@ -738,6 +739,27 @@ public class AiDietWorker {
         if (soupCount > 0 && sideDishCount < 2) {
             throw new BusinessException(ErrorCode.INVALID_MENU_DATA);
         }
+    }
+
+    /**
+     * DB에 데이터 저장
+     * @param generation DietGeneration
+     * @param result ai 생성 결과
+     * @param command 전처리 데이터
+     */
+    void saveAiDietResult(DietGeneration generation, AiDietGenerateDto.Result result, AiDietGenerateDto.Command command){
+        User user = userReader.getById(command.userId());
+        Family family = user.getFamily();
+
+        List<Diet> diets = result.mealPlans().stream()
+                .map(mealPlan -> {
+                    Menu menu = menuRepository.findById(mealPlan.menuId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+                    return Diet.create(family, menu, mealPlan.date(), mealPlan.mealType(), generation);
+                })
+                .toList();
+
+        dietRepository.saveAll(diets);
     }
 
     /**
