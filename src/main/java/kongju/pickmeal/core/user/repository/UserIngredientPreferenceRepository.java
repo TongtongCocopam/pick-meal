@@ -13,11 +13,5 @@ public interface UserIngredientPreferenceRepository {
 
     List<UserIngredientPreference> saveAll(List<UserIngredientPreference> userIngredientPreferenceList);
 
-    @Query("""
-        select uip
-        from UserIngredientPreference uip
-        join fetch uip.ingredient
-        where uip.user in :users
-    """)
     List<UserIngredientPreference> findAllByUserInFetchIngredient(List<User> users);
 }

@@ -1,9 +1,9 @@
 package kongju.pickmeal.application.diet;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.diet.Diet;
 import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.diet.UserMenuPick;
@@ -19,10 +20,12 @@ import kongju.pickmeal.core.diet.DietGeneration;
 import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
+import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.diet.type.DietGenerationStatus;
+import kongju.pickmeal.core.diet.repository.DietRepository;
 import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
@@ -42,6 +45,7 @@ public class DietService {
     private final UserPickCountRepository userPickCountRepository;
     private final DietGenerationRepository dietGenerationRepository;
     private final PickCountHistoryRepository pickCountHistoryRepository;
+    private final DietRepository dietRepository;
 
     private final AiDietService aiDietService;
 
@@ -235,9 +239,10 @@ public class DietService {
 
     /**
      * 식단 요청 유효한지 검증
-     * @param family 가족
+     *
+     * @param family    가족
      * @param startDate 시작
-     * @param endDate 종료 날짜
+     * @param endDate   종료 날짜
      */
     private void validateGenerationRequest(
             Family family,
@@ -279,6 +284,97 @@ public class DietService {
             throw new BusinessException(ErrorCode.DIET_GENERATION_MONTHLY_LIMIT_EXCEEDED);
         }
 
+    }
+
+    /**
+     * 만들어진 식단 가져오기
+     * @param userId 유저 아이디
+     * @param month 달
+     * @return 식단 데이터
+     */
+    public DietDto.ListItemResponse getDiets(Long userId, YearMonth month) {
+        User user = userReader.getById(userId);
+        Family family = user.getFamily();
+
+        List<Diet> diets = getDiets(month, family);
+
+        if (diets.isEmpty()) {
+            return DietDto.ListItemResponse.builder()
+                    .month(month)
+                    .totalDays(0)
+                    .isGenerated(false)
+                    .build();
+        }
+
+        List<DietDto.DietResponse> dietResponses = getDietResponses(diets);
+
+        int totalDays = dietResponses.size();
+
+        return DietDto.ListItemResponse.builder()
+                .month(month)
+                .totalDays(totalDays)
+                .diets(dietResponses)
+                .isGenerated(true)
+                .build();
+    }
+
+    /**
+     * 식단 정보 데이터
+     * @param month 달
+     * @param family 가족
+     * @return 해당 달의 식단 데이터
+     */
+    private List<Diet> getDiets(YearMonth month, Family family) {
+        // 해당 달의 시작 날짜와 마지막 날짜를 가져와 검사
+        YearMonth yearMonth = YearMonth.from(month);
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.atEndOfMonth();
+
+        // family와 날짜를 기준으로 생성한 식단이 존재하는지 확인
+        return dietRepository.findMonthlyDiets(family, startDate, endDate);
+    }
+
+    /**
+     * 같은 날짜 별로 식단을 묶어서 식단 리스트 정보로 변환
+     * @param diets 식단
+     * @return 일별 식단 정보
+     */
+    private static @NonNull List<DietDto.DietResponse> getDietResponses(List<Diet> diets) {
+        Map<LocalDate, List<Diet>> dietsByDate = diets.stream()
+                .collect(Collectors.groupingBy(
+                        Diet::getMealDate,
+                        TreeMap::new,
+                        Collectors.toList()
+                ));
+
+        List<DietDto.DietResponse> dietResponses = new ArrayList<>();
+
+        for (Map.Entry<LocalDate, List<Diet>> entry : dietsByDate.entrySet()) {
+            LocalDate date = entry.getKey();
+            List<Diet> dailyDiets = entry.getValue();
+
+            List<DietDto.MealResponse> meals = new ArrayList<>();
+
+            for (Diet diet : dailyDiets) {
+                Menu menu = diet.getMenu();
+
+                DietDto.MealResponse meal = DietDto.MealResponse.builder()
+                        .dietId(diet.getId())
+                        .mealType(diet.getMealType())
+                        .dishType(menu.getDishType())
+                        .menuName(menu.getMenuName())
+                        .build();
+
+                meals.add(meal);
+            }
+            DietDto.DietResponse dietResponse = DietDto.DietResponse.builder()
+                    .date(date)
+                    .meals(meals)
+                    .build();
+
+            dietResponses.add(dietResponse);
+        }
+        return dietResponses;
     }
 
 }
