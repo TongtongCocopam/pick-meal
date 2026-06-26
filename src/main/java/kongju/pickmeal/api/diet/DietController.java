@@ -1,17 +1,22 @@
 package kongju.pickmeal.api.diet;
 
+import java.time.YearMonth;
+
 import jakarta.validation.Valid;
-import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import kongju.pickmeal.application.diet.DietService;
+import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
+import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
+
 
 
 @RestController
@@ -54,11 +59,22 @@ public class DietController {
     }
 
     @PostMapping("/ai-generate")
+    @PreAuthorize("hasRole('LEADER')")
     public ResponseEntity<ApiResponse<DietGenerationDto.GenerateResponse>> generate(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid DietGenerationDto.GenerateRequest request
     ) {
         DietGenerationDto.GenerateResponse response = dietService.requestGeneration(userDetails.id(), request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<DietDto.ListItemResponse>> getAllDiets(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth month
+    ){
+        DietDto.ListItemResponse response = dietService.getDiets(userDetails.id(), month);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
