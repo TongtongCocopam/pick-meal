@@ -54,7 +54,7 @@ public class DietControllerTest {
         @WithMockUser(roles = "GUEST")
         public void should_fail_menu_pick_when_not_family_member() throws Exception {
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
-                            .build();
+                    .build();
 
             mockMvc.perform(post("/api/v1/diets/menu-picks")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -82,11 +82,11 @@ public class DietControllerTest {
 
     @Nested
     @DisplayName("선택한 메뉴 변경")
-    class UpdatePickMenu{
+    class UpdatePickMenu {
         @Test
         @DisplayName("GUEST 권한은 메뉴 선택 변경에 실패")
         @WithMockUser(roles = "GUEST")
-        public void should_fail_update_pick_menu_when_not_family()  throws Exception {
+        public void should_fail_update_pick_menu_when_not_family() throws Exception {
             Long pickId = 1L;
 
             MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
@@ -130,11 +130,11 @@ public class DietControllerTest {
 
     @Nested
     @DisplayName("메뉴 선택 삭제")
-    class DeleteMenuPick{
+    class DeleteMenuPick {
         @Test
         @DisplayName("GUEST 권한은 메뉴 선택 변경에 실패")
         @WithMockUser(roles = "GUEST")
-        public void should_fail_update_pick_menu_when_not_family()  throws Exception {
+        public void should_fail_update_pick_menu_when_not_family() throws Exception {
             Long pickId = 1L;
 
             mockMvc.perform(delete("/api/v1/diets/menu-picks/{pickId}", pickId)
@@ -165,4 +165,27 @@ public class DietControllerTest {
                     .andDo(print());
         }
     }
+
+    @Nested
+    @DisplayName("식단 보기")
+    class DietView {
+        @Test
+        @DisplayName("잘못된 년월인 경우")
+        public void should_fail_diet_view_when_invalid_yearMonth() throws Exception {
+            mockMvc.perform(get("/api/v1/diets")
+                            .param("month", "2026-13")
+                            .with(user(mockMember())))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_diet_view() throws Exception {
+            mockMvc.perform(get("/api/v1/diets")
+                            .param("month", "2026-06")
+                            .with(user(mockMember())))
+                    .andExpect(status().isOk());
+        }
+    }
+
 }

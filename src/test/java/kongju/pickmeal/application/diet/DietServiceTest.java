@@ -1,8 +1,17 @@
 package kongju.pickmeal.application.diet;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
+import kongju.pickmeal.application.diet.data.DietDto;
+import kongju.pickmeal.core.diet.Diet;
+import kongju.pickmeal.core.diet.DietGeneration;
+import kongju.pickmeal.core.diet.repository.DietRepository;
+import kongju.pickmeal.core.diet.type.MealType;
+import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.support.fixture.FamilyFixture;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -45,7 +54,8 @@ public class DietServiceTest {
     private UserPickCountRepository userPickCountRepository;
     @Mock
     private PickCountHistoryRepository pickCountHistoryRepository;
-
+    @Mock
+    private DietRepository dietRepository;
     @InjectMocks
     private DietService dietService;
 
@@ -53,7 +63,7 @@ public class DietServiceTest {
     @DisplayName("선택권 사용")
     class UsePickCount {
         @Test
-        @DisplayName("메뉴가 없을 겨우")
+        @DisplayName("메뉴가 없을 경우")
         public void should_fail_menu_pick_when_menu_not_found() {
             Long userId = 1L;
 
@@ -160,7 +170,7 @@ public class DietServiceTest {
 
     @Nested
     @DisplayName("선택한 메뉴 변경")
-    class UpdatePickMenu{
+    class UpdatePickMenu {
         @Test
         @DisplayName("유저 찾기 실패")
         public void should_fail_update_pick_menu_when_user_not_found() {
@@ -210,7 +220,7 @@ public class DietServiceTest {
             given(userReader.getById(any())).willReturn(user);
 
             Menu menu = MenuFixture.menu();
-            UserMenuPick userMenuPick = UserMenuPick.create(user,menu);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu);
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
 
             given(menuRepository.findById(any())).willReturn(Optional.empty());
@@ -235,7 +245,7 @@ public class DietServiceTest {
 
             Menu menu = MenuFixture.menu();
             given(menuRepository.findById(pickId)).willReturn(Optional.of(menu));
-            UserMenuPick userMenuPick = UserMenuPick.create(user,menu);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu);
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
 
             BusinessException exception = assertThrows(BusinessException.class,
@@ -273,7 +283,7 @@ public class DietServiceTest {
 
     @Nested
     @DisplayName("메뉴 선택 삭제")
-    class DeleteMenuPick{
+    class DeleteMenuPick {
         @Test
         @DisplayName("유저 찾기 실패")
         public void should_fail_delete_pick_menu_when_user_not_found() {
@@ -322,5 +332,65 @@ public class DietServiceTest {
 
             assertEquals(menu.getId(), response.menuId());
         }
+    }
+
+    @Nested
+    @DisplayName("식단 보기")
+    class DietView {
+        @Test
+        @DisplayName("식단이 비어있는 경우")
+        public void should_success_diet_view_when_empty_diets() {
+            Long userId = 1L;
+            YearMonth month = YearMonth.now();
+
+            // 유저
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+            given(dietRepository.findMonthlyDiets(any(), any(), any())).willReturn(List.of());
+
+            DietDto.ListItemResponse response = dietService.getDiets(userId, month);
+
+            assertEquals(false, response.isGenerated());
+            assertEquals(month, response.month());
+            assertEquals(0, response.totalDays());
+
+        }
+
+        @Test
+        @DisplayName("식단이 있는 경우")
+        public void should_success_diet_view() {
+            Long userId = 1L;
+            YearMonth month = YearMonth.now();
+
+            // 유저
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+
+            Family family = FamilyFixture.family();
+            Menu menu = MenuFixture.menu();
+
+            DietGeneration dg = DietGeneration.createPending(
+                    family,
+                    LocalDate.now(),
+                    LocalDate.now(),
+                    1
+            );
+            Diet diet = Diet.create(family,
+                    menu,
+                    LocalDate.now(),
+                    MealType.BREAKFAST,
+                    dg);
+            given(dietRepository.findMonthlyDiets(any(), any(), any())).willReturn(List.of(diet));
+
+            DietDto.ListItemResponse response = dietService.getDiets(userId, month);
+
+            assertEquals(true, response.isGenerated());
+            assertEquals(month, response.month());
+            assertEquals(1, response.totalDays());
+
+            DietDto.MealResponse mealResponse = response.diets().getFirst().meals().getFirst();
+            assertEquals(MealType.BREAKFAST, mealResponse.mealType());
+        }
+
     }
 }
