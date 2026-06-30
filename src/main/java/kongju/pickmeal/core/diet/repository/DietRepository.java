@@ -11,4 +11,6 @@ public interface DietRepository {
     List<Diet> saveAll(List<Diet> diets);
 
     List<Diet> findMonthlyDiets(Family family, LocalDate startDate, LocalDate endDate);
+
+    List<Diet> findAllFamilyAndMealDate(Family family, LocalDate date);
 }

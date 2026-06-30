@@ -1,10 +1,17 @@
 package kongju.pickmeal.application.diet;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.stream.Collectors;
 
+import kongju.pickmeal.core.diet.type.MealType;
+import kongju.pickmeal.core.menu.Ingredient;
+import kongju.pickmeal.core.menu.MenuIngredient;
+import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
+import kongju.pickmeal.core.menu.type.IngredientUnit;
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
@@ -46,6 +53,7 @@ public class DietService {
     private final DietGenerationRepository dietGenerationRepository;
     private final PickCountHistoryRepository pickCountHistoryRepository;
     private final DietRepository dietRepository;
+    private final MenuIngredientRepository menuIngredientRepository;
 
     private final AiDietService aiDietService;
 
@@ -288,8 +296,9 @@ public class DietService {
 
     /**
      * 만들어진 식단 가져오기
+     *
      * @param userId 유저 아이디
-     * @param month 달
+     * @param month  달
      * @return 식단 데이터
      */
     public DietDto.ListItemResponse getDiets(Long userId, YearMonth month) {
@@ -320,7 +329,8 @@ public class DietService {
 
     /**
      * 식단 정보 데이터
-     * @param month 달
+     *
+     * @param month  달
      * @param family 가족
      * @return 해당 달의 식단 데이터
      */
@@ -336,6 +346,7 @@ public class DietService {
 
     /**
      * 같은 날짜 별로 식단을 묶어서 식단 리스트 정보로 변환
+     *
      * @param diets 식단
      * @return 일별 식단 정보
      */
@@ -377,4 +388,241 @@ public class DietService {
         return dietResponses;
     }
 
+    /**
+     * 일일 식단 데이터를 가져옴
+     *
+     * @param userId 유저 아이디
+     * @param date   날짜
+     * @return 해당 날짜 메뉴, 재료, 영양 정보
+     */
+    public DietDto.DailyDetailResponse getDailyMeals(Long userId, LocalDate date) {
+        User user = userReader.getById(userId);
+        Family family = user.getFamily();
+        // 해당 날짜 가족 식단 전부 가져오기
+        List<Diet> diets = dietRepository.findAllFamilyAndMealDate(family, date);
+        // 아침 점심 저녁과 메뉴 연결
+        Map<MealType, List<DietDto.MenuItemResponse>> menuItemsByMealType = new HashMap<>();
+        // 초기화
+        DailyNutritionTotal total = DailyNutritionTotal.builder().build();
+        // 총 재료
+        Map<String, DietDto.IngredientsResponse> totalIngredientMap = new LinkedHashMap<>();
+
+        for (Diet diet : diets) {
+            // 식단에 속해있는 메뉴 가져오기
+            Menu menu = diet.getMenu();
+            // 연결된 재료 전부 가져옴 메뉴 정보 추가
+            DietDto.MenuItemResponse menuItemResponse = getMenuItemResponses(menu, totalIngredientMap);
+
+            // 새로운 키마다 리스트 생성
+            menuItemsByMealType
+                    .computeIfAbsent(diet.getMealType(), mealType -> new ArrayList<>())
+                    .add(menuItemResponse);
+
+            // 메뉴 영양 정보 더하기
+            total.add(menu);
+        }
+
+        List<DietDto.DailyMealResponse> meals = toDailyMealResponse(menuItemsByMealType);
+
+        List<DietDto.IngredientsResponse> totalIngredients =
+                new ArrayList<>(totalIngredientMap.values());
+
+        return DietDto.DailyDetailResponse.builder()
+                .date(date)
+                .totalCalories(total.calories)
+                .totalCarbs(total.carbs)
+                .totalProtein(total.protein)
+                .totalFat(total.fat)
+                .totalSodium(total.sodium)
+                .meals(meals)
+                .totalIngredients(totalIngredients)
+                .build();
+    }
+
+    /**
+     * MealType에 따라 메뉴 묶기
+     *
+     * @param menuItemsByMealType 맵
+     * @return 끼니별 칼로리 합산
+     */
+    private @NonNull List<DietDto.DailyMealResponse> toDailyMealResponse(Map<MealType, List<DietDto.MenuItemResponse>> menuItemsByMealType) {
+        // 아점저마다 식단 묶기
+        return menuItemsByMealType.entrySet().stream()
+                .map(entry -> {
+                    MealType mealType = entry.getKey();
+                    List<DietDto.MenuItemResponse> menuItems = entry.getValue();
+
+                    BigDecimal mealCalories = menuItems.stream()
+                            .map(DietDto.MenuItemResponse::kcal)
+                            .map(this::nullToZero)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    return DietDto.DailyMealResponse.builder()
+                            .mealType(mealType)
+                            .mealCalories(mealCalories)
+                            .meals(menuItems)
+                            .build();
+                })
+                .toList();
+    }
+
+    /**
+     * 재료 변환
+     *
+     * @param menu               메뉴
+     * @param totalIngredientMap 재료 양 : 단위 , 재료 정보
+     * @return 합산 재료
+     */
+    private DietDto.MenuItemResponse getMenuItemResponses(
+            Menu menu,
+            Map<String, DietDto.IngredientsResponse> totalIngredientMap
+    ) {
+        List<MenuIngredient> menuIngredients = menuIngredientRepository.findAllByMenuWithIngredient(menu);
+
+        // 재료 이름과 양 단위 꺼내기
+        List<DietDto.IngredientsResponse> requiredIngredients = menuIngredients.stream()
+                .map(menuIngredient -> {
+                    Ingredient ingredient = menuIngredient.getIngredient();
+
+                    // 맵에 추가
+                    addTotalIngredient(
+                            totalIngredientMap,
+                            ingredient,
+                            menuIngredient.getQuantity(),
+                            menuIngredient.getUnit()
+                    );
+
+                    return DietDto.IngredientsResponse.builder()
+                            .ingredientId(ingredient.getId())
+                            .name(ingredient.getName())
+                            .quantity(menuIngredient.getQuantity())
+                            .unit(menuIngredient.getUnit())
+                            .build();
+                })
+                .toList();
+
+        return DietDto.MenuItemResponse.builder()
+                .menuId(menu.getId())
+                .menuName(menu.getMenuName())
+                .dishType(menu.getDishType())
+                .kcal(menu.getKcal())
+                .carbs(menu.getCarbs())
+                .protein(menu.getProtein())
+                .fat(menu.getFat())
+                .sodium(menu.getSodium())
+                .requiredIngredients(requiredIngredients)
+                .build();
+    }
+
+    /**
+     * 재료 총합 계산
+     *
+     * @param totalIngredientMap 총 재료 맵
+     * @param ingredient         재료
+     * @param quantity           양
+     * @param unit               단위
+     */
+    private void addTotalIngredient(
+            Map<String, DietDto.IngredientsResponse> totalIngredientMap,
+            Ingredient ingredient,
+            Double quantity,
+            IngredientUnit unit
+    ) {
+        // 재료 아이디와 단위가 같은 경우
+        String key = ingredient.getId() + ":" + unit;
+
+        DietDto.IngredientsResponse newValue = DietDto.IngredientsResponse.builder()
+                .ingredientId(ingredient.getId())
+                .name(ingredient.getName())
+                .quantity(quantity)
+                .unit(unit)
+                .build();
+
+        // 합산,
+        totalIngredientMap.merge(
+                key,
+                newValue,
+                (oldValue, value) ->
+                        DietDto.IngredientsResponse.builder()
+                                .ingredientId(oldValue.ingredientId())
+                                .name(oldValue.name())
+                                .quantity(addNullable(oldValue.quantity(), value.quantity()))
+                                .unit(oldValue.unit())
+                                .build()
+        );
+    }
+
+    /**
+     * Double 계산
+     *
+     * @param a 숫자
+     * @param b 숫자
+     * @return null이 아니라면 더함
+     */
+    private Double addNullable(Double a, Double b) {
+        if (a == null && b == null) {
+            return null;
+        }
+
+        if (a == null) {
+            return b;
+        }
+
+        if (b == null) {
+            return a;
+        }
+
+        return a + b;
+    }
+
+    /**
+     * null인지 확인
+     *
+     * @param value 값
+     * @return null이면 zero반환
+     */
+    private BigDecimal nullToZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    @Builder
+    private static class DailyNutritionTotal {
+        private BigDecimal calories = BigDecimal.ZERO;
+        private BigDecimal carbs = BigDecimal.ZERO;
+        private BigDecimal protein = BigDecimal.ZERO;
+        private BigDecimal fat = BigDecimal.ZERO;
+        private BigDecimal sodium = BigDecimal.ZERO;
+
+        void add(Menu menu) {
+            calories = calories.add(nullToZero(menu.getKcal()));
+            carbs = carbs.add(nullToZero(menu.getCarbs()));
+            protein = protein.add(nullToZero(menu.getProtein()));
+            fat = fat.add(nullToZero(menu.getFat()));
+            sodium = sodium.add(nullToZero(menu.getSodium()));
+        }
+
+        BigDecimal calories() {
+            return calories;
+        }
+
+        BigDecimal carbs() {
+            return carbs;
+        }
+
+        BigDecimal protein() {
+            return protein;
+        }
+
+        BigDecimal fat() {
+            return fat;
+        }
+
+        BigDecimal sodium() {
+            return sodium;
+        }
+
+        private static BigDecimal nullToZero(BigDecimal value) {
+            return value == null ? BigDecimal.ZERO : value;
+        }
+    }
 }

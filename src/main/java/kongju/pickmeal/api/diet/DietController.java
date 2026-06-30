@@ -1,5 +1,6 @@
 package kongju.pickmeal.api.diet;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 
 import jakarta.validation.Valid;
@@ -16,7 +17,6 @@ import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
-
 
 
 @RestController
@@ -50,10 +50,10 @@ public class DietController {
 
     @DeleteMapping("/menu-picks/{pickId}")
     @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<MenuPickDto.DeleteResponse>>  deletePickItem(
+    public ResponseEntity<ApiResponse<MenuPickDto.DeleteResponse>> deletePickItem(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long pickId
-    ){
+    ) {
         MenuPickDto.DeleteResponse response = dietService.deletePickMenu(userDetails.id(), pickId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -73,8 +73,19 @@ public class DietController {
     public ResponseEntity<ApiResponse<DietDto.ListItemResponse>> getAllDiets(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth month
-    ){
+    ) {
         DietDto.ListItemResponse response = dietService.getDiets(userDetails.id(), month);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    @GetMapping("/{date}")
+    @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<DietDto.DailyDetailResponse>> getDailyDiets(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable LocalDate date
+    ) {
+        DietDto.DailyDetailResponse response = dietService.getDailyMeals(userDetails.id(), date);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
 }
