@@ -18,4 +18,13 @@ public interface DietJpaRepository extends JpaRepository<Diet, Long> {
             order by d.mealDate asc
             """)
     List<Diet> findMonthlyDiets(Family family, LocalDate startDate, LocalDate endDate);
+
+    @Query("""
+                select d
+                from Diet d
+                join fetch d.menu
+                where d.mealDate = :date
+                and d.family = :family
+            """)
+    List<Diet> findAllFamilyAndMealDate(Family family, LocalDate date);
 }

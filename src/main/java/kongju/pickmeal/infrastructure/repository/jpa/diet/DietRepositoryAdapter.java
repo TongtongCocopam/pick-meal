@@ -25,4 +25,9 @@ public class DietRepositoryAdapter implements DietRepository {
     public List<Diet> findMonthlyDiets(Family family, LocalDate startDate, LocalDate endDate) {
         return dietJpaRepository.findMonthlyDiets(family, startDate, endDate);
     }
+
+    @Override
+    public List<Diet> findAllFamilyAndMealDate(Family family, LocalDate date) {
+        return dietJpaRepository.findAllFamilyAndMealDate(family, date);
+    }
 }
