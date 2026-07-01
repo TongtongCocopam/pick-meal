@@ -6,11 +6,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.stream.Collectors;
 
-import kongju.pickmeal.core.diet.type.MealType;
-import kongju.pickmeal.core.menu.Ingredient;
-import kongju.pickmeal.core.menu.MenuIngredient;
-import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
-import kongju.pickmeal.core.menu.type.IngredientUnit;
+import lombok.Getter;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -21,12 +17,16 @@ import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.diet.Diet;
 import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.diet.UserMenuPick;
+import kongju.pickmeal.core.diet.type.MealType;
 import kongju.pickmeal.core.user.UserPickCount;
+import kongju.pickmeal.core.menu.MenuIngredient;
 import kongju.pickmeal.core.diet.DietGeneration;
 import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
+import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.common.exception.BusinessException;
@@ -37,6 +37,7 @@ import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
 import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
+import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 
@@ -400,6 +401,11 @@ public class DietService {
         Family family = user.getFamily();
         // 해당 날짜 가족 식단 전부 가져오기
         List<Diet> diets = dietRepository.findAllFamilyAndMealDate(family, date);
+
+        if(diets.isEmpty()) {
+            throw new BusinessException(ErrorCode.DIET_NOT_FOUND, "해당 날짜에 등록된 식단이 없습니다.");
+        }
+
         // 아침 점심 저녁과 메뉴 연결
         Map<MealType, List<DietDto.MenuItemResponse>> menuItemsByMealType = new HashMap<>();
         // 초기화
@@ -412,12 +418,10 @@ public class DietService {
             Menu menu = diet.getMenu();
             // 연결된 재료 전부 가져옴 메뉴 정보 추가
             DietDto.MenuItemResponse menuItemResponse = getMenuItemResponses(menu, totalIngredientMap);
-
             // 새로운 키마다 리스트 생성
             menuItemsByMealType
                     .computeIfAbsent(diet.getMealType(), mealType -> new ArrayList<>())
                     .add(menuItemResponse);
-
             // 메뉴 영양 정보 더하기
             total.add(menu);
         }
@@ -429,11 +433,11 @@ public class DietService {
 
         return DietDto.DailyDetailResponse.builder()
                 .date(date)
-                .totalCalories(total.calories)
-                .totalCarbs(total.carbs)
-                .totalProtein(total.protein)
-                .totalFat(total.fat)
-                .totalSodium(total.sodium)
+                .totalCalories(total.getCalories())
+                .totalCarbs(total.getCarbs())
+                .totalProtein(total.getProtein())
+                .totalFat(total.getFat())
+                .totalSodium(total.getSodium())
                 .meals(meals)
                 .totalIngredients(totalIngredients)
                 .build();
@@ -586,11 +590,17 @@ public class DietService {
     }
 
     @Builder
+    @Getter
     private static class DailyNutritionTotal {
+        @Builder.Default
         private BigDecimal calories = BigDecimal.ZERO;
-        private BigDecimal carbs = BigDecimal.ZERO;
+        @Builder.Default
+        private BigDecimal carbs  = BigDecimal.ZERO;
+        @Builder.Default
         private BigDecimal protein = BigDecimal.ZERO;
+        @Builder.Default
         private BigDecimal fat = BigDecimal.ZERO;
+        @Builder.Default
         private BigDecimal sodium = BigDecimal.ZERO;
 
         void add(Menu menu) {
@@ -599,26 +609,6 @@ public class DietService {
             protein = protein.add(nullToZero(menu.getProtein()));
             fat = fat.add(nullToZero(menu.getFat()));
             sodium = sodium.add(nullToZero(menu.getSodium()));
-        }
-
-        BigDecimal calories() {
-            return calories;
-        }
-
-        BigDecimal carbs() {
-            return carbs;
-        }
-
-        BigDecimal protein() {
-            return protein;
-        }
-
-        BigDecimal fat() {
-            return fat;
-        }
-
-        BigDecimal sodium() {
-            return sodium;
         }
 
         private static BigDecimal nullToZero(BigDecimal value) {
