@@ -1,44 +1,50 @@
 package kongju.pickmeal.application.diet;
 
-import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
+import java.time.YearMonth;
+import java.time.LocalDate;
 
-import kongju.pickmeal.application.diet.data.DietDto;
-import kongju.pickmeal.core.diet.Diet;
-import kongju.pickmeal.core.diet.DietGeneration;
-import kongju.pickmeal.core.diet.repository.DietRepository;
-import kongju.pickmeal.core.diet.type.MealType;
-import kongju.pickmeal.core.family.Family;
-import kongju.pickmeal.support.fixture.FamilyFixture;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import kongju.pickmeal.core.diet.Diet;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.diet.UserMenuPick;
 import kongju.pickmeal.core.user.UserPickCount;
+import kongju.pickmeal.core.diet.type.MealType;
+import kongju.pickmeal.core.menu.MenuIngredient;
+import kongju.pickmeal.core.diet.DietGeneration;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.support.fixture.UserFixture;
 import kongju.pickmeal.support.fixture.MenuFixture;
+import kongju.pickmeal.core.menu.type.IngredientType;
+import kongju.pickmeal.support.fixture.FamilyFixture;
+import kongju.pickmeal.core.menu.type.IngredientUnit;
+import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.diet.repository.DietRepository;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 
 
@@ -54,6 +60,8 @@ public class DietServiceTest {
     private UserPickCountRepository userPickCountRepository;
     @Mock
     private PickCountHistoryRepository pickCountHistoryRepository;
+    @Mock
+    private MenuIngredientRepository menuIngredientRepository;
     @Mock
     private DietRepository dietRepository;
     @InjectMocks
@@ -393,4 +401,57 @@ public class DietServiceTest {
         }
 
     }
+
+    @Nested
+    @DisplayName("일일 식단 보기")
+    class DailyMeal {
+        @Test
+        @DisplayName("식단이 없는 경우")
+        public void should_fail_daily_meal_when_diet_not_exist() {
+            given(userReader.getById(any())).willReturn(UserFixture.user());
+            given(dietRepository.findAllFamilyAndMealDate(any(), any())).willReturn(List.of());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.getDailyMeals(1L, LocalDate.ofEpochDay(2026 - 7 - 1)));
+
+            assertEquals(ErrorCode.DIET_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_daily_meal() {
+            Long userId = 1L;
+            LocalDate date = LocalDate.now();
+
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyMember(family);
+
+            given(userReader.getById(any())).willReturn(user);
+
+            Menu menu1 = MenuFixture.menu();
+            Menu menu2 = MenuFixture.menu("계란말이");
+
+            DietGeneration dietGeneration = DietGeneration.createPending(family, date, date, 1);
+
+            Diet breakfastSoup = Diet.create(family, menu1, date, MealType.BREAKFAST, dietGeneration);
+            Diet breakfastSide = Diet.create(family, menu2, date, MealType.BREAKFAST, dietGeneration);
+            given(dietRepository.findAllFamilyAndMealDate(any(), any())).willReturn(List.of(breakfastSoup, breakfastSide));
+
+            Ingredient kimchi = Ingredient.create("김치");
+            Ingredient egg = Ingredient.create("계란");
+            given(menuIngredientRepository.findAllByMenuWithIngredient(menu1))
+                    .willReturn(List.of(MenuIngredient.create(menu1, kimchi, "100.0", 100.0, IngredientUnit.G, IngredientType.MAIN)));
+
+            given(menuIngredientRepository.findAllByMenuWithIngredient(menu2))
+                    .willReturn(List.of(MenuIngredient.create(menu2, egg, "2.0", 2.0, IngredientUnit.PIECE, IngredientType.SUB)));
+
+            DietDto.DailyDetailResponse response =
+                    dietService.getDailyMeals(userId, date);
+
+            assertThat(response.date()).isEqualTo(date);
+            System.out.println(response);
+        }
+    }
+
 }

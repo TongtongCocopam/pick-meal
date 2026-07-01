@@ -1,12 +1,12 @@
 package kongju.pickmeal.support.fixture;
 
-import java.math.BigDecimal;
 import java.util.List;
+import java.math.BigDecimal;
 
-import kongju.pickmeal.application.menu.data.MenuDto;
 import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.menu.type.MenuCategory;
+import kongju.pickmeal.application.menu.data.MenuDto;
 
 
 public class MenuFixture {
@@ -29,7 +29,7 @@ public class MenuFixture {
                 null,
                 menuName,
                 MenuCategory.KOREAN,
-                DishType.STEW,
+                DishType.SIDE_DISH,
                 BigDecimal.valueOf(45.2),
                 BigDecimal.valueOf(5.3),
                 BigDecimal.valueOf(3.1),

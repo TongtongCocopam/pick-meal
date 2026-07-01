@@ -1,5 +1,7 @@
 package kongju.pickmeal.api.diet;
 
+import java.time.LocalDate;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
@@ -186,6 +188,38 @@ public class DietControllerTest {
                             .with(user(mockMember())))
                     .andExpect(status().isOk());
         }
+    }
+
+    @Nested
+    @DisplayName("일일 식단 보기")
+    class DailyMeal {
+        @Test
+        @DisplayName("멤버 권한이 없는 경우")
+        @WithMockUser(roles = "GUEST")
+        public void should_fail_daily_meal_when_not_member() throws Exception {
+            mockMvc.perform(get("/api/v1/diets/{date}", LocalDate.now()))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("날짜 형식이 맞지 않는경우")
+        public void should_fail_daily_meal_when_invalid_day() throws Exception {
+            mockMvc.perform(get("/api/v1/diets/{date}", "2026.07.01")
+                            .with(user(mockMember())))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_daily_meal() throws Exception {
+            mockMvc.perform(get("/api/v1/diets/{date}", LocalDate.now())
+                            .with(user(mockMember())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+
     }
 
 }
