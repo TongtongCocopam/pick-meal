@@ -29,18 +29,7 @@ public interface DietGenerationJpaRepository extends JpaRepository<DietGeneratio
             @Param("statuses") List<DietGenerationStatus> statuses
     );
 
-    @Query("""
-                select count(dg)
-                from DietGeneration dg
-                where dg.family = :family
-                  and dg.status in :statuses
-                  and dg.startDate <= :monthEnd
-                  and dg.endDate >= :monthStart
-            """)
-    long countByFamilyAndPeriod(
-            @Param("family") Family family,
-            @Param("monthStart") LocalDate monthStart,
-            @Param("monthEnd") LocalDate monthEnd,
-            @Param("statuses") List<DietGenerationStatus> statuses
+    long countByFamilyAndTargetMonthAndStatusIn(
+            Family family, LocalDate targetMonth, List<DietGenerationStatus> status
     );
 }
