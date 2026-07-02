@@ -56,6 +56,7 @@ public enum ErrorCode {
     DISH_TYPE_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 요리 종류입니다."),
     CATEGORY_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 카테고리입니다."),
     TIME_SLOT_ALREADY_FILLED(HttpStatus.CONFLICT, "해당 시간에는 이미 메뉴가 배정되었습니다."),
+    INVALID_TARGET_MONTH(HttpStatus.BAD_REQUEST, "선택할 수 없는 식단 생성 월입니다."),
 
     TOO_MANY_SELECTIONS(HttpStatus.BAD_REQUEST, "선택권 개수를 초과하였습니다."),
 
