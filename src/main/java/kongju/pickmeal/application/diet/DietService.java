@@ -1,9 +1,9 @@
 package kongju.pickmeal.application.diet;
 
-import java.math.BigDecimal;
 import java.util.*;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
 import lombok.Getter;
@@ -28,6 +28,7 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
+import kongju.pickmeal.core.diet.type.DietMenuSource;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
@@ -48,13 +49,13 @@ import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 public class DietService {
     private final UserReader userReader;
     private final MenuRepository menuRepository;
+    private final DietRepository dietRepository;
     private final FamilyRepository familyRepository;
     private final UserMenuPickRepository userMenuPickRepository;
     private final UserPickCountRepository userPickCountRepository;
+    private final MenuIngredientRepository menuIngredientRepository;
     private final DietGenerationRepository dietGenerationRepository;
     private final PickCountHistoryRepository pickCountHistoryRepository;
-    private final DietRepository dietRepository;
-    private final MenuIngredientRepository menuIngredientRepository;
 
     private final AiDietService aiDietService;
 
@@ -74,6 +75,9 @@ public class DietService {
         List<Long> menuIds = request.menuIds();
         Long count = (long) menuIds.size();
 
+        YearMonth targetMonth = request.targetMonth();
+
+        validateSelectableMonth(targetMonth);
         // 유저가 선택한 메뉴들을 유저 픽 연결 테이블에 넣기
         List<UserMenuPick> userMenuPickList = menuIds.stream()
                 .map(menuId -> {
@@ -82,7 +86,7 @@ public class DietService {
                     debitPickCount(user, count);
                     debitHistory(user, count, UUID.randomUUID());
 
-                    return UserMenuPick.create(user, menu);
+                    return UserMenuPick.create(user, menu, targetMonth.atDay(1));
                 })
                 .toList();
 
@@ -100,6 +104,19 @@ public class DietService {
                 .pickedCount(saveUserMenuPickList.size())
                 .items(itemResponses)
                 .build();
+    }
+
+    /**
+     * 식단 선택 허용 가능한 달인지
+     *
+     * @param targetMonth ai생성에 사용할 달
+     */
+    private void validateSelectableMonth(YearMonth targetMonth) {
+        YearMonth now = YearMonth.now();
+
+        if (!targetMonth.equals(now) && !targetMonth.equals(now.plusMonths(1))) {
+            throw new BusinessException(ErrorCode.INVALID_TARGET_MONTH);
+        }
     }
 
     /**
@@ -219,31 +236,71 @@ public class DietService {
         Family family = familyRepository.findByIdForUpdate(user.getFamily().getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.FAMILY_NOT_FOUND));
 
+        YearMonth targetMonth = request.targetMonth();
+        validateTargetMonth(targetMonth);
+        DietPeriod period = calculateDietPeriod(targetMonth);
 
-        LocalDate startDate = request.startDate();
-        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
-
-        validateGenerationRequest(family, startDate, endDate);
+        LocalDate targetMonthDate = targetMonth.atDay(1);
+        LocalDate startDate = period.startDate();
+        LocalDate endDate = period.endDate();
+        validateGenerationRequest(family, startDate, endDate, targetMonthDate);
 
         DietGeneration generation = DietGeneration.createPending(
                 family,
                 startDate,
                 endDate,
-                request.dailyMealCount()
+                request.dailyMealCount(),
+                targetMonthDate
         );
 
         DietGeneration saveGeneration = dietGenerationRepository.save(generation);
-
-        aiDietService.generateDietAsync(
-                userId,
-                saveGeneration.getId(),
-                request
-        );
+        aiDietService.generateDietAsync(userId, saveGeneration.getId(), request, startDate, endDate);
 
         return DietGenerationDto.GenerateResponse.builder()
                 .generationId(generation.getId())
                 .status(generation.getStatus())
                 .build();
+    }
+
+    /**
+     * 유효한 달인지 검사
+     *
+     * @param targetMonth 선택한 달
+     */
+    private void validateTargetMonth(YearMonth targetMonth) {
+        YearMonth now = YearMonth.now();
+        YearMonth nextMonth = now.plusMonths(1);
+
+        if (targetMonth.isBefore(now) || targetMonth.isAfter(nextMonth)) {
+            throw new BusinessException(ErrorCode.INVALID_TARGET_MONTH);
+        }
+    }
+
+    /**
+     * 기간 계산
+     * @param targetMonth 선택한 달
+     * @return 시작일, 종료일
+     */
+    private DietPeriod calculateDietPeriod(YearMonth targetMonth) {
+        YearMonth now = YearMonth.now();
+
+        LocalDate startDate = targetMonth.equals(now)
+                ? LocalDate.now()
+                : targetMonth.atDay(1);
+
+        LocalDate endDate = targetMonth.atEndOfMonth();
+
+        return DietPeriod.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+    }
+
+    @Builder
+    private record DietPeriod(
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
     }
 
     /**
@@ -256,7 +313,8 @@ public class DietService {
     private void validateGenerationRequest(
             Family family,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            LocalDate targetMonthDate
     ) {
         List<DietGenerationStatus> activeStatuses = List.of(
                 DietGenerationStatus.PENDING,
@@ -276,15 +334,10 @@ public class DietService {
             throw new BusinessException(ErrorCode.DIET_ALREADY_GENERATED);
         }
 
-        YearMonth targetMonth = YearMonth.from(startDate);
-        LocalDate monthStart = targetMonth.atDay(1);
-        LocalDate monthEnd = targetMonth.atEndOfMonth();
-
         // 기간 동안 몇 번 생성 했는지 확인
-        long monthlyCount = dietGenerationRepository.countByFamilyAndPeriod(
+        long monthlyCount = dietGenerationRepository.countByFamilyAndTargetMonthAndStatusIn(
                 family,
-                monthStart,
-                monthEnd,
+                targetMonthDate,
                 activeStatuses
         );
 
@@ -402,7 +455,7 @@ public class DietService {
         // 해당 날짜 가족 식단 전부 가져오기
         List<Diet> diets = dietRepository.findAllFamilyAndMealDate(family, date);
 
-        if(diets.isEmpty()) {
+        if (diets.isEmpty()) {
             throw new BusinessException(ErrorCode.DIET_NOT_FOUND, "해당 날짜에 등록된 식단이 없습니다.");
         }
 
@@ -417,7 +470,7 @@ public class DietService {
             // 식단에 속해있는 메뉴 가져오기
             Menu menu = diet.getMenu();
             // 연결된 재료 전부 가져옴 메뉴 정보 추가
-            DietDto.MenuItemResponse menuItemResponse = getMenuItemResponses(menu, totalIngredientMap);
+            DietDto.MenuItemResponse menuItemResponse = getMenuItemResponses(menu, totalIngredientMap, diet.getSource());
             // 새로운 키마다 리스트 생성
             menuItemsByMealType
                     .computeIfAbsent(diet.getMealType(), mealType -> new ArrayList<>())
@@ -475,11 +528,13 @@ public class DietService {
      *
      * @param menu               메뉴
      * @param totalIngredientMap 재료 양 : 단위 , 재료 정보
+     * @param source             누가 선택한 식단 인지
      * @return 합산 재료
      */
     private DietDto.MenuItemResponse getMenuItemResponses(
             Menu menu,
-            Map<String, DietDto.IngredientsResponse> totalIngredientMap
+            Map<String, DietDto.IngredientsResponse> totalIngredientMap,
+            DietMenuSource source
     ) {
         List<MenuIngredient> menuIngredients = menuIngredientRepository.findAllByMenuWithIngredient(menu);
 
@@ -505,6 +560,7 @@ public class DietService {
                 })
                 .toList();
 
+        boolean familyChoice = source == DietMenuSource.USER_PICKED;
         return DietDto.MenuItemResponse.builder()
                 .menuId(menu.getId())
                 .menuName(menu.getMenuName())
@@ -515,6 +571,7 @@ public class DietService {
                 .fat(menu.getFat())
                 .sodium(menu.getSodium())
                 .requiredIngredients(requiredIngredients)
+                .familyChoice(familyChoice)
                 .build();
     }
 
@@ -595,7 +652,7 @@ public class DietService {
         @Builder.Default
         private BigDecimal calories = BigDecimal.ZERO;
         @Builder.Default
-        private BigDecimal carbs  = BigDecimal.ZERO;
+        private BigDecimal carbs = BigDecimal.ZERO;
         @Builder.Default
         private BigDecimal protein = BigDecimal.ZERO;
         @Builder.Default

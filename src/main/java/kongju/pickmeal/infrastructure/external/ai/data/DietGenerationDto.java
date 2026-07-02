@@ -1,10 +1,11 @@
 package kongju.pickmeal.infrastructure.external.ai.data;
 
 import java.util.UUID;
-import java.time.LocalDate;
+import java.time.YearMonth;
 
 import lombok.Builder;
 import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import kongju.pickmeal.core.diet.type.DietGenerationStatus;
 
@@ -13,7 +14,8 @@ public class DietGenerationDto {
     @Builder
     public record GenerateRequest(
             @NotNull
-            LocalDate startDate,
+            @JsonFormat(pattern = "yyyy-MM")
+            YearMonth targetMonth,
             @NotNull
             Integer dailyMealCount
     ) {

@@ -1,6 +1,7 @@
 package kongju.pickmeal.application.diet;
 
 import java.util.*;
+import java.time.LocalDate;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,9 +24,11 @@ public class AiDietService {
     public void generateDietAsync(
             Long userId,
             UUID generationId,
-            DietGenerationDto.GenerateRequest request
+            DietGenerationDto.GenerateRequest request,
+            LocalDate startDate,
+            LocalDate endDate
     ) {
-        aiDietWorker.generate(userId, generationId, request);
+        aiDietWorker.generate(userId, generationId, request, startDate, endDate);
     }
 
 

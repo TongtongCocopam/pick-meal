@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import lombok.Builder;
 
 import kongju.pickmeal.core.user.type.Gender;
+import kongju.pickmeal.core.diet.UserMenuPick;
 import kongju.pickmeal.core.diet.type.MealType;
 import kongju.pickmeal.core.menu.type.DishType;
 
@@ -18,7 +19,10 @@ public class AiDietGenerateDto {
             LocalDate startDate,
             LocalDate endDate,
             List<MenuCandidate> menuCandidates,
-            List<UserMenu> userMenuPicks,
+            // 유저가 선택한 메뉴 뽑음
+            List<UserMenu> userMenus,
+            // 객체 그대로 전달
+            List<UserMenuPick> userMenuPicks,
 
             List<HealthCondition> healthConditions,
             List<Disease> disease,

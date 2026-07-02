@@ -2,12 +2,14 @@ package kongju.pickmeal.infrastructure.repository.jpa.diet;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.diet.UserMenuPick;
-import org.springframework.data.jpa.repository.Query;
+import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 
 
 public interface UserMenuPickJpaRepository extends JpaRepository<UserMenuPick, Long> {
@@ -18,6 +20,8 @@ public interface UserMenuPickJpaRepository extends JpaRepository<UserMenuPick, L
                     from UserMenuPick ump
                     join fetch ump.menu
                     where ump.user in :users
+                    and ump.targetMonth = :targetMonth
+                    and ump.status = :status
             """)
-    List<UserMenuPick> findAllByUserInFetchMenu(List<User> users);
+    List<UserMenuPick> findAllByUserInAndTargetMonthAndStatusFetchMenu(List<User> users, LocalDate targetMonth, UserMenuPickStatus status);
 }

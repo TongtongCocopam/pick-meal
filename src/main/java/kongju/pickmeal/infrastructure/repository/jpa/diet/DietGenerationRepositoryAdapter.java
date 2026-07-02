@@ -34,7 +34,7 @@ public class DietGenerationRepositoryAdapter implements DietGenerationRepository
     }
 
     @Override
-    public long countByFamilyAndPeriod(Family family, LocalDate monthStart, LocalDate monthEnd, List<DietGenerationStatus> statuses) {
-        return dietGenerationJpaRepository.countByFamilyAndPeriod(family, monthStart, monthEnd, statuses);
+    public long countByFamilyAndTargetMonthAndStatusIn(Family family, LocalDate targetMonth, List<DietGenerationStatus> statuses) {
+        return dietGenerationJpaRepository.countByFamilyAndTargetMonthAndStatusIn(family, targetMonth, statuses);
     }
 }

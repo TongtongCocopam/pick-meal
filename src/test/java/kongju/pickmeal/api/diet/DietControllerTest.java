@@ -1,6 +1,8 @@
 package kongju.pickmeal.api.diet;
 
+import java.util.List;
 import java.time.LocalDate;
+import java.time.YearMonth;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
@@ -56,6 +58,8 @@ public class DietControllerTest {
         @WithMockUser(roles = "GUEST")
         public void should_fail_menu_pick_when_not_family_member() throws Exception {
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
+                    .menuIds(List.of(1L,2L))
+                    .targetMonth(YearMonth.now())
                     .build();
 
             mockMvc.perform(post("/api/v1/diets/menu-picks")
@@ -70,6 +74,8 @@ public class DietControllerTest {
         @DisplayName("성공케이스")
         public void should_success_menu_pick() throws Exception {
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
+                    .menuIds(List.of(1L,2L))
+                    .targetMonth(YearMonth.now())
                     .build();
 
             mockMvc.perform(post("/api/v1/diets/menu-picks")
