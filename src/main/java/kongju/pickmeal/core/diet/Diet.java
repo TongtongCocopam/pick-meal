@@ -12,6 +12,7 @@ import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.diet.type.MealType;
 import kongju.pickmeal.core.common.BaseTimeEntity;
+import kongju.pickmeal.core.diet.type.DietMenuSource;
 
 
 @Entity
@@ -35,13 +36,18 @@ public class Diet extends BaseTimeEntity {
     @JoinColumn(name = "dietGeneration_id")
     private DietGeneration dietGeneration;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private DietMenuSource source;
+
     @Builder(access = AccessLevel.PRIVATE)
-    private Diet(Family family, Menu menu, LocalDate mealDate, MealType mealType, DietGeneration dietGeneration) {
+    private Diet(Family family, Menu menu, LocalDate mealDate, MealType mealType, DietGeneration dietGeneration, DietMenuSource source) {
         this.family = family;
         this.menu = menu;
         this.mealDate = mealDate;
         this.mealType = mealType;
         this.dietGeneration = dietGeneration;
+        this.source = source;
     }
 
     public static Diet create(
@@ -49,7 +55,8 @@ public class Diet extends BaseTimeEntity {
             Menu menu,
             LocalDate mealDate,
             MealType mealType,
-            DietGeneration dietGeneration
+            DietGeneration dietGeneration,
+            DietMenuSource source
     ) {
         return Diet.builder()
                 .family(family)
@@ -57,6 +64,7 @@ public class Diet extends BaseTimeEntity {
                 .mealDate(mealDate)
                 .mealType(mealType)
                 .dietGeneration(dietGeneration)
+                .source(source)
                 .build();
     }
 
