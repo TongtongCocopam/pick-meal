@@ -1,16 +1,15 @@
 package kongju.pickmeal.application.diet.data;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.time.YearMonth;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 
-import kongju.pickmeal.core.menu.type.IngredientUnit;
-import kongju.pickmeal.core.menu.type.MenuCategory;
 import lombok.Builder;
 
 import kongju.pickmeal.core.diet.type.MealType;
 import kongju.pickmeal.core.menu.type.DishType;
+import kongju.pickmeal.core.menu.type.IngredientUnit;
 
 
 public class DietDto {
@@ -70,7 +69,8 @@ public class DietDto {
             BigDecimal protein,
             BigDecimal fat,
             BigDecimal sodium,
-            List<IngredientsResponse> requiredIngredients
+            List<IngredientsResponse> requiredIngredients,
+            boolean familyChoice
     ) {
     }
 
