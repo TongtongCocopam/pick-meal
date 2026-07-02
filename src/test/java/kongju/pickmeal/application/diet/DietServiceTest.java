@@ -11,14 +11,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import kongju.pickmeal.core.diet.Diet;
 import kongju.pickmeal.core.user.User;
@@ -34,6 +34,7 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.support.fixture.UserFixture;
 import kongju.pickmeal.support.fixture.MenuFixture;
+import kongju.pickmeal.core.diet.type.DietMenuSource;
 import kongju.pickmeal.core.menu.type.IngredientType;
 import kongju.pickmeal.support.fixture.FamilyFixture;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
@@ -82,6 +83,7 @@ public class DietServiceTest {
 
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
                     .menuIds(List.of(1L, 2L))
+                    .targetMonth(YearMonth.now())
                     .build();
 
             BusinessException exception = assertThrows(
@@ -98,6 +100,7 @@ public class DietServiceTest {
 
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
                     .menuIds(List.of(1L, 2L))
+                    .targetMonth(YearMonth.now())
                     .build();
 
             given(userReader.getById(any())).willThrow(new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -116,6 +119,7 @@ public class DietServiceTest {
 
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
                     .menuIds(List.of(1L, 2L))
+                    .targetMonth(YearMonth.now())
                     .build();
 
             User user = UserFixture.user();
@@ -141,9 +145,11 @@ public class DietServiceTest {
         @DisplayName("성공 케이스")
         public void should_success_menu_pick() {
             Long userId = 1L;
+            LocalDate targetMonth =  LocalDate.now();
 
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
                     .menuIds(List.of(1L, 2L))
+                    .targetMonth(YearMonth.now())
                     .build();
             // 선택권 사용 유저
             User user = UserFixture.user();
@@ -167,8 +173,8 @@ public class DietServiceTest {
 
             given(userMenuPickRepository.saveAll(anyList()))
                     .willReturn(
-                            List.of(UserMenuPick.create(user, menu1),
-                                    UserMenuPick.create(user, menu2)));
+                            List.of(UserMenuPick.create(user, menu1, targetMonth),
+                                    UserMenuPick.create(user, menu2, targetMonth)));
 
             MenuPickDto.CreateResponse response = dietService.menuPick(userId, request);
 
@@ -220,6 +226,7 @@ public class DietServiceTest {
         public void should_fail_update_pick_menu_when_menu_not_found() {
             Long userId = 1L;
             Long pickId = 1L;
+            LocalDate targetMonth =  LocalDate.now();
             MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
                     .menuId(2L)
                     .build();
@@ -228,7 +235,7 @@ public class DietServiceTest {
             given(userReader.getById(any())).willReturn(user);
 
             Menu menu = MenuFixture.menu();
-            UserMenuPick userMenuPick = UserMenuPick.create(user, menu);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth);
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
 
             given(menuRepository.findById(any())).willReturn(Optional.empty());
@@ -244,6 +251,7 @@ public class DietServiceTest {
         public void should_fail_update_pick_menu_when_not_change_menu() {
             Long userId = 1L;
             Long pickId = 1L;
+            LocalDate targetMonth =  LocalDate.now();
             MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
                     .menuId(1L)
                     .build();
@@ -253,7 +261,7 @@ public class DietServiceTest {
 
             Menu menu = MenuFixture.menu();
             given(menuRepository.findById(pickId)).willReturn(Optional.of(menu));
-            UserMenuPick userMenuPick = UserMenuPick.create(user, menu);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth);
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
 
             BusinessException exception = assertThrows(BusinessException.class,
@@ -267,6 +275,7 @@ public class DietServiceTest {
         public void should_success_update_pick_menu() {
             Long userId = 1L;
             Long pickId = 1L;
+            LocalDate targetMonth =  LocalDate.now();
             MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
                     .menuId(2L)
                     .build();
@@ -280,7 +289,7 @@ public class DietServiceTest {
             given(menuRepository.findById(any())).willReturn(Optional.of(menu));
 
             Menu menu1 = MenuFixture.menu("마라탕");
-            UserMenuPick userMenuPick = UserMenuPick.create(user, menu1);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu1, targetMonth);
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
 
             MenuPickDto.UpdateResponse response = dietService.updatePickMenu(userId, pickId, request);
@@ -328,13 +337,14 @@ public class DietServiceTest {
         public void should_success_delete_pick_menu() {
             Long userId = 1L;
             Long pickId = 1L;
+            LocalDate targetMonth =  LocalDate.now();
 
             // 유저
             User user = UserFixture.user();
             given(userReader.getById(any())).willReturn(user);
 
             Menu menu = MenuFixture.menu();
-            UserMenuPick userMenuPick = UserMenuPick.create(user, menu);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth);
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
             MenuPickDto.DeleteResponse response = dietService.deletePickMenu(userId, pickId);
 
@@ -381,13 +391,15 @@ public class DietServiceTest {
                     family,
                     LocalDate.now(),
                     LocalDate.now(),
-                    1
+                    1,
+                    LocalDate.now()
             );
             Diet diet = Diet.create(family,
                     menu,
                     LocalDate.now(),
                     MealType.BREAKFAST,
-                    dg);
+                    dg,
+                    DietMenuSource.USER_PICKED);
             given(dietRepository.findMonthlyDiets(any(), any(), any())).willReturn(List.of(diet));
 
             DietDto.ListItemResponse response = dietService.getDiets(userId, month);
@@ -432,10 +444,10 @@ public class DietServiceTest {
             Menu menu1 = MenuFixture.menu();
             Menu menu2 = MenuFixture.menu("계란말이");
 
-            DietGeneration dietGeneration = DietGeneration.createPending(family, date, date, 1);
+            DietGeneration dietGeneration = DietGeneration.createPending(family, date, date, 1, LocalDate.now());
 
-            Diet breakfastSoup = Diet.create(family, menu1, date, MealType.BREAKFAST, dietGeneration);
-            Diet breakfastSide = Diet.create(family, menu2, date, MealType.BREAKFAST, dietGeneration);
+            Diet breakfastSoup = Diet.create(family, menu1, date, MealType.BREAKFAST, dietGeneration, DietMenuSource.USER_PICKED);
+            Diet breakfastSide = Diet.create(family, menu2, date, MealType.BREAKFAST, dietGeneration, DietMenuSource.USER_PICKED);
             given(dietRepository.findAllFamilyAndMealDate(any(), any())).willReturn(List.of(breakfastSoup, breakfastSide));
 
             Ingredient kimchi = Ingredient.create("김치");
