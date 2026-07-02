@@ -41,20 +41,26 @@ public class DietGeneration {
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private LocalDate targetMonth;
+
     @Builder(access = AccessLevel.PRIVATE)
-    private DietGeneration(Family family, LocalDate startDate, LocalDate endDate, Integer dailyMealCount,DietGenerationStatus status) {
+    private DietGeneration(Family family, LocalDate startDate, LocalDate endDate,
+                           Integer dailyMealCount,DietGenerationStatus status, LocalDate targetMonth) {
         this.family = family;
         this.startDate = startDate;
         this.endDate = endDate;
         this.dailyMealCount = dailyMealCount;
         this.status = status;
+        this.targetMonth = targetMonth;
     }
 
     public static DietGeneration createPending(
             Family family,
             LocalDate startDate,
             LocalDate endDate,
-            Integer dailyMealCount
+            Integer dailyMealCount,
+            LocalDate targetMonth
     ) {
         return DietGeneration.builder()
                 .family(family)
@@ -62,6 +68,7 @@ public class DietGeneration {
                 .endDate(endDate)
                 .dailyMealCount(dailyMealCount)
                 .status(DietGenerationStatus.PENDING)
+                .targetMonth(targetMonth)
                 .build();
     }
 
