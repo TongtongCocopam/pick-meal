@@ -2,6 +2,7 @@ package kongju.pickmeal.application.diet;
 
 import java.util.*;
 import java.time.Period;
+import java.time.YearMonth;
 import java.time.LocalDate;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
@@ -28,6 +29,8 @@ import kongju.pickmeal.core.ai.AiDietGenerateDto;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.user.UserHealthProfile;
+import kongju.pickmeal.core.diet.type.DietMenuSource;
+import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.UserIngredientPreference;
@@ -71,20 +74,22 @@ public class AiDietWorker {
     public void generate(
             Long userId,
             UUID generationId,
-            DietGenerationDto.GenerateRequest request
+            DietGenerationDto.GenerateRequest request,
+            LocalDate startDate,
+            LocalDate endDate
     ) {
         DietGeneration generation = dietGenerationRepository.findById(generationId)
                 .orElseThrow();
 
         generation.processing();
         // 전처리
-        AiDietGenerateDto.Command command = prepareAiDietGeneration(userId, request);
+        AiDietGenerateDto.Command command = prepareAiDietGeneration(userId, request, startDate, endDate);
         // ai호출
         AiDietGenerateDto.Result result = dietAiGenerator.generate(command);
         // 검증
         validateAiDietResult(result, command);
         // 저장
-         saveAiDietResult(generation, result, command);
+        saveAiDietResult(generation, result, command);
         // 상태변경
         generation.completed();
     }
@@ -96,18 +101,17 @@ public class AiDietWorker {
      * @param request 신청 날짜와 끼니 개수
      * @return 질병정보, 건강정보, 메뉴, 선호 비선호 재료 등
      */
-    private AiDietGenerateDto.Command prepareAiDietGeneration(Long userId, DietGenerationDto.GenerateRequest request) {
+    private AiDietGenerateDto.Command prepareAiDietGeneration(Long userId, DietGenerationDto.GenerateRequest request, LocalDate startDate, LocalDate endDate) {
         User user = userReader.getById(userId);
         Family family = user.getFamily();
 
-        LocalDate startDate = request.startDate();
-        LocalDate endDate = calculateEndDate(startDate);
+        YearMonth targetMonth = request.targetMonth();
 
         List<User> users = userRepository.findAllFamily(family);
 
         List<AiDietGenerateDto.Disease> diseases = getFamilyDiseases(users);
         List<AiDietGenerateDto.HealthCondition> healthConditions = getFamilyHealthConditions(users);
-        List<AiDietGenerateDto.UserMenu> userMenus = getUserMenus(users);
+        UserMenuPickPreparation userMenuPickPreparation = getUserMenus(users, targetMonth);
 
         IngredientPreferenceSummary preferenceSummary = getIngredientPreferenceSummary(users);
 
@@ -125,21 +129,12 @@ public class AiDietWorker {
                 startDate,
                 endDate,
                 menuCandidates,
-                userMenus,
+                userMenuPickPreparation.userMenus,
+                userMenuPickPreparation.userMenuPicks,
                 healthConditions,
                 diseases,
                 preferenceSummary
         );
-    }
-
-    /**
-     * 마지막 식단 날짜 계산
-     *
-     * @param startDate 시작 날짜
-     * @return 날짜
-     */
-    private LocalDate calculateEndDate(LocalDate startDate) {
-        return startDate.withDayOfMonth(startDate.lengthOfMonth());
     }
 
     /**
@@ -482,9 +477,11 @@ public class AiDietWorker {
      * @param users 가족
      * @return 유저 선택 메뉴 리스트
      */
-    private List<AiDietGenerateDto.UserMenu> getUserMenus(List<User> users) {
+    private UserMenuPickPreparation getUserMenus(List<User> users, YearMonth targetMonth) {
+        LocalDate month = YearMonth.from(targetMonth).atDay(1);
+
         List<UserMenuPick> userMenuPicks =
-                userMenuPickRepository.findAllByUserInFetchMenu(users);
+                userMenuPickRepository.findAllByUserInAndTargetMonthAndStatusFetchMenu(users, month, UserMenuPickStatus.PENDING);
 
         List<Menu> pickedMenus = userMenuPicks.stream()
                 .map(UserMenuPick::getMenu)
@@ -500,7 +497,7 @@ public class AiDietWorker {
         Map<Long, List<MenuIngredient>> menuIngredientMap =
                 getMenuIngredientMap(pickedMenus);
 
-        return userMenuPicks.stream()
+        List<AiDietGenerateDto.UserMenu> userMenus = userMenuPicks.stream()
                 .map(userMenuPick -> {
                     Menu menu = userMenuPick.getMenu();
 
@@ -521,6 +518,18 @@ public class AiDietWorker {
                 })
                 .distinct()
                 .toList();
+
+        return UserMenuPickPreparation.builder()
+                .userMenus(userMenus)
+                .userMenuPicks(userMenuPicks)
+                .build();
+    }
+
+    @Builder
+    private record UserMenuPickPreparation(
+            List<AiDietGenerateDto.UserMenu> userMenus,
+            List<UserMenuPick> userMenuPicks
+    ) {
     }
 
     /**
@@ -571,7 +580,8 @@ public class AiDietWorker {
 
     /**
      * ai생성 데이터 검증
-     * @param result 생성 데이터
+     *
+     * @param result  생성 데이터
      * @param command 전처리 데이터
      */
     private void validateAiDietResult(AiDietGenerateDto.Result result, AiDietGenerateDto.Command command) {
@@ -607,6 +617,7 @@ public class AiDietWorker {
 
     /**
      * 메뉴 후보에서 id, dishType추출
+     *
      * @param command ai에 넣을 전처리한 데이터
      * @return map
      */
@@ -619,7 +630,7 @@ public class AiDietWorker {
             dishTypeMap.put(candidate.menuId(), candidate.dishType());
         }
 
-        for (AiDietGenerateDto.UserMenu userMenu : command.userMenuPicks()) {
+        for (AiDietGenerateDto.UserMenu userMenu : command.userMenus()) {
             dishTypeMap.putIfAbsent(userMenu.menuId(), userMenu.dishType());
         }
 
@@ -628,8 +639,9 @@ public class AiDietWorker {
 
     /**
      * 기본 필드 검사
-     * @param result 결과
-     * @param command 전처리 데이터
+     *
+     * @param result      결과
+     * @param command     전처리 데이터
      * @param dishTypeMap menuId, dishType
      */
     private void validateMealPlanBasicFields(
@@ -663,7 +675,8 @@ public class AiDietWorker {
 
     /**
      * 날짜 사이에 빈 데이터가 없는지 확인
-     * @param result 결과
+     *
+     * @param result  결과
      * @param command 요청 날짜
      */
     private void validateDateCoverage(
@@ -687,7 +700,8 @@ public class AiDietWorker {
 
     /**
      * 한끼에 dishType수가 맞는지와 중복 체크
-     * @param mealGroup 한끼 반찬, 메뉴
+     *
+     * @param mealGroup   한끼 반찬, 메뉴
      * @param dishTypeMap menuId, dishType
      */
     private void validateMealGroup(
@@ -723,8 +737,9 @@ public class AiDietWorker {
 
     /**
      * 개수 확인
-     * @param mainCount 메인 메뉴
-     * @param soupCount 국
+     *
+     * @param mainCount     메인 메뉴
+     * @param soupCount     국
      * @param sideDishCount 반찬
      */
     private void validateDishCombination(
@@ -743,23 +758,34 @@ public class AiDietWorker {
 
     /**
      * DB에 데이터 저장
+     *
      * @param generation DietGeneration
-     * @param result ai 생성 결과
-     * @param command 전처리 데이터
+     * @param result     ai 생성 결과
+     * @param command    전처리 데이터
      */
-    void saveAiDietResult(DietGeneration generation, AiDietGenerateDto.Result result, AiDietGenerateDto.Command command){
+    void saveAiDietResult(DietGeneration generation, AiDietGenerateDto.Result result, AiDietGenerateDto.Command command) {
         User user = userReader.getById(command.userId());
         Family family = user.getFamily();
+
+        Set<Long> userPickMenuIds = command.userMenus().stream()
+                .map(AiDietGenerateDto.UserMenu::menuId)
+                .collect(Collectors.toSet());
 
         List<Diet> diets = result.mealPlans().stream()
                 .map(mealPlan -> {
                     Menu menu = menuRepository.findById(mealPlan.menuId())
                             .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
-                    return Diet.create(family, menu, mealPlan.date(), mealPlan.mealType(), generation);
+                    DietMenuSource source = userPickMenuIds.contains(mealPlan.menuId())
+                            ? DietMenuSource.USER_PICKED
+                            : DietMenuSource.AI_RECOMMENDED;
+
+                    return Diet.create(family, menu, mealPlan.date(), mealPlan.mealType(), generation, source);
                 })
                 .toList();
 
         dietRepository.saveAll(diets);
+
+        command.userMenuPicks().forEach(UserMenuPick::used);
     }
 
     /**
@@ -781,6 +807,7 @@ public class AiDietWorker {
             LocalDate endDate,
             List<AiDietGenerateDto.MenuCandidate> menuCandidates,
             List<AiDietGenerateDto.UserMenu> userMenus,
+            List<UserMenuPick> userMenuPicks,
             List<AiDietGenerateDto.HealthCondition> healthConditions,
             List<AiDietGenerateDto.Disease> diseases,
             IngredientPreferenceSummary preferenceSummary
@@ -790,7 +817,8 @@ public class AiDietWorker {
                 .startDate(startDate)
                 .endDate(endDate)
                 .menuCandidates(menuCandidates)
-                .userMenuPicks(userMenus)
+                .userMenus(userMenus)
+                .userMenuPicks(userMenuPicks)
                 .healthConditions(healthConditions)
                 .disease(diseases)
                 .preferredIngredients(preferenceSummary.preferredIngredientNames())
