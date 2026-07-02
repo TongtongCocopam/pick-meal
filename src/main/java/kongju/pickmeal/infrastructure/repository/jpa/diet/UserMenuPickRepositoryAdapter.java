@@ -1,8 +1,10 @@
 package kongju.pickmeal.infrastructure.repository.jpa.diet;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -32,7 +34,7 @@ public class UserMenuPickRepositoryAdapter implements UserMenuPickRepository {
     }
 
     @Override
-    public List<UserMenuPick> findAllByUserInFetchMenu(List<User> users) {
-        return userMenuPickJpaRepository.findAllByUserInFetchMenu(users);
+    public List<UserMenuPick> findAllByUserInAndTargetMonthAndStatusFetchMenu(List<User> users, LocalDate targetMonth, UserMenuPickStatus status) {
+        return userMenuPickJpaRepository.findAllByUserInAndTargetMonthAndStatusFetchMenu(users, targetMonth, status);
     }
 }

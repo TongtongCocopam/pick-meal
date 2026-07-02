@@ -1,8 +1,10 @@
 package kongju.pickmeal.core.diet.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.diet.UserMenuPick;
 
@@ -14,5 +16,5 @@ public interface UserMenuPickRepository {
 
     void delete(UserMenuPick userMenuPick);
 
-    List<UserMenuPick> findAllByUserInFetchMenu(List<User> users);
+    List<UserMenuPick> findAllByUserInAndTargetMonthAndStatusFetchMenu(List<User> users, LocalDate targetMonth, UserMenuPickStatus status);
 }
