@@ -6,6 +6,7 @@ import java.time.YearMonth;
 import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
+import kongju.pickmeal.application.diet.data.DietMenuDto;
 import lombok.Getter;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -624,15 +625,8 @@ public class DietService {
         if (a == null && b == null) {
             return null;
         }
-
-        if (a == null) {
-            return b;
-        }
-
-        if (b == null) {
-            return a;
-        }
-
+        if (a == null) return b;
+        if (b == null) return a;
         return a + b;
     }
 
@@ -671,5 +665,34 @@ public class DietService {
         private static BigDecimal nullToZero(BigDecimal value) {
             return value == null ? BigDecimal.ZERO : value;
         }
+    }
+
+    /**
+     * ai생성된 메뉴 교체
+     * @param userId 리더 아이디
+     * @param dietId 식단 아이디
+     * @param request 교체할 메뉴 아이디
+     * @return 교체한 메뉴 id, 메뉴 이름
+     */
+    public DietMenuDto.ReplaceResponse replaceMenu(Long userId, Long dietId, DietMenuDto.ReplaceRequest request) {
+        User user = userReader.getById(userId);
+
+        Diet diet = dietRepository.findById(dietId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DIET_ITEM_NOT_FOUND));
+
+        // 내 가족 식단이 아닐 경우
+        if(user.getFamily() != diet.getFamily()) {
+            throw new BusinessException(ErrorCode.NOT_FAMILY_MEMBER);
+        }
+
+        Menu menu = menuRepository.findById(request.menuId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+
+        diet.replaceMenu(menu);
+
+        return DietMenuDto.ReplaceResponse.builder()
+                .replacedMenuId(menu.getId())
+                .menuName(menu.getMenuName())
+                .build();
     }
 }
