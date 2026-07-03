@@ -68,5 +68,8 @@ public class Diet extends BaseTimeEntity {
                 .build();
     }
 
+    public void replaceMenu(Menu menu) {
+        this.menu = menu;
+    }
 
 }
