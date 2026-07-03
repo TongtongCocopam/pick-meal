@@ -1,6 +1,7 @@
 package kongju.pickmeal.core.diet.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.time.LocalDate;
 
 import kongju.pickmeal.core.diet.Diet;
@@ -13,4 +14,6 @@ public interface DietRepository {
     List<Diet> findMonthlyDiets(Family family, LocalDate startDate, LocalDate endDate);
 
     List<Diet> findAllFamilyAndMealDate(Family family, LocalDate date);
+
+    Optional<Diet> findById(Long id);
 }
