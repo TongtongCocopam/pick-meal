@@ -18,11 +18,13 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
 import kongju.pickmeal.application.diet.DietService;
+import kongju.pickmeal.application.diet.data.DietMenuDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.support.fixture.TestSecurityConfig;
 import kongju.pickmeal.api.exception.GlobalExceptionHandler;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 
+import static kongju.pickmeal.support.fixture.SecurityFixture.mockLeader;
 import static kongju.pickmeal.support.fixture.SecurityFixture.mockMember;
 
 import static org.mockito.BDDMockito.given;
@@ -58,7 +60,7 @@ public class DietControllerTest {
         @WithMockUser(roles = "GUEST")
         public void should_fail_menu_pick_when_not_family_member() throws Exception {
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
-                    .menuIds(List.of(1L,2L))
+                    .menuIds(List.of(1L, 2L))
                     .targetMonth(YearMonth.now())
                     .build();
 
@@ -74,7 +76,7 @@ public class DietControllerTest {
         @DisplayName("성공케이스")
         public void should_success_menu_pick() throws Exception {
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
-                    .menuIds(List.of(1L,2L))
+                    .menuIds(List.of(1L, 2L))
                     .targetMonth(YearMonth.now())
                     .build();
 
@@ -228,4 +230,38 @@ public class DietControllerTest {
 
     }
 
+    @Nested
+    @DisplayName("ai생성 식단 메뉴 대체")
+    class ReplaceMenu {
+        @Test
+        @DisplayName("dietId 형식이 맞지 않는 경우")
+        public void should_fail_replace_menu_when_invalid_menuId() throws Exception {
+            DietMenuDto.ReplaceRequest request = DietMenuDto.ReplaceRequest.builder()
+                    .menuId(1L)
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/diets/{dietId}/menu", "식단아이디")
+                            .with(user(mockLeader()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_replace_menu() throws Exception {
+            DietMenuDto.ReplaceRequest request = DietMenuDto.ReplaceRequest.builder()
+                    .menuId(2L)
+                    .build();
+
+            mockMvc.perform(patch("/api/v1/diets/{dietId}/menu", 1L)
+                            .with(user(mockLeader()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+    }
 }

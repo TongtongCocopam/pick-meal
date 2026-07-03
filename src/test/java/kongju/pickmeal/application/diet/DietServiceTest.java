@@ -40,6 +40,7 @@ import kongju.pickmeal.support.fixture.FamilyFixture;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
+import kongju.pickmeal.application.diet.data.DietMenuDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.diet.repository.DietRepository;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
@@ -145,7 +146,7 @@ public class DietServiceTest {
         @DisplayName("성공 케이스")
         public void should_success_menu_pick() {
             Long userId = 1L;
-            LocalDate targetMonth =  LocalDate.now();
+            LocalDate targetMonth = LocalDate.now();
 
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
                     .menuIds(List.of(1L, 2L))
@@ -226,7 +227,7 @@ public class DietServiceTest {
         public void should_fail_update_pick_menu_when_menu_not_found() {
             Long userId = 1L;
             Long pickId = 1L;
-            LocalDate targetMonth =  LocalDate.now();
+            LocalDate targetMonth = LocalDate.now();
             MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
                     .menuId(2L)
                     .build();
@@ -251,7 +252,7 @@ public class DietServiceTest {
         public void should_fail_update_pick_menu_when_not_change_menu() {
             Long userId = 1L;
             Long pickId = 1L;
-            LocalDate targetMonth =  LocalDate.now();
+            LocalDate targetMonth = LocalDate.now();
             MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
                     .menuId(1L)
                     .build();
@@ -275,7 +276,7 @@ public class DietServiceTest {
         public void should_success_update_pick_menu() {
             Long userId = 1L;
             Long pickId = 1L;
-            LocalDate targetMonth =  LocalDate.now();
+            LocalDate targetMonth = LocalDate.now();
             MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
                     .menuId(2L)
                     .build();
@@ -337,7 +338,7 @@ public class DietServiceTest {
         public void should_success_delete_pick_menu() {
             Long userId = 1L;
             Long pickId = 1L;
-            LocalDate targetMonth =  LocalDate.now();
+            LocalDate targetMonth = LocalDate.now();
 
             // 유저
             User user = UserFixture.user();
@@ -466,4 +467,77 @@ public class DietServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("ai생성 식단 메뉴 대체")
+    class ReplaceMenu {
+        @Test
+        @DisplayName("식단이 없음")
+        public void should_fail_replace_meal_when_diet_not_exist() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            DietMenuDto.ReplaceRequest request = DietMenuDto.ReplaceRequest.builder()
+                    .menuId(3L)
+                    .build();
+            given(userReader.getById(any())).willReturn(UserFixture.user());
+            given(dietRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.replaceMenu(userId, dietId, request));
+
+            assertEquals(ErrorCode.DIET_ITEM_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("대체할 메뉴가 없음")
+        public void should_success_replace_meal_when_not_exist_menu() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = Diet.create(family, menu, LocalDate.now(), MealType.BREAKFAST, dietGeneration, DietMenuSource.USER_PICKED);
+
+            DietMenuDto.ReplaceRequest request = DietMenuDto.ReplaceRequest.builder()
+                    .menuId(3L)
+                    .build();
+
+            given(userReader.getById(any())).willReturn(user);
+            given(dietRepository.findById(any())).willReturn(Optional.of(diet));
+            given(menuRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.replaceMenu(userId, dietId, request));
+
+            assertEquals(ErrorCode.ITEM_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_replace_meal() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = Diet.create(family, menu, LocalDate.now(), MealType.BREAKFAST, dietGeneration, DietMenuSource.USER_PICKED);
+            Menu menu2 = MenuFixture.menu("계란말이");
+
+            DietMenuDto.ReplaceRequest request = DietMenuDto.ReplaceRequest.builder()
+                    .menuId(3L)
+                    .build();
+
+            given(userReader.getById(any())).willReturn(user);
+            given(dietRepository.findById(any())).willReturn(Optional.of(diet));
+            given(menuRepository.findById(any())).willReturn(Optional.of(menu2));
+
+            DietMenuDto.ReplaceResponse response = dietService.replaceMenu(userId, dietId, request);
+
+            assertEquals(menu2.getId(), response.replacedMenuId());
+            assertEquals(menu2.getMenuName(), response.menuName());
+        }
+    }
 }

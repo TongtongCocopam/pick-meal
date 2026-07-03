@@ -16,6 +16,7 @@ import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
+import kongju.pickmeal.application.diet.data.DietMenuDto;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 
 
@@ -87,5 +88,17 @@ public class DietController {
         DietDto.DailyDetailResponse response = dietService.getDailyMeals(userDetails.id(), date);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    @PatchMapping("/{dietId}/menu")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<DietMenuDto.ReplaceResponse>> updateMenu(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long dietId,
+            @RequestBody @Valid DietMenuDto.ReplaceRequest request
+    ) {
+        DietMenuDto.ReplaceResponse response = dietService.replaceMenu(userDetails.id(), dietId, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
 
 }
