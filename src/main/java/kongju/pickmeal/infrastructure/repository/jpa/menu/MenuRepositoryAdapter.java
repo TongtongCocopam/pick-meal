@@ -53,4 +53,9 @@ public class MenuRepositoryAdapter implements MenuRepository {
     public List<Menu> findAll() {
         return menuJpaRepository.findAll();
     }
+
+    @Override
+    public Page<Menu> searchReplacementMenus(MenuCategory category, DishType dishType, Long menuId, String keyword, Pageable pageable) {
+        return menuJpaRepository.searchReplacementMenus(category, dishType, menuId, keyword, pageable);
+    }
 }
