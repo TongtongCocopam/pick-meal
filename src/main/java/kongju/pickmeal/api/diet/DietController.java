@@ -5,8 +5,11 @@ import java.time.YearMonth;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -100,5 +103,16 @@ public class DietController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/{dietId}/replacement-menus")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<DietMenuDto.ReplacementMenuListResponse>> getReplacementMenus(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long dietId,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        DietMenuDto.ReplacementMenuListResponse response = dietService.replacementMenus(userDetails.id(), dietId, keyword, pageable);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
 }

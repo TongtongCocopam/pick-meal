@@ -6,12 +6,13 @@ import java.time.YearMonth;
 import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
-import kongju.pickmeal.application.diet.data.DietMenuDto;
 import lombok.Getter;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.user.User;
@@ -30,6 +31,7 @@ import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.core.diet.type.DietMenuSource;
+import kongju.pickmeal.application.diet.data.DietMenuDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
@@ -279,6 +281,7 @@ public class DietService {
 
     /**
      * 기간 계산
+     *
      * @param targetMonth 선택한 달
      * @return 시작일, 종료일
      */
@@ -669,21 +672,19 @@ public class DietService {
 
     /**
      * ai생성된 메뉴 교체
-     * @param userId 리더 아이디
-     * @param dietId 식단 아이디
+     *
+     * @param userId  리더 아이디
+     * @param dietId  식단 아이디
      * @param request 교체할 메뉴 아이디
      * @return 교체한 메뉴 id, 메뉴 이름
      */
     public DietMenuDto.ReplaceResponse replaceMenu(Long userId, Long dietId, DietMenuDto.ReplaceRequest request) {
         User user = userReader.getById(userId);
 
-        Diet diet = dietRepository.findById(dietId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.DIET_ITEM_NOT_FOUND));
+        Diet diet = getDiet(dietId);
 
         // 내 가족 식단이 아닐 경우
-        if(user.getFamily() != diet.getFamily()) {
-            throw new BusinessException(ErrorCode.NOT_FAMILY_MEMBER);
-        }
+        checkFamilyLeader(user, diet);
 
         Menu menu = menuRepository.findById(request.menuId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
@@ -695,4 +696,73 @@ public class DietService {
                 .menuName(menu.getMenuName())
                 .build();
     }
+
+    /**
+     * 가족 리더 인지 확인
+     * @param user 유저
+     * @param diet 식단
+     */
+    private void checkFamilyLeader(User user, Diet diet) {
+        if (user.getFamily() != diet.getFamily()) {
+            throw new BusinessException(ErrorCode.NOT_FAMILY_MEMBER);
+        }
+    }
+
+    /**
+     * 식단 가져오기
+     * @param dietId 식단 아이디
+     * @return 식단
+     */
+    private @NonNull Diet getDiet(Long dietId) {
+        return dietRepository.findById(dietId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DIET_ITEM_NOT_FOUND));
+    }
+
+    /**
+     * 대체 메뉴 리스트
+     * @param userId 유저 아이디
+     * @param dietId 식단 아이디
+     * @param keyword 키워드
+     * @param pageable 페이지
+     * @return 메뉴 리스트
+     */
+    public DietMenuDto.ReplacementMenuListResponse replacementMenus(
+            Long userId, Long dietId, String keyword, Pageable pageable
+    ) {
+        // 유저 찾기
+        User user =  userReader.getById(userId);
+        // 내 가족 식단 인지 확인
+        Diet diet = getDiet(dietId);
+
+        checkFamilyLeader(user, diet);
+
+        // USER_PICKED 식단이면 교체 불가
+        if(DietMenuSource.USER_PICKED == diet.getSource()){
+            throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
+        }
+
+        // 현재 식단의 dishType이 같은 메뉴만 조회
+        Menu menu = diet.getMenu();
+
+        // 키워드가 있다면 키워드도 조회
+        Page<Menu> menuPage = menuRepository.searchReplacementMenus(menu.getCategory(), menu.getDishType(), menu.getId(), keyword, pageable);
+        List<DietMenuDto.ReplacementMenuResponse> menuInfoList = menuPage.stream()
+                .map(DietMenuDto.ReplacementMenuResponse::from)
+                .toList();
+
+        DietMenuDto.PageInfoResponse pageInfo = DietMenuDto.PageInfoResponse.builder()
+                .currentPage(menuPage.getNumber() + 1)
+                .totalPages(menuPage.getTotalPages())
+                .totalElements(menuPage.getTotalElements())
+                .build();
+
+        return DietMenuDto.ReplacementMenuListResponse.builder()
+                .dietId(dietId)
+                .keyword(keyword)
+                .dishType(menu.getDishType())
+                .menus(menuInfoList)
+                .pageInfo(pageInfo)
+                .build();
+    }
+
 }
