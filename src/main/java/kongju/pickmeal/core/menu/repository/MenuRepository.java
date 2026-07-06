@@ -19,4 +19,5 @@ public interface MenuRepository{
     Page<Menu> searchByFilters(MenuCategory category, DishType dishType, String keyword, Pageable pageable);
     Optional<Menu> findById(Long id);
     List<Menu> findAll();
+    Page<Menu> searchReplacementMenus(MenuCategory category, DishType dishType, Long menuId, String keyword, Pageable pageable);
 }
