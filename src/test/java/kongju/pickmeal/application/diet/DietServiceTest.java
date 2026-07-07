@@ -5,12 +5,18 @@ import java.util.Optional;
 import java.time.YearMonth;
 import java.time.LocalDate;
 
+import kongju.pickmeal.core.menu.type.DishType;
+import kongju.pickmeal.support.fixture.DietFixture;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.mockito.BDDMockito.given;
@@ -538,6 +544,130 @@ public class DietServiceTest {
 
             assertEquals(menu2.getId(), response.replacedMenuId());
             assertEquals(menu2.getMenuName(), response.menuName());
+        }
+    }
+
+    @Nested
+    @DisplayName("생성 식단 대체 가능 메뉴 목록")
+    class ReplaceMenus {
+        @Test
+        @DisplayName("유저가 선택함 식단이면 교체 불가")
+        public void should_fail_replace_menus_when_diet_not_found() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            String keyword = "김치";
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+
+
+            given(userReader.getById(any())).willReturn(user);
+            given(dietRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.replacementMenus(userId, dietId, keyword, null));
+
+            assertEquals(ErrorCode.DIET_ITEM_NOT_FOUND, exception.getErrorCode());
+
+        }
+
+        @Test
+        @DisplayName("내 가족 식단인지 확인")
+        public void should_fail_replace_menus_when_not_my_family() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            String keyword = "김치";
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            Family family2 = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = DietFixture.diet(family2, menu, dietGeneration, DietMenuSource.AI_RECOMMENDED);
+
+            given(userReader.getById(any())).willReturn(user);
+            given(dietRepository.findById(any())).willReturn(Optional.of(diet));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.replacementMenus(userId, dietId, keyword, null));
+
+            assertEquals(ErrorCode.NOT_FAMILY_MEMBER, exception.getErrorCode());
+
+        }
+
+        @Test
+        @DisplayName("유저가 선택함 식단이면 교체 불가")
+        public void should_fail_replace_menus_when_user_choice_menu() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            String keyword = "김치";
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = DietFixture.diet(family, menu, dietGeneration, DietMenuSource.USER_PICKED);
+
+            given(userReader.getById(any())).willReturn(user);
+            given(dietRepository.findById(any())).willReturn(Optional.of(diet));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.replacementMenus(userId, dietId, keyword, null));
+
+            assertEquals(ErrorCode.DIET_MENU_LOCKED, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("메뉴 리스트가 비어있을 경우")
+        public void should_success_replace_menus_when_menus_empty() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            String keyword = "김치";
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = DietFixture.diet(family, menu, dietGeneration, DietMenuSource.AI_RECOMMENDED);
+
+            given(userReader.getById(any())).willReturn(user);
+            given(dietRepository.findById(any())).willReturn(Optional.of(diet));
+            given(menuRepository.searchReplacementMenus(any(), any(), any(), any(), any())).willReturn(Page.empty());
+
+            DietMenuDto.ReplacementMenuListResponse response = dietService.replacementMenus(userId, dietId, keyword, null);
+
+            assertEquals(dietId, response.dietId());
+            assertEquals(List.of(), response.menus());
+            assertEquals(DishType.STEW, response.dishType());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_replace_menus() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            String keyword = "김치";
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = DietFixture.diet(family, menu, dietGeneration, DietMenuSource.AI_RECOMMENDED);
+
+            given(userReader.getById(any())).willReturn(user);
+            given(dietRepository.findById(any())).willReturn(Optional.of(diet));
+
+            Menu menu2 = MenuFixture.menu("김치찌개");
+            Menu menu3 = MenuFixture.menu("김치국");
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<Menu> menuPage = new PageImpl<>(List.of(menu2, menu3), pageable, 2);
+            given(menuRepository.searchReplacementMenus(any(), any(), any(), any(), any())).willReturn(menuPage);
+
+            DietMenuDto.ReplacementMenuListResponse response = dietService.replacementMenus(userId, dietId, keyword, null);
+
+            assertEquals(dietId, response.dietId());
+            assertEquals(2, response.menus().size());
+            assertEquals(DishType.STEW, response.dishType());
         }
     }
 }

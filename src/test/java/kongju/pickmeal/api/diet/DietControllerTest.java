@@ -3,11 +3,13 @@ package kongju.pickmeal.api.diet;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.http.MediaType;
+import org.springframework.data.domain.Pageable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.context.annotation.Import;
@@ -17,6 +19,16 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 
+import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+
+import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.application.diet.DietService;
 import kongju.pickmeal.application.diet.data.DietMenuDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
@@ -26,15 +38,6 @@ import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 
 import static kongju.pickmeal.support.fixture.SecurityFixture.mockLeader;
 import static kongju.pickmeal.support.fixture.SecurityFixture.mockMember;
-
-import static org.mockito.BDDMockito.given;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.any;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 
 @WebMvcTest(DietController.class)
@@ -262,6 +265,75 @@ public class DietControllerTest {
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
+        }
+    }
+
+    @Nested
+    @DisplayName("생성 식단 대체 가능 메뉴 목록")
+    class ReplaceMenus {
+        @Test
+        @DisplayName("dietId 형식이 맞지 않는 경우")
+        public void should_fail_replace_menus_when_invalid_dietId() throws Exception {
+            mockMvc.perform(get("/api/v1/diets/{dietId}/replacement-menus", "식단아이디")
+                            .with(user(mockLeader()))
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_replace_menus() throws Exception {
+            Long dietId = 1234L;
+            Long userId = 1L;
+
+            DietMenuDto.ReplacementMenuListResponse response =
+                    DietMenuDto.ReplacementMenuListResponse.builder()
+                            .dietId(dietId)
+                            .keyword("김치")
+                            .dishType(DishType.SOUP)
+                            .menus(List.of(
+                                    DietMenuDto.ReplacementMenuResponse.builder()
+                                            .menuId(10L)
+                                            .menuName("김치찌개")
+                                            .kcal(BigDecimal.valueOf(320.5))
+                                            .build(),
+                                    DietMenuDto.ReplacementMenuResponse.builder()
+                                            .menuId(11L)
+                                            .menuName("참치김치찌개")
+                                            .kcal(BigDecimal.valueOf(290.0))
+                                            .build()
+                            ))
+                            .pageInfo(DietMenuDto.PageInfoResponse.builder()
+                                    .currentPage(1)
+                                    .totalPages(1)
+                                    .totalElements(2L)
+                                    .build())
+                            .build();
+
+            given(dietService.replacementMenus(eq(userId), eq(dietId), eq("김치"), any(Pageable.class))).willReturn(response);
+
+            mockMvc.perform(get("/api/v1/diets/{dietId}/replacement-menus", dietId)
+                            .with(user(mockLeader()))
+                            .param("keyword", "김치")
+                            .param("page", "0")
+                            .param("size", "20")
+                            .param("sort", "id,asc"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.dietId").value(1234))
+                    .andExpect(jsonPath("$.data.keyword").value("김치"))
+                    .andExpect(jsonPath("$.data.dishType").value("SOUP"))
+                    .andExpect(jsonPath("$.data.menus[0].menuId").value(10))
+                    .andExpect(jsonPath("$.data.menus[0].menuName").value("김치찌개"))
+                    .andExpect(jsonPath("$.data.menus[0].kcal").value(320.5))
+                    .andExpect(jsonPath("$.data.menus[1].menuId").value(11))
+                    .andExpect(jsonPath("$.data.menus[1].menuName").value("참치김치찌개"))
+                    .andExpect(jsonPath("$.data.menus[1].kcal").value(290.0))
+                    .andExpect(jsonPath("$.data.pageInfo.currentPage").value(1))
+                    .andExpect(jsonPath("$.data.pageInfo.totalPages").value(1))
+                    .andExpect(jsonPath("$.data.pageInfo.totalElements").value(2));
         }
     }
 }
