@@ -70,6 +70,7 @@ public class Diet extends BaseTimeEntity {
 
     public void replaceMenu(Menu menu) {
         this.menu = menu;
+        this.source = DietMenuSource.MANUAL_REPLACED;
     }
 
 }

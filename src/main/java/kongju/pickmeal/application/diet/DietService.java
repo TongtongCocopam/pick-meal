@@ -741,11 +741,12 @@ public class DietService {
             throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
         }
 
+        String normalizedKeyword = normalizeKeyword(keyword);
         // 현재 식단의 dishType이 같은 메뉴만 조회
         Menu menu = diet.getMenu();
 
         // 키워드가 있다면 키워드도 조회
-        Page<Menu> menuPage = menuRepository.searchReplacementMenus(menu.getCategory(), menu.getDishType(), menu.getId(), keyword, pageable);
+        Page<Menu> menuPage = menuRepository.searchReplacementMenus(menu.getCategory(), menu.getDishType(), menu.getId(), normalizedKeyword, pageable);
         List<DietMenuDto.ReplacementMenuResponse> menuInfoList = menuPage.stream()
                 .map(DietMenuDto.ReplacementMenuResponse::from)
                 .toList();
@@ -765,4 +766,16 @@ public class DietService {
                 .build();
     }
 
+    /**
+     * 공백 제거
+     *
+     * @param keyword 키워드
+     * @return 키워드
+     */
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim();
+    }
 }
