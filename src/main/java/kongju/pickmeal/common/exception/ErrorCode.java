@@ -43,7 +43,7 @@ public enum ErrorCode {
     DIET_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 식단 정보가 없습니다."),
     DIET_ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "대상 식단을 찾을 수 없습니다."),
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "메뉴 정보를 찾을 수 없습니다."),
-    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "배정할 메뉴 후보를 찾을 수 없습니다."),
+//    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "배정할 메뉴 후보를 찾을 수 없습니다."),
     INGREDIENT_NOT_FOUND(HttpStatus.NOT_FOUND, "재료 정보가 존재하지 않습니다."),
 
     MENU_PICK_NOT_CHANGED(HttpStatus.BAD_REQUEST, "이전과 동일한 메뉴 입니다."),
