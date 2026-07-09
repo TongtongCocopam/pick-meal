@@ -115,4 +115,15 @@ public class DietController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/{dietId}/replacement-menus/{menuId}")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<DietMenuDto.MenuDetailsResponse>> getReplacementMenuDetails(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long dietId,
+            @PathVariable Long menuId
+    ) {
+        DietMenuDto.MenuDetailsResponse response = dietService.menuDetails(userDetails.id(), dietId, menuId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
 }

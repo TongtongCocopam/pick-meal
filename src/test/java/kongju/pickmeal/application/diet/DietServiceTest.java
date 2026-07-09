@@ -5,8 +5,6 @@ import java.util.Optional;
 import java.time.YearMonth;
 import java.time.LocalDate;
 
-import kongju.pickmeal.core.menu.type.DishType;
-import kongju.pickmeal.support.fixture.DietFixture;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -32,11 +30,13 @@ import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.diet.UserMenuPick;
+import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.user.UserPickCount;
 import kongju.pickmeal.core.diet.type.MealType;
 import kongju.pickmeal.core.menu.MenuIngredient;
 import kongju.pickmeal.core.diet.DietGeneration;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.support.fixture.DietFixture;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.support.fixture.UserFixture;
 import kongju.pickmeal.support.fixture.MenuFixture;
@@ -516,7 +516,7 @@ public class DietServiceTest {
             BusinessException exception = assertThrows(BusinessException.class,
                     () -> dietService.replaceMenu(userId, dietId, request));
 
-            assertEquals(ErrorCode.ITEM_NOT_FOUND, exception.getErrorCode());
+            assertEquals(ErrorCode.MENU_NOT_FOUND, exception.getErrorCode());
         }
 
         @Test
@@ -670,4 +670,109 @@ public class DietServiceTest {
             assertEquals(DishType.STEW, response.dishType());
         }
     }
+
+    @Nested
+    @DisplayName("대체 식단 상세 정보")
+    class ReplaceMenuDetails{
+        @Test
+        @DisplayName("내 가족 식단인지 확인")
+        public void should_fail_replace_menu_detail_when_not_my_family() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            Long menuId = 3L;
+
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            Family family2 = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family2, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = DietFixture.diet(family2, menu, dietGeneration, DietMenuSource.AI_RECOMMENDED);
+
+            given(userReader.getById(userId)).willReturn(user);
+            given(dietRepository.findById(dietId)).willReturn(Optional.of(diet));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.menuDetails(userId, dietId, menuId));
+
+            assertEquals(ErrorCode.NOT_FAMILY_MEMBER, exception.getErrorCode());
+
+        }
+
+        @Test
+        @DisplayName("메뉴가 없는 경우")
+        public void should_fail_replace_menu_detail_when_menu_not_found() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            Long menuId = 3L;
+
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = DietFixture.diet(family, menu, dietGeneration, DietMenuSource.AI_RECOMMENDED);
+
+            given(userReader.getById(userId)).willReturn(user);
+            given(dietRepository.findById(dietId)).willReturn(Optional.of(diet));
+            given(menuRepository.findById(menuId)).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.menuDetails(userId, dietId, menuId));
+
+            assertEquals(ErrorCode.MENU_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("유저가 선택함 식단이면 교체 불가")
+        public void should_fail_replace_menu_detail_when_family_choice_menu() {
+            Long userId = 1L;
+            Long dietId = 2L;
+            Long menuId = 3L;
+
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = DietFixture.diet(family, menu, dietGeneration, DietMenuSource.USER_PICKED);
+
+            given(userReader.getById(userId)).willReturn(user);
+            given(dietRepository.findById(dietId)).willReturn(Optional.of(diet));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.menuDetails(userId, dietId, menuId));
+
+            assertEquals(ErrorCode.DIET_MENU_LOCKED, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_replace_menu_detail(){
+            Long userId = 1L;
+            Long dietId = 2L;
+            Long menuId = 3L;
+
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+
+            Menu menu = MenuFixture.menu();
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Diet diet = DietFixture.diet(family, menu, dietGeneration, DietMenuSource.AI_RECOMMENDED);
+
+            Menu menu2 = MenuFixture.menu("북어국");
+            given(userReader.getById(userId)).willReturn(user);
+            given(dietRepository.findById(dietId)).willReturn(Optional.of(diet));
+            given(menuRepository.findById(menuId)).willReturn(Optional.of(menu2));
+
+            DietMenuDto.MenuDetailsResponse response = dietService.menuDetails(userId, dietId, menuId);
+
+            assertEquals(menu2.getMenuName(), response.menuName());
+        }
+    }
+
 }

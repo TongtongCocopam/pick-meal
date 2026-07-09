@@ -3,6 +3,7 @@ package kongju.pickmeal.application.diet.data;
 import java.util.List;
 import java.math.BigDecimal;
 
+import kongju.pickmeal.core.menu.type.IngredientUnit;
 import lombok.Builder;
 
 import kongju.pickmeal.core.menu.Menu;
@@ -53,6 +54,29 @@ public class DietMenuDto {
             Integer currentPage,
             Integer totalPages,
             Long totalElements
-    ){}
+    ) {
+    }
 
+    @Builder
+    public record MenuDetailsResponse(
+            Long dietId,
+            Long menuId,
+            String menuName,
+            DishType dishType,
+            BigDecimal kcal,
+            BigDecimal carbs,
+            BigDecimal protein,
+            BigDecimal fat,
+            BigDecimal sodium,
+            List<IngredientsResponse> requiredIngredients
+    ) {
+    }
+
+    @Builder
+    public record IngredientsResponse(
+            Long ingredientId,
+            String name,
+            String quantityText
+    ) {
+    }
 }

@@ -686,8 +686,7 @@ public class DietService {
         // 내 가족 식단이 아닐 경우
         checkFamilyLeader(user, diet);
 
-        Menu menu = menuRepository.findById(request.menuId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+        Menu menu = getMenu(request.menuId());
 
         diet.replaceMenu(menu);
 
@@ -699,6 +698,7 @@ public class DietService {
 
     /**
      * 가족 리더 인지 확인
+     *
      * @param user 유저
      * @param diet 식단
      */
@@ -710,6 +710,7 @@ public class DietService {
 
     /**
      * 식단 가져오기
+     *
      * @param dietId 식단 아이디
      * @return 식단
      */
@@ -720,9 +721,10 @@ public class DietService {
 
     /**
      * 대체 메뉴 리스트
-     * @param userId 유저 아이디
-     * @param dietId 식단 아이디
-     * @param keyword 키워드
+     *
+     * @param userId   유저 아이디
+     * @param dietId   식단 아이디
+     * @param keyword  키워드
      * @param pageable 페이지
      * @return 메뉴 리스트
      */
@@ -730,16 +732,14 @@ public class DietService {
             Long userId, Long dietId, String keyword, Pageable pageable
     ) {
         // 유저 찾기
-        User user =  userReader.getById(userId);
+        User user = userReader.getById(userId);
         // 내 가족 식단 인지 확인
         Diet diet = getDiet(dietId);
 
         checkFamilyLeader(user, diet);
 
         // USER_PICKED 식단이면 교체 불가
-        if(DietMenuSource.USER_PICKED == diet.getSource()){
-            throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
-        }
+        checkUserMenuPick(diet);
 
         String normalizedKeyword = normalizeKeyword(keyword);
         // 현재 식단의 dishType이 같은 메뉴만 조회
@@ -777,5 +777,61 @@ public class DietService {
             return null;
         }
         return keyword.trim();
+    }
+
+    /**
+     * 교체할 메뉴 상세 정보
+     * @param userId 유저 아이디
+     * @param dietId 식단 아이디
+     * @param menuId 메뉴 아이디
+     * @return 메뉴 상세 정보
+     */
+    public DietMenuDto.MenuDetailsResponse menuDetails(Long userId, Long dietId, Long menuId) {
+        // 유저 확인
+        User user = userReader.getById(userId);
+        // 가족 식단인지 확인
+        Diet diet = getDiet(dietId);
+        checkFamilyLeader(user, diet);
+        // 유저가 선택한 식단인지 확인
+        checkUserMenuPick(diet);
+        // 메뉴 찾기
+        Menu menu = getMenu(menuId);
+
+        List<MenuIngredient> menuIngredients = menuIngredientRepository.findAllByMenuWithIngredient(menu);
+        // 재료 리스트 불러오기
+        List<DietMenuDto.IngredientsResponse> ingredients = menuIngredients.stream()
+                .map(menuIngredient -> {
+                    Ingredient ingredient = menuIngredient.getIngredient();
+                    return DietMenuDto.IngredientsResponse.builder()
+                            .ingredientId(ingredient.getId())
+                            .name(ingredient.getName())
+                            .quantityText(menuIngredient.getQuantityText())
+                            .build();
+                })
+                .toList();
+
+        return DietMenuDto.MenuDetailsResponse.builder()
+                .dietId(dietId)
+                .menuId(menuId)
+                .menuName(menu.getMenuName())
+                .dishType(menu.getDishType())
+                .kcal(menu.getKcal())
+                .carbs(menu.getCarbs())
+                .protein(menu.getProtein())
+                .fat(menu.getFat())
+                .sodium(menu.getSodium())
+                .requiredIngredients(ingredients)
+                .build();
+    }
+
+    /**
+     * 유저가 픽한 메뉴인지 확인
+     *
+     * @param diet 식단
+     */
+    private static void checkUserMenuPick(Diet diet) {
+        if (DietMenuSource.USER_PICKED == diet.getSource()) {
+            throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
+        }
     }
 }

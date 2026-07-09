@@ -336,4 +336,33 @@ public class DietControllerTest {
                     .andExpect(jsonPath("$.data.pageInfo.totalElements").value(2));
         }
     }
+
+    @Nested
+    @DisplayName("대체 식단 상세 정보")
+    class ReplaceMenuDetails {
+        @Test
+        @DisplayName("리더가 아닌 경우")
+        public void should_fail_replace_menu_detail_when_not_leader() throws Exception {
+            Long dietId = 1234L;
+            Long menuId = 1L;
+            mockMvc.perform(get("/api/v1/diets/{dietId}/replacement-menus/{menuId}", dietId, menuId)
+                            .with(user(mockMember())))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_replace_menu_detail() throws Exception {
+            Long dietId = 1234L;
+            Long menuId = 1L;
+            mockMvc.perform(get("/api/v1/diets/{dietId}/replacement-menus/{menuId}", dietId, menuId)
+                            .with(user(mockLeader())))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+
+        }
+    }
 }
