@@ -3,7 +3,6 @@ package kongju.pickmeal.application.diet.data;
 import java.util.List;
 import java.math.BigDecimal;
 
-import kongju.pickmeal.core.menu.type.IngredientUnit;
 import lombok.Builder;
 
 import kongju.pickmeal.core.menu.Menu;
