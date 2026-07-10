@@ -2,6 +2,7 @@ package kongju.pickmeal.application.menu;
 
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
 
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
@@ -14,19 +15,32 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.family.Family;
+import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.support.fixture.UserFixture;
+import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.menu.type.MenuCategory;
 import kongju.pickmeal.support.fixture.MenuFixture;
+import kongju.pickmeal.core.menu.type.IngredientUnit;
+import kongju.pickmeal.core.menu.type.IngredientType;
 import kongju.pickmeal.application.menu.data.MenuDto;
+import kongju.pickmeal.support.fixture.FamilyFixture;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
+import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto;
+import kongju.pickmeal.core.menu.repository.IngredientRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 
 
@@ -36,6 +50,10 @@ public class MenuServiceTest {
     private MenuRepository menuRepository;
     @Mock
     private MenuIngredientRepository menuIngredientRepository;
+    @Mock
+    private UserReader userReader;
+    @Mock
+    private IngredientRepository ingredientRepository;
 
     @InjectMocks
     private MenuService menuService;
@@ -94,4 +112,102 @@ public class MenuServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("가족 메뉴 추가")
+    class FamilyMenuCreate{
+        @Test
+        @DisplayName("가족이 없음")
+        public void should_fail_create_family_menu_when_not_family_member() {
+            Long userId = 1L;
+            FamilyCustomMenuDto.CreateRequest request = FamilyCustomMenuDto.CreateRequest.builder().build();
+            User user = UserFixture.user();
+
+            given(userReader.getById(userId)).willReturn(user);
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> menuService.createMenu(userId, request));
+
+            assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("재료id가 있지만 없는 재료")
+        public void should_fail_create_family_menu_when_ingredient_not_found() {
+            Long userId = 1L;
+
+            FamilyCustomMenuDto.CreateRequest request =
+                    FamilyCustomMenuDto.CreateRequest.builder()
+                            .menuName("닭가슴살 김치볶음밥")
+                            .dishType(DishType.MAIN_DISH)
+                            .category(MenuCategory.KOREAN)
+                            .kcal(BigDecimal.valueOf(520.0))
+                            .carbs(BigDecimal.valueOf(65.0))
+                            .protein(BigDecimal.valueOf(32.0))
+                            .fat(BigDecimal.valueOf(14.0))
+                            .sodium(BigDecimal.valueOf(850.0))
+                            .ingredients(List.of(
+                                    FamilyCustomMenuDto.IngredientRequest.builder()
+                                            .ingredientId(1L)
+                                            .ingredientName("소금")
+                                            .quantity(3.0)
+                                            .unit(IngredientUnit.G)
+                                            .type(IngredientType.SEASONING)
+                                            .build()
+                            ))
+                            .build();
+
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+
+            given(userReader.getById(userId)).willReturn(user);
+            given(ingredientRepository.findById(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> menuService.createMenu(userId, request));
+
+            assertEquals(ErrorCode.INGREDIENT_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_create_family_menu() {
+            Long userId = 1L;
+
+            FamilyCustomMenuDto.CreateRequest request =
+                    FamilyCustomMenuDto.CreateRequest.builder()
+                            .menuName("닭가슴살 김치볶음밥")
+                            .dishType(DishType.MAIN_DISH)
+                            .category(MenuCategory.KOREAN)
+                            .kcal(BigDecimal.valueOf(520.0))
+                            .carbs(BigDecimal.valueOf(65.0))
+                            .protein(BigDecimal.valueOf(32.0))
+                            .fat(BigDecimal.valueOf(14.0))
+                            .sodium(BigDecimal.valueOf(850.0))
+                            .ingredients(List.of(
+                                    FamilyCustomMenuDto.IngredientRequest.builder()
+                                            .ingredientId(1L)
+                                            .ingredientName("소금")
+                                            .quantity(3.0)
+                                            .unit(IngredientUnit.G)
+                                            .type(IngredientType.SEASONING)
+                                            .build()
+                            ))
+                            .build();
+
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+
+            Ingredient ingredient = Ingredient.create("소금");
+
+            given(userReader.getById(userId)).willReturn(user);
+            given(ingredientRepository.findById(any())).willReturn(Optional.of(ingredient));
+
+            menuService.createMenu(userId, request);
+
+            verify(menuIngredientRepository, times(1)).saveAll(anyList());
+        }
+    }
 }

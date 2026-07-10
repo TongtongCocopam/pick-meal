@@ -9,16 +9,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
+import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.menu.MenuIngredient;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.menu.type.MenuCategory;
-import kongju.pickmeal.application.menu.data.MenuDto;
+import kongju.pickmeal.application.menu.data.MenuDto.*;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.application.menu.data.MenuFilterDto;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
+import kongju.pickmeal.core.menu.repository.IngredientRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
+import kongju.pickmeal.application.menu.data.MenuFilterDto.CategoryResponse;
+import kongju.pickmeal.application.menu.data.MenuFilterDto.DishTypeResponse;
+import kongju.pickmeal.application.menu.data.MenuFilterDto.MetadataResponse;
+import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.CreateRequest;
+import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.IngredientRequest;
 
 
 @Service
@@ -26,31 +34,33 @@ import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 @RequiredArgsConstructor
 public class MenuService {
     private final MenuRepository menuRepository;
+    private final IngredientRepository ingredientRepository;
     private final MenuIngredientRepository menuIngredientRepository;
+    private final UserReader userReader;
 
     /**
      * 필터링 카테고리 목록 가저오기
      *
      * @return 카테고리, 디시타입 리스트
      */
-    public MenuFilterDto.MetadataResponse getFilterMetadata() {
-        List<MenuFilterDto.CategoryResponse> categories = Arrays.stream(MenuCategory.values())
-                .map(category -> MenuFilterDto.CategoryResponse.builder()
+    public MetadataResponse getFilterMetadata() {
+        List<CategoryResponse> categories = Arrays.stream(MenuCategory.values())
+                .map(category -> CategoryResponse.builder()
                         .name(category)
                         .displayName(category.getDisplayName())
                         .build()
                 )
                 .toList();
 
-        List<MenuFilterDto.DishTypeResponse> dishTypes = Arrays.stream(DishType.values())
-                .map(dishType -> MenuFilterDto.DishTypeResponse.builder()
+        List<DishTypeResponse> dishTypes = Arrays.stream(DishType.values())
+                .map(dishType -> DishTypeResponse.builder()
                         .name(dishType)
                         .displayName(dishType.getDisplayName())
                         .build()
                 )
                 .toList();
 
-        return MenuFilterDto.MetadataResponse.builder()
+        return MetadataResponse.builder()
                 .categories(categories)
                 .dishTypes(dishTypes)
                 .build();
@@ -65,7 +75,7 @@ public class MenuService {
      * @param pageable 페이지
      * @return 검색 결과
      */
-    public MenuDto.ListItemResponse searchMenus(
+    public ListItemResponse searchMenus(
             MenuCategory category, DishType dishType, String keyword, Pageable pageable
     ) {
         String nKeyword = normalizeKeyword(keyword);
@@ -73,8 +83,8 @@ public class MenuService {
         // 카테고리나 디쉬 타입이 있다면 쿼리로 불러오기
         Page<Menu> menuPage = menuRepository.searchByFilters(category, dishType, nKeyword, pageable);
 
-        List<MenuDto.MenuInfoResponse> menuInfoList = menuPage.stream()
-                .map(menu -> MenuDto.MenuInfoResponse.builder()
+        List<MenuInfoResponse> menuInfoList = menuPage.stream()
+                .map(menu -> MenuInfoResponse.builder()
                         .menuId(menu.getId())
                         .menuName(menu.getMenuName())
                         .category(menu.getCategory())
@@ -84,13 +94,13 @@ public class MenuService {
                 )
                 .toList();
 
-        MenuDto.PageInfoResponse pageInfo = MenuDto.PageInfoResponse.builder()
+        PageInfoResponse pageInfo = PageInfoResponse.builder()
                 .currentPage(menuPage.getNumber() + 1)
                 .totalPages(menuPage.getTotalPages())
                 .totalElements(menuPage.getTotalElements())
                 .build();
 
-        return MenuDto.ListItemResponse.builder()
+        return ListItemResponse.builder()
                 .content(menuInfoList)
                 .pageInfo(pageInfo)
                 .build();
@@ -115,7 +125,7 @@ public class MenuService {
      * @param menuId 메뉴 아이디
      * @return 메뉴 상세 정보
      */
-    public MenuDto.DetailResponse detailMenu(Long menuId) {
+    public DetailResponse detailMenu(Long menuId) {
         // id로 메뉴 찾기
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_MENU_ID));
@@ -123,8 +133,8 @@ public class MenuService {
         List<MenuIngredient> menuIngredients = menuIngredientRepository.findAllByMenuWithIngredient(menu);
 
         // 메뉴 재료 정보 제공
-        List<MenuDto.IngredientResponse> ingredients = menuIngredients.stream()
-                .map(menuIngredient -> MenuDto.IngredientResponse.builder()
+        List<IngredientResponse> ingredients = menuIngredients.stream()
+                .map(menuIngredient -> IngredientResponse.builder()
                         .ingredientName(menuIngredient.getIngredient().getName())
                         .quantityText(menuIngredient.getQuantityText())
                         .build()
@@ -132,7 +142,7 @@ public class MenuService {
                 .toList();
 
         // 메뉴 영양 정보
-        return MenuDto.DetailResponse.builder()
+        return DetailResponse.builder()
                 .menuId(menu.getId())
                 .menuName(menu.getMenuName())
                 .category(menu.getCategory())
@@ -146,4 +156,75 @@ public class MenuService {
                 .build();
     }
 
+    /**
+     * 가족 메뉴 추가
+     *
+     * @param userId  유저 아이디
+     * @param request 메뉴
+     */
+    public void createMenu(Long userId, CreateRequest request) {
+        User user = userReader.getById(userId);
+
+        if (user.getFamily() == null) {
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
+
+        Menu menu = Menu.createFamilyMenu(
+                null,
+                request.menuName(),
+                request.category(),
+                request.dishType(),
+                request.kcal(),
+                request.carbs(),
+                request.protein(),
+                request.fat(),
+                request.sodium(),
+                user.getFamily());
+
+        List<IngredientRequest> ingredientRequests = request.ingredients();
+
+        Menu savedMenu = menuRepository.save(menu);
+
+        List<MenuIngredient> menuIngredients = getOrCreateIngredient(savedMenu, ingredientRequests);
+        menuIngredientRepository.saveAll(menuIngredients);
+    }
+
+    /**
+     * 재료 저장, 메뉴 재료 연결 테이블 생성
+     * @param menu 메뉴
+     * @param ingredientRequests 재료 정보
+     * @return 메뉴 재료 연결 테이블
+     */
+    private List<MenuIngredient> getOrCreateIngredient(Menu menu, List<IngredientRequest> ingredientRequests) {
+        return ingredientRequests.stream()
+                .map(ingredientRequest -> {
+                    Ingredient ingredient;
+                    if (ingredientRequest.ingredientId() != null) {
+                        ingredient = ingredientRepository.findById(ingredientRequest.ingredientId())
+                                .orElseThrow(() -> new BusinessException(ErrorCode.INGREDIENT_NOT_FOUND));
+                    }else{
+                        String ingredientName = normalizeIngredientName(ingredientRequest.ingredientName());
+
+                        ingredient = ingredientRepository.findByName(ingredientName)
+                                .orElseGet(() -> ingredientRepository.save(Ingredient.create(ingredientName)));
+                    }
+                    String quantityText = ingredientRequest.quantity() + " " + ingredientRequest.unit();
+                    return MenuIngredient.create(menu, ingredient, quantityText, ingredientRequest.quantity(),
+                            ingredientRequest.unit(), ingredientRequest.type());
+                })
+                .toList();
+    }
+
+    /**
+     * 재료 이름 확인
+     * @param name 이름
+     * @return 공백 제거한 재료 이름
+     */
+    private String normalizeIngredientName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+
+        return name.trim();
+    }
 }

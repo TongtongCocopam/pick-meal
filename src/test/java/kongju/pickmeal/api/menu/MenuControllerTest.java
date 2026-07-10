@@ -1,10 +1,13 @@
 package kongju.pickmeal.api.menu;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
+import org.springframework.http.MediaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -16,16 +19,23 @@ import kongju.pickmeal.support.fixture.MenuFixture;
 import kongju.pickmeal.core.menu.type.MenuCategory;
 import kongju.pickmeal.application.menu.MenuService;
 import kongju.pickmeal.application.menu.data.MenuDto;
+import kongju.pickmeal.core.menu.type.IngredientUnit;
+import kongju.pickmeal.core.menu.type.IngredientType;
 import kongju.pickmeal.application.menu.data.MenuFilterDto;
-
-import static kongju.pickmeal.support.fixture.SecurityFixture.mockGuest;
+import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.CreateRequest;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+
+import static kongju.pickmeal.support.fixture.SecurityFixture.*;
+import static kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.IngredientRequest.*;
+
 
 
 @WebMvcTest(MenuController.class)
@@ -35,6 +45,9 @@ public class MenuControllerTest {
 
     @MockitoBean
     private MenuService menuService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Nested
     @DisplayName("카테고리 목록 불러오기")
@@ -98,11 +111,73 @@ public class MenuControllerTest {
                     .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true));
-
-
         }
 
     }
 
+    @Nested
+    @DisplayName("가족 메뉴 추가")
+    class FamilyMenuCreate {
+        @Test
+        @DisplayName("request가 잘못된 경우")
+        public void should_fail_family_menu_create_when_param_invalid() throws Exception {
+            CreateRequest request = CreateRequest.builder().build();
 
+            mockMvc.perform(post("/api/v1/menus/custom")
+                            .with(user(mockLeader()))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_family_menu_create() throws Exception {
+            CreateRequest request = CreateRequest.builder()
+                    .menuName("닭가슴살 김치볶음밥")
+                    .dishType(DishType.MAIN_DISH)
+                    .category(MenuCategory.KOREAN)
+                    .kcal(BigDecimal.valueOf(520.0))
+                    .carbs(BigDecimal.valueOf(65.0))
+                    .protein(BigDecimal.valueOf(32.0))
+                    .fat(BigDecimal.valueOf(14.0))
+                    .sodium(BigDecimal.valueOf(850.0))
+                    .ingredients(List.of(
+                            builder()
+                                    .ingredientId(null)
+                                    .ingredientName("닭가슴살")
+                                    .quantity(120.0)
+                                    .unit(IngredientUnit.G)
+                                    .type(IngredientType.MAIN)
+                                    .build(),
+                            builder()
+                                    .ingredientId(null)
+                                    .ingredientName("김치")
+                                    .quantity(100.0)
+                                    .unit(IngredientUnit.G)
+                                    .type(IngredientType.MAIN)
+                                    .build(),
+                            builder()
+                                    .ingredientId(null)
+                                    .ingredientName("밥")
+                                    .quantity(200.0)
+                                    .unit(IngredientUnit.G)
+                                    .type(IngredientType.MAIN)
+                                    .build()
+                    ))
+                    .build();
+
+            mockMvc.perform(post("/api/v1/menus/custom")
+                            .with(user(mockLeader()))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+    }
 }
