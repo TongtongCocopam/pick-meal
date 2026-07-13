@@ -114,7 +114,7 @@ public class MenuServiceTest {
 
     @Nested
     @DisplayName("가족 메뉴 추가")
-    class FamilyMenuCreate{
+    class FamilyMenuCreate {
         @Test
         @DisplayName("가족이 없음")
         public void should_fail_create_family_menu_when_not_family_member() {
@@ -208,6 +208,84 @@ public class MenuServiceTest {
             menuService.createMenu(userId, request);
 
             verify(menuIngredientRepository, times(1)).saveAll(anyList());
+        }
+    }
+
+
+    @Nested
+    @DisplayName("가족 메뉴 삭제")
+    class FamilyMenuDelete {
+        @Test
+        @DisplayName("가족이 없는 경우")
+        public void should_fail_family_menu_delete_when_family_not_found() {
+            Long userId = 1L;
+            Long menuId = 1L;
+            User user = UserFixture.user();
+
+            given(userReader.getById(userId)).willReturn(user);
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> menuService.deleteCustomMenu(userId, menuId));
+
+            assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("리더와 메뉴 가족이 일치하지 않는 경우")
+        public void should_fail_family_menu_delete_when_menu_family_not_match() {
+            Long userId = 1L;
+            Long menuId = 1L;
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+            given(userReader.getById(userId)).willReturn(user);
+
+            Family family1 = FamilyFixture.family();
+            Menu menu = Menu.createFamilyMenu(null,
+                    "된장국",
+                    MenuCategory.KOREAN,
+                    DishType.MAIN_DISH,
+                    BigDecimal.valueOf(520.0),
+                    BigDecimal.valueOf(520.0),
+                    BigDecimal.valueOf(520.0),
+                    BigDecimal.valueOf(520.0),
+                    BigDecimal.valueOf(520.0),
+                    family1);
+            given(menuRepository.findById(menuId)).willReturn(Optional.ofNullable(menu));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> menuService.deleteCustomMenu(userId, menuId));
+
+            assertEquals(ErrorCode.NOT_YOUR_FAMILY_REQUEST, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_family_menu_delete() {
+            Long userId = 1L;
+            Long menuId = 1L;
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+            given(userReader.getById(userId)).willReturn(user);
+
+            Menu menu = Menu.createFamilyMenu(null,
+                    "된장국",
+                    MenuCategory.KOREAN,
+                    DishType.MAIN_DISH,
+                    BigDecimal.valueOf(520.0),
+                    BigDecimal.valueOf(520.0),
+                    BigDecimal.valueOf(520.0),
+                    BigDecimal.valueOf(520.0),
+                    BigDecimal.valueOf(520.0),
+                    family);
+            given(menuRepository.findById(menuId)).willReturn(Optional.ofNullable(menu));
+            menuService.deleteCustomMenu(userId, menuId);
+
+            verify(menuIngredientRepository, times(1)).deleteAllByMenu(any());
+            verify(menuRepository, times(1)).delete(any());
+
         }
     }
 }
