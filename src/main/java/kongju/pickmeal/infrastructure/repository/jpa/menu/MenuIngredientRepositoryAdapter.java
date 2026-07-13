@@ -45,4 +45,9 @@ public class MenuIngredientRepositoryAdapter implements MenuIngredientRepository
     public List<MenuIngredient> findAllByMenuInFetchIngredient(List<Menu> menus) {
         return menuIngredientJpaRepository.findAllByMenuInFetchIngredient(menus);
     }
+
+    @Override
+    public void deleteAllByMenu(Menu menu) {
+        menuIngredientJpaRepository.deleteAllByMenu(menu);
+    }
 }

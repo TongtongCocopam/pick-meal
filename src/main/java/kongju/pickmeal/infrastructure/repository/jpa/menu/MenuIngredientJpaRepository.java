@@ -36,4 +36,6 @@ public interface MenuIngredientJpaRepository extends JpaRepository<MenuIngredien
     where mi.menu in :menus
 """)
     List<MenuIngredient> findAllByMenuInFetchIngredient(List<Menu> menus);
+
+    void deleteAllByMenu(Menu menu);
 }
