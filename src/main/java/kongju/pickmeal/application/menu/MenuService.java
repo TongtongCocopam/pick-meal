@@ -3,7 +3,9 @@ package kongju.pickmeal.application.menu;
 import java.util.List;
 import java.util.Arrays;
 
+import kongju.pickmeal.core.family.Family;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +27,7 @@ import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.application.menu.data.MenuFilterDto.CategoryResponse;
 import kongju.pickmeal.application.menu.data.MenuFilterDto.DishTypeResponse;
 import kongju.pickmeal.application.menu.data.MenuFilterDto.MetadataResponse;
-import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.CreateRequest;
+import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.SaveRequest;
 import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.IngredientRequest;
 
 
@@ -162,12 +164,10 @@ public class MenuService {
      * @param userId  유저 아이디
      * @param request 메뉴
      */
-    public void createMenu(Long userId, CreateRequest request) {
+    public void createMenu(Long userId, SaveRequest request) {
         User user = userReader.getById(userId);
 
-        if (user.getFamily() == null) {
-            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
-        }
+        checkFamily(user);
 
         Menu menu = Menu.createFamilyMenu(
                 null,
@@ -187,6 +187,16 @@ public class MenuService {
 
         List<MenuIngredient> menuIngredients = getOrCreateIngredient(savedMenu, ingredientRequests);
         menuIngredientRepository.saveAll(menuIngredients);
+    }
+
+    /**
+     * 가족 여부 확인
+     * @param user 유저
+     */
+    private static void checkFamily(User user) {
+        if (user.getFamily() == null) {
+            throw new BusinessException(ErrorCode.FAMILY_NOT_FOUND);
+        }
     }
 
     /**
@@ -227,4 +237,60 @@ public class MenuService {
 
         return name.trim();
     }
+
+    /**
+     * 메뉴 수정
+     * @param userId 유저 아이디
+     * @param menuId 메뉴 아이디
+     * @param request 메뉴 정보
+     */
+    public void updateCustomMenu(Long userId, Long menuId, SaveRequest request) {
+        User user = userReader.getById(userId);
+        // 메뉴
+        Menu menu = getMenu(menuId);
+
+        checkFamily(user);
+
+        checkMyFamily(menu.getFamily(), user.getFamily());
+
+        menu.update(request.menuName(),
+                request.category(),
+                request.dishType(),
+                request.kcal(),
+                request.carbs(),
+                request.protein(),
+                request.fat(),
+                request.sodium());
+
+        // 기존 재료, 메뉴 연결 테이블 삭제
+        menuIngredientRepository.deleteAllByMenu(menu);
+
+        // 새로 추가
+        List<IngredientRequest> ingredientRequests = request.ingredients();
+
+        List<MenuIngredient> menuIngredients = getOrCreateIngredient(menu, ingredientRequests);
+        menuIngredientRepository.saveAll(menuIngredients);
+    }
+
+    /**
+     * 내 가족 메뉴인지 확인
+     * @param menuFamily 메뉴 가족
+     * @param userFamily 리더 가족
+     */
+    private static void checkMyFamily(Family menuFamily, Family userFamily) {
+        if(menuFamily != userFamily) {
+            throw new BusinessException(ErrorCode.NOT_YOUR_FAMILY_REQUEST);
+        }
+    }
+
+    /**
+     * 메뉴 찾기
+     * @param menuId 메뉴 아이디
+     * @return 메뉴
+     */
+    private @NonNull Menu getMenu(Long menuId) {
+        return menuRepository.findById(menuId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+    }
+
 }

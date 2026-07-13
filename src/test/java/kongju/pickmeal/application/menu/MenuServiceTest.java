@@ -119,7 +119,7 @@ public class MenuServiceTest {
         @DisplayName("가족이 없음")
         public void should_fail_create_family_menu_when_not_family_member() {
             Long userId = 1L;
-            FamilyCustomMenuDto.CreateRequest request = FamilyCustomMenuDto.CreateRequest.builder().build();
+            FamilyCustomMenuDto.SaveRequest request = FamilyCustomMenuDto.SaveRequest.builder().build();
             User user = UserFixture.user();
 
             given(userReader.getById(userId)).willReturn(user);
@@ -135,8 +135,8 @@ public class MenuServiceTest {
         public void should_fail_create_family_menu_when_ingredient_not_found() {
             Long userId = 1L;
 
-            FamilyCustomMenuDto.CreateRequest request =
-                    FamilyCustomMenuDto.CreateRequest.builder()
+            FamilyCustomMenuDto.SaveRequest request =
+                    FamilyCustomMenuDto.SaveRequest.builder()
                             .menuName("닭가슴살 김치볶음밥")
                             .dishType(DishType.MAIN_DISH)
                             .category(MenuCategory.KOREAN)
@@ -175,8 +175,8 @@ public class MenuServiceTest {
         public void should_success_create_family_menu() {
             Long userId = 1L;
 
-            FamilyCustomMenuDto.CreateRequest request =
-                    FamilyCustomMenuDto.CreateRequest.builder()
+            FamilyCustomMenuDto.SaveRequest request =
+                    FamilyCustomMenuDto.SaveRequest.builder()
                             .menuName("닭가슴살 김치볶음밥")
                             .dishType(DishType.MAIN_DISH)
                             .category(MenuCategory.KOREAN)

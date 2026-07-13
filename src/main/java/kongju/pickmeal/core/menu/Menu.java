@@ -116,4 +116,17 @@ public class Menu extends BaseTimeEntity {
                 .build();
     }
 
+    public void update(String menuName, MenuCategory category, DishType dishType,
+                       BigDecimal kcal, BigDecimal carbs, BigDecimal protein,
+                       BigDecimal fat, BigDecimal sodium) {
+        this.menuName = menuName;
+        this.category = category;
+        this.dishType = dishType;
+        this.kcal = kcal;
+        this.carbs = carbs;
+        this.protein = protein;
+        this.fat=fat;
+        this.sodium = sodium;
+    }
+
 }

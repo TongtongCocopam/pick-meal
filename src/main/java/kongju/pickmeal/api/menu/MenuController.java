@@ -18,7 +18,7 @@ import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.application.menu.data.MenuDto.DetailResponse;
 import kongju.pickmeal.application.menu.data.MenuDto.ListItemResponse;
 import kongju.pickmeal.application.menu.data.MenuFilterDto.MetadataResponse;
-import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.CreateRequest;
+import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.SaveRequest;
 
 
 @RestController
@@ -62,9 +62,20 @@ public class MenuController {
     @PreAuthorize("hasRole('LEADER')")
     public ResponseEntity<ApiResponse<Void>> createCustomMenu(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid CreateRequest request
+            @RequestBody @Valid SaveRequest request
     ) {
         menuService.createMenu(userDetails.id(), request);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @PutMapping("/custom/{menuId}")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<Void>> updateCustomMenu(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long menuId,
+            @RequestBody @Valid SaveRequest request
+    ) {
+        menuService.updateCustomMenu(userDetails.id(), menuId, request);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }
