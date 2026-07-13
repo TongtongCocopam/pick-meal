@@ -15,7 +15,7 @@ import kongju.pickmeal.core.menu.type.IngredientUnit;
 
 public class FamilyCustomMenuDto {
     @Builder
-    public record CreateRequest(
+    public record SaveRequest(
             @NotBlank
             String menuName,
             @NotNull
