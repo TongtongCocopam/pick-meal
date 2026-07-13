@@ -3,7 +3,6 @@ package kongju.pickmeal.application.menu;
 import java.util.List;
 import java.util.Arrays;
 
-import kongju.pickmeal.core.family.Family;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
@@ -13,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.menu.MenuIngredient;
@@ -164,6 +164,7 @@ public class MenuService {
      * @param userId  유저 아이디
      * @param request 메뉴
      */
+    @Transactional
     public void createMenu(Long userId, SaveRequest request) {
         User user = userReader.getById(userId);
 
@@ -244,6 +245,7 @@ public class MenuService {
      * @param menuId 메뉴 아이디
      * @param request 메뉴 정보
      */
+    @Transactional
     public void updateCustomMenu(Long userId, Long menuId, SaveRequest request) {
         User user = userReader.getById(userId);
         // 메뉴
@@ -293,4 +295,20 @@ public class MenuService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
     }
 
+    /**
+     * 커스텀 메뉴 삭제
+     * @param userId 유저 아이디
+     * @param menuId 메뉴 아이디
+     */
+    @Transactional
+    public void deleteCustomMenu(Long userId, Long menuId) {
+        User user = userReader.getById(userId);
+        checkFamily(user);
+
+        Menu menu = getMenu(menuId);
+        checkMyFamily(user.getFamily(), menu.getFamily());
+
+        menuIngredientRepository.deleteAllByMenu(menu);
+        menuRepository.delete(menu);
+    }
 }

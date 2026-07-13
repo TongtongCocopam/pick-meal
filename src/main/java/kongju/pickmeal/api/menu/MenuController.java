@@ -78,4 +78,14 @@ public class MenuController {
         menuService.updateCustomMenu(userDetails.id(), menuId, request);
         return ResponseEntity.ok(ApiResponse.success());
     }
+
+    @DeleteMapping("/custom/{menuId}")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<Void>> deleteCustomMenu(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long menuId
+    ){
+        menuService.deleteCustomMenu(userDetails.id(), menuId);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
 }
