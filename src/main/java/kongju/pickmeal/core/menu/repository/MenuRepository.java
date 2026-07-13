@@ -11,13 +11,22 @@ import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.menu.type.MenuCategory;
 
 
-public interface MenuRepository{
+public interface MenuRepository {
     Optional<Menu> findByExternalRecipeId(Long externalRecipeId);
+
     boolean existsByExternalRecipeId(Long externalRecipeId);
+
     List<Menu> saveAll(List<Menu> menus);
+
     Menu save(Menu menu);
+
     Page<Menu> searchByFilters(MenuCategory category, DishType dishType, String keyword, Pageable pageable);
+
     Optional<Menu> findById(Long id);
+
     List<Menu> findAll();
+
     Page<Menu> searchReplacementMenus(MenuCategory category, DishType dishType, Long menuId, String keyword, Pageable pageable);
+
+    void delete(Menu menu);
 }

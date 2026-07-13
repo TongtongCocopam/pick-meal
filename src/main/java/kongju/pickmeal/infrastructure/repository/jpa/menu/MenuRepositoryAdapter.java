@@ -58,4 +58,9 @@ public class MenuRepositoryAdapter implements MenuRepository {
     public Page<Menu> searchReplacementMenus(MenuCategory category, DishType dishType, Long menuId, String keyword, Pageable pageable) {
         return menuJpaRepository.searchReplacementMenus(category, dishType, menuId, keyword, pageable);
     }
+
+    @Override
+    public void delete(Menu menu) {
+        menuJpaRepository.delete(menu);
+    }
 }
