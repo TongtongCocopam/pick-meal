@@ -32,4 +32,6 @@ public interface MenuRepository {
     void delete(Menu menu);
 
     List<Menu> findRecommendationCandidatesWithoutAllergy(MenuCategory category, DishType dishType, Long currentMenuId, Set<Long> allergyIngredientIds);
+
+    List<Menu> findRecommendationCandidates(MenuCategory category, DishType dishType, Long currentMenuId);
 }

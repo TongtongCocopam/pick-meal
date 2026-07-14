@@ -69,4 +69,9 @@ public class MenuRepositoryAdapter implements MenuRepository {
     public List<Menu> findRecommendationCandidatesWithoutAllergy(MenuCategory category, DishType dishType, Long currentMenuId, Set<Long> allergyIngredientIds) {
         return menuJpaRepository.findRecommendationCandidatesWithoutAllergy(category, dishType, currentMenuId, allergyIngredientIds);
     }
+
+    @Override
+    public List<Menu> findRecommendationCandidates(MenuCategory category, DishType dishType, Long currentMenuId) {
+        return menuJpaRepository.findRecommendationCandidates(category, dishType, currentMenuId);
+    }
 }
