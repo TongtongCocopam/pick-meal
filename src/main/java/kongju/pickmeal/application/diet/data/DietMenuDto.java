@@ -78,4 +78,30 @@ public class DietMenuDto {
             String quantityText
     ) {
     }
+
+    @Builder
+    public record RecommendationResponse(
+            String menuName,
+            DishType dishType,
+            List<CandidateResponse> menus
+    ){}
+
+    @Builder
+    public record CandidateResponse(
+            Long menuId,
+            String menuName,
+            BigDecimal kcal,
+            BigDecimal carbs,
+            BigDecimal protein,
+            BigDecimal fat,
+            BigDecimal sodium,
+            List<IngredientResponse> ingredients
+    ) {
+    }
+
+    @Builder
+    public record IngredientResponse(
+            String name
+    ) {
+    }
 }
