@@ -365,4 +365,77 @@ public class DietControllerTest {
 
         }
     }
+
+    @Nested
+    @DisplayName("대체 메뉴 추천")
+    class MenuSuggestion {
+        @Test
+        @DisplayName("리더가 아닌 경우")
+        public void should_fail__menu_suggestion_when_not_leader() throws Exception {
+            Long dietId = 1234L;
+            mockMvc.perform(get("/api/v1/diets/{dietId}/replacement-menu-suggestions", dietId)
+                            .with(user(mockMember())))
+                    .andDo(print())
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_menu_suggestion() throws Exception {
+            Long dietId = 1234L;
+            Long userId = 1L;
+
+            DietMenuDto.IngredientResponse ingredientResponse = DietMenuDto.IngredientResponse.builder().name("두부").build();
+            DietMenuDto.RecommendationResponse response = DietMenuDto.RecommendationResponse.builder()
+                    .menuName("된장국")
+                    .dishType(DishType.SOUP)
+                    .menus(
+                            List.of(DietMenuDto.CandidateResponse.builder()
+                                            .menuId(2L)
+                                            .menuName("동태탕")
+                                            .kcal(BigDecimal.valueOf(300))
+                                            .carbs(BigDecimal.valueOf(300))
+                                            .protein(BigDecimal.valueOf(300))
+                                            .fat(BigDecimal.valueOf(300))
+                                            .sodium(BigDecimal.valueOf(300))
+                                            .ingredients(List.of(ingredientResponse))
+                                            .build(),
+                                    DietMenuDto.CandidateResponse.builder()
+                                            .menuId(3L)
+                                            .menuName("감자탕")
+                                            .kcal(BigDecimal.valueOf(300))
+                                            .carbs(BigDecimal.valueOf(300))
+                                            .protein(BigDecimal.valueOf(300))
+                                            .fat(BigDecimal.valueOf(300))
+                                            .sodium(BigDecimal.valueOf(300))
+                                            .ingredients(List.of(ingredientResponse))
+                                            .build(),
+                                    DietMenuDto.CandidateResponse.builder()
+                                            .menuId(4L)
+                                            .menuName("북어국")
+                                            .kcal(BigDecimal.valueOf(300))
+                                            .carbs(BigDecimal.valueOf(300))
+                                            .protein(BigDecimal.valueOf(300))
+                                            .fat(BigDecimal.valueOf(300))
+                                            .sodium(BigDecimal.valueOf(300))
+                                            .ingredients(List.of(ingredientResponse))
+                                            .build())
+                    )
+                    .build();
+
+            given(dietService.recommendations(userId, dietId)).willReturn(response);
+
+            mockMvc.perform(get("/api/v1/diets/{dietId}/replacement-menu-suggestions", dietId)
+                            .with(user(mockLeader()))
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.menuName").value("된장국"))
+                    .andExpect(jsonPath("$.data.menus").isNotEmpty());
+
+        }
+    }
+
 }

@@ -4,6 +4,7 @@ import java.util.List;
 import java.math.BigDecimal;
 
 import lombok.Builder;
+import jakarta.validation.constraints.NotNull;
 
 import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.menu.type.DishType;
@@ -76,6 +77,36 @@ public class DietMenuDto {
             Long ingredientId,
             String name,
             String quantityText
+    ) {
+    }
+
+    @Builder
+    public record RecommendationResponse(
+            String menuName,
+            DishType dishType,
+            List<CandidateResponse> menus
+    ){}
+
+    @Builder
+    public record CandidateResponse(
+            @NotNull
+            Long menuId,
+            @NotNull
+            String menuName,
+            BigDecimal kcal,
+            BigDecimal carbs,
+            BigDecimal protein,
+            BigDecimal fat,
+            BigDecimal sodium,
+            @NotNull
+            List<IngredientResponse> ingredients
+    ) {
+    }
+
+    @Builder
+    public record IngredientResponse(
+            @NotNull
+            String name
     ) {
     }
 }

@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 import jakarta.validation.Valid;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +16,21 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import kongju.pickmeal.application.diet.DietService;
-import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.api.security.CustomUserDetails;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
 import kongju.pickmeal.application.diet.data.DietMenuDto;
-import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
+import kongju.pickmeal.application.diet.data.DietDto.ListItemResponse;
+import kongju.pickmeal.application.diet.data.MenuPickDto.CreateResponse;
+import kongju.pickmeal.application.diet.data.MenuPickDto.DeleteResponse;
+import kongju.pickmeal.application.diet.data.MenuPickDto.UpdateResponse;
+import kongju.pickmeal.application.diet.data.DietMenuDto.ReplaceResponse;
+import kongju.pickmeal.application.diet.data.DietDto.DailyDetailResponse;
+import kongju.pickmeal.application.diet.data.DietMenuDto.MenuDetailsResponse;
+import kongju.pickmeal.application.diet.data.DietMenuDto.RecommendationResponse;
+import kongju.pickmeal.application.diet.data.DietMenuDto.ReplacementMenuListResponse;
+
+import static kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto.*;
 
 
 @RestController
@@ -31,10 +41,10 @@ public class DietController {
 
     @PostMapping("/menu-picks")
     @PreAuthorize("hasRole('LEADER') or hasRole('MEMBER')")
-    public ResponseEntity<ApiResponse<MenuPickDto.CreateResponse>> createMenuPick(
+    public ResponseEntity<ApiResponse<CreateResponse>> createMenuPick(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid MenuPickDto.CreateRequest request) {
-        MenuPickDto.CreateResponse response = dietService.menuPick(userDetails.id(), request);
+        CreateResponse response = dietService.menuPick(userDetails.id(), request);
 
         return ResponseEntity
                 .ok(ApiResponse.success(response));
@@ -42,88 +52,97 @@ public class DietController {
 
     @PatchMapping("/menu-picks/{pickId}")
     @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<MenuPickDto.UpdateResponse>> updatePickItem(
+    public ResponseEntity<ApiResponse<UpdateResponse>> updatePickItem(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long pickId,
             @RequestBody @Valid MenuPickDto.UpdateRequest request
     ) {
-        MenuPickDto.UpdateResponse response = dietService.updatePickMenu(userDetails.id(), pickId, request);
+        UpdateResponse response = dietService.updatePickMenu(userDetails.id(), pickId, request);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("/menu-picks/{pickId}")
     @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<MenuPickDto.DeleteResponse>> deletePickItem(
+    public ResponseEntity<ApiResponse<DeleteResponse>> deletePickItem(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long pickId
     ) {
-        MenuPickDto.DeleteResponse response = dietService.deletePickMenu(userDetails.id(), pickId);
+        DeleteResponse response = dietService.deletePickMenu(userDetails.id(), pickId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/ai-generate")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<DietGenerationDto.GenerateResponse>> generate(
+    public ResponseEntity<ApiResponse<GenerateResponse>> generate(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody @Valid DietGenerationDto.GenerateRequest request
+            @RequestBody @Valid GenerateRequest request
     ) {
-        DietGenerationDto.GenerateResponse response = dietService.requestGeneration(userDetails.id(), request);
+        GenerateResponse response = dietService.requestGeneration(userDetails.id(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping
     @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<DietDto.ListItemResponse>> getAllDiets(
+    public ResponseEntity<ApiResponse<ListItemResponse>> getAllDiets(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth month
     ) {
-        DietDto.ListItemResponse response = dietService.getDiets(userDetails.id(), month);
+        ListItemResponse response = dietService.getDiets(userDetails.id(), month);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/{date}")
     @PreAuthorize("hasRole('MEMBER') or hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<DietDto.DailyDetailResponse>> getDailyDiets(
+    public ResponseEntity<ApiResponse<DailyDetailResponse>> getDailyDiets(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable LocalDate date
     ) {
-        DietDto.DailyDetailResponse response = dietService.getDailyMeals(userDetails.id(), date);
+        DailyDetailResponse response = dietService.getDailyMeals(userDetails.id(), date);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/{dietId}/menu")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<DietMenuDto.ReplaceResponse>> updateMenu(
+    public ResponseEntity<ApiResponse<ReplaceResponse>> updateMenu(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long dietId,
             @RequestBody @Valid DietMenuDto.ReplaceRequest request
     ) {
-        DietMenuDto.ReplaceResponse response = dietService.replaceMenu(userDetails.id(), dietId, request);
+        ReplaceResponse response = dietService.replaceMenu(userDetails.id(), dietId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/{dietId}/replacement-menus")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<DietMenuDto.ReplacementMenuListResponse>> getReplacementMenus(
+    public ResponseEntity<ApiResponse<ReplacementMenuListResponse>> getReplacementMenus(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long dietId,
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        DietMenuDto.ReplacementMenuListResponse response = dietService.replacementMenus(userDetails.id(), dietId, keyword, pageable);
+        ReplacementMenuListResponse response = dietService.replacementMenus(userDetails.id(), dietId, keyword, pageable);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/{dietId}/replacement-menus/{menuId}")
     @PreAuthorize("hasRole('LEADER')")
-    public ResponseEntity<ApiResponse<DietMenuDto.MenuDetailsResponse>> getReplacementMenuDetails(
+    public ResponseEntity<ApiResponse<MenuDetailsResponse>> getReplacementMenuDetails(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long dietId,
             @PathVariable Long menuId
     ) {
-        DietMenuDto.MenuDetailsResponse response = dietService.menuDetails(userDetails.id(), dietId, menuId);
+        MenuDetailsResponse response = dietService.menuDetails(userDetails.id(), dietId, menuId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/{dietId}/replacement-menu-suggestions")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<RecommendationResponse>> replacementMenuSuggestions(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long dietId
+    ) {
+        RecommendationResponse response = dietService.recommendations(userDetails.id(), dietId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 }

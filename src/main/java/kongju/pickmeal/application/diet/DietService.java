@@ -32,11 +32,14 @@ import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.core.diet.type.DietMenuSource;
 import kongju.pickmeal.application.diet.data.DietMenuDto;
+import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
+import kongju.pickmeal.core.user.UserIngredientPreference;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.diet.type.DietGenerationStatus;
 import kongju.pickmeal.core.diet.repository.DietRepository;
+import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
@@ -44,6 +47,7 @@ import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
+import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 
 @Service
@@ -52,6 +56,7 @@ import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 public class DietService {
     private final UserReader userReader;
     private final MenuRepository menuRepository;
+    private final UserRepository userRepository;
     private final DietRepository dietRepository;
     private final FamilyRepository familyRepository;
     private final UserMenuPickRepository userMenuPickRepository;
@@ -59,6 +64,7 @@ public class DietService {
     private final MenuIngredientRepository menuIngredientRepository;
     private final DietGenerationRepository dietGenerationRepository;
     private final PickCountHistoryRepository pickCountHistoryRepository;
+    private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
 
     private final AiDietService aiDietService;
 
@@ -359,6 +365,7 @@ public class DietService {
      * @param month  달
      * @return 식단 데이터
      */
+    @Transactional(readOnly = true)
     public DietDto.ListItemResponse getDiets(Long userId, YearMonth month) {
         User user = userReader.getById(userId);
         Family family = user.getFamily();
@@ -453,6 +460,7 @@ public class DietService {
      * @param date   날짜
      * @return 해당 날짜 메뉴, 재료, 영양 정보
      */
+    @Transactional(readOnly = true)
     public DietDto.DailyDetailResponse getDailyMeals(Long userId, LocalDate date) {
         User user = userReader.getById(userId);
         Family family = user.getFamily();
@@ -728,6 +736,7 @@ public class DietService {
      * @param pageable 페이지
      * @return 메뉴 리스트
      */
+    @Transactional(readOnly = true)
     public DietMenuDto.ReplacementMenuListResponse replacementMenus(
             Long userId, Long dietId, String keyword, Pageable pageable
     ) {
@@ -781,11 +790,13 @@ public class DietService {
 
     /**
      * 교체할 메뉴 상세 정보
+     *
      * @param userId 유저 아이디
      * @param dietId 식단 아이디
      * @param menuId 메뉴 아이디
      * @return 메뉴 상세 정보
      */
+    @Transactional(readOnly = true)
     public DietMenuDto.MenuDetailsResponse menuDetails(Long userId, Long dietId, Long menuId) {
         // 유저 확인
         User user = userReader.getById(userId);
@@ -834,4 +845,101 @@ public class DietService {
             throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
         }
     }
+
+    /**
+     * 추천 메뉴
+     *
+     * @param userId 유저 아이디
+     * @param dietId 식단 아이디
+     * @return 3개 메뉴
+     */
+    @Transactional(readOnly = true)
+    public DietMenuDto.RecommendationResponse recommendations(Long userId, Long dietId) {
+        User user = userReader.getById(userId);
+        Diet diet = getDiet(dietId);
+
+        if (diet.getSource() == DietMenuSource.USER_PICKED) {
+            throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
+        }
+
+        checkFamilyLeader(user, diet);
+        Family family = user.getFamily();
+
+        Menu menu = diet.getMenu();
+        // 알러지 정보 조회
+        List<DietMenuDto.CandidateResponse> candidateResponses = getCandidateResponses(family, menu);
+
+        return DietMenuDto.RecommendationResponse.builder()
+                .menuName(menu.getMenuName())
+                .dishType(menu.getDishType())
+                .menus(candidateResponses)
+                .build();
+    }
+
+    /**
+     * 알러지 제외하고 후보 메뉴 뽑기
+     *
+     * @param family 가족
+     * @param menu   메뉴
+     * @return 후보 메뉴
+     */
+    private @NonNull List<DietMenuDto.CandidateResponse> getCandidateResponses(Family family, Menu menu) {
+        List<User> users = userRepository.findAllFamily(family);
+
+        List<UserIngredientPreference> familyPreferences =
+                userIngredientPreferenceRepository.findAllByUserInFetchIngredient(users);
+
+        Set<Long> allergyIngredientIds = familyPreferences.stream()
+                .filter(preference -> preference.getPreference() == FoodPreferenceType.ALLERGY)
+                .map(preference -> preference.getIngredient().getId())
+                .collect(Collectors.toSet());
+
+        List<Menu> candidates;
+
+        if (allergyIngredientIds.isEmpty()) {
+            candidates = menuRepository.findRecommendationCandidates(
+                    menu.getCategory(),
+                    menu.getDishType(),
+                    menu.getId()
+            );
+        } else {
+            candidates = menuRepository.findRecommendationCandidatesWithoutAllergy(
+                    menu.getCategory(),
+                    menu.getDishType(),
+                    menu.getId(),
+                    allergyIngredientIds
+            );
+        }
+
+        List<Menu> shuffledCandidates = new ArrayList<>(candidates);
+        Collections.shuffle(shuffledCandidates);
+        List<Menu> recommendedMenus = shuffledCandidates.stream()
+                .limit(3)
+                .toList();
+
+        return recommendedMenus.stream()
+                .map(candidate -> {
+                    List<DietMenuDto.IngredientResponse> ingredientResponses =
+                            menuIngredientRepository.findAllByMenuWithIngredient(candidate).stream()
+                                    .map(menuIngredient ->
+                                            DietMenuDto.IngredientResponse.builder()
+                                                    .name(menuIngredient.getIngredient().getName())
+                                                    .build()
+                                    )
+                                    .toList();
+
+                    return DietMenuDto.CandidateResponse.builder()
+                            .menuId(candidate.getId())
+                            .menuName(candidate.getMenuName())
+                            .kcal(candidate.getKcal())
+                            .carbs(candidate.getCarbs())
+                            .protein(candidate.getProtein())
+                            .fat(candidate.getFat())
+                            .sodium(candidate.getSodium())
+                            .ingredients(ingredientResponses)
+                            .build();
+                })
+                .toList();
+    }
+
 }

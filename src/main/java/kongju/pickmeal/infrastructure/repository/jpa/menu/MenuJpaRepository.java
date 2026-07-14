@@ -1,6 +1,8 @@
 package kongju.pickmeal.infrastructure.repository.jpa.menu;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,4 +39,28 @@ public interface MenuJpaRepository extends JpaRepository<Menu, Long> {
                     and (:keyword is null or lower(m.menuName) like lower(concat('%', :keyword, '%') ) )
             """)
     Page<Menu> searchReplacementMenus(MenuCategory category, DishType dishType, Long menuId, String keyword, Pageable pageable);
+
+    @Query("""
+                select m
+                from Menu m
+                where m.category = :category
+                  and m.dishType = :dishType
+                  and m.id <> :currentMenuId
+                  and not exists (
+                      select 1
+                      from MenuIngredient mi
+                      where mi.menu = m
+                        and mi.ingredient.id in :allergyIngredientIds
+                  )
+            """)
+    List<Menu> findRecommendationCandidatesWithoutAllergy(MenuCategory category, DishType dishType, Long currentMenuId, Set<Long> allergyIngredientIds);
+
+    @Query("""
+                select m
+                from Menu m
+                where m.category = :category
+                  and m.dishType = :dishType
+                  and m.id <> :currentMenuId
+            """)
+    List<Menu> findRecommendationCandidates(MenuCategory category,DishType dishType, Long currentMenuId );
 }

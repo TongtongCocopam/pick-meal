@@ -4,7 +4,12 @@ import java.util.List;
 import java.util.Optional;
 import java.time.YearMonth;
 import java.time.LocalDate;
+import java.util.Set;
 
+import kongju.pickmeal.core.user.UserIngredientPreference;
+import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
+import kongju.pickmeal.core.user.repository.UserRepository;
+import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -17,9 +22,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -61,6 +65,8 @@ public class DietServiceTest {
     @Mock
     private UserReader userReader;
     @Mock
+    private UserRepository userRepository;
+    @Mock
     private MenuRepository menuRepository;
     @Mock
     private UserMenuPickRepository userMenuPickRepository;
@@ -70,6 +76,8 @@ public class DietServiceTest {
     private PickCountHistoryRepository pickCountHistoryRepository;
     @Mock
     private MenuIngredientRepository menuIngredientRepository;
+    @Mock
+    private UserIngredientPreferenceRepository userIngredientPreferenceRepository;
     @Mock
     private DietRepository dietRepository;
     @InjectMocks
@@ -775,4 +783,73 @@ public class DietServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("대체 메뉴 추천")
+    class MenuSuggestion{
+        @Test
+        @DisplayName("식단을 찾을 수 없음")
+        public void should_fail_menu_suggestion_when_diet_not_found() {
+            Long userId = 1L;
+            Long dietId = 2L;
+
+            User user = UserFixture.user();
+            given(userReader.getById(userId)).willReturn(user);
+            given(dietRepository.findById(dietId)).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.recommendations(userId, dietId));
+
+            assertEquals(ErrorCode.DIET_ITEM_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공케이스")
+        public void should_success_menu_suggestion() {
+            Long userId = 1L;
+            Long dietId = 2L;
+
+            User user = UserFixture.user();
+            Family family = FamilyFixture.family();
+            user.joinFamilyLeader(family);
+
+            given(userReader.getById(userId)).willReturn(user);
+
+            DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
+            Menu menu = MenuFixture.menu();
+            Diet diet = DietFixture.diet(family, menu, dietGeneration, DietMenuSource.MANUAL_REPLACED);
+            given(dietRepository.findById(dietId)).willReturn(Optional.of(diet));
+
+            User member1 = UserFixture.user();
+            User member2 = UserFixture.user();
+            member1.joinFamilyMember(family);
+            member2.joinFamilyMember(family);
+
+            List<User> users = List.of(user, member1,  member2);
+            given(userRepository.findAllFamily(family)).willReturn(users);
+
+            Ingredient ingredient = Ingredient.create("감자");
+
+            UserIngredientPreference preference = UserIngredientPreference.builder()
+                    .user(user)
+                    .ingredient(ingredient)
+                    .preference(FoodPreferenceType.ALLERGY)
+                    .build();
+
+            given(userIngredientPreferenceRepository.findAllByUserInFetchIngredient(users))
+                    .willReturn(List.of(preference));
+
+            Menu menu2 = MenuFixture.menu("된장국");
+            Menu menu3 = MenuFixture.menu("김치찜");
+            Menu menu4 = MenuFixture.menu("미소된장국");
+
+            given(menuRepository.findRecommendationCandidatesWithoutAllergy(any(), any(), any(), anySet())).willReturn(List.of(menu2, menu3, menu4));
+
+            MenuIngredient menuIngredient = MenuIngredient.create(menu2, ingredient, "14g", 14.0, IngredientUnit.G, IngredientType.SUB);
+
+            given(menuIngredientRepository.findAllByMenuWithIngredient(any())).willReturn(List.of(menuIngredient));
+
+            DietMenuDto.RecommendationResponse response = dietService.recommendations(userId, dietId);
+            assertEquals(menu.getMenuName(), response.menuName());
+        }
+    }
 }
