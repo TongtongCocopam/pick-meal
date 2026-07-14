@@ -1,5 +1,6 @@
 package kongju.pickmeal.infrastructure.repository.jpa.menu;
 
+import java.util.Set;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,5 +63,10 @@ public class MenuRepositoryAdapter implements MenuRepository {
     @Override
     public void delete(Menu menu) {
         menuJpaRepository.delete(menu);
+    }
+
+    @Override
+    public List<Menu> findRecommendationCandidatesWithoutAllergy(MenuCategory category, DishType dishType, Long currentMenuId, Set<Long> allergyIngredientIds) {
+        return menuJpaRepository.findRecommendationCandidatesWithoutAllergy(category, dishType, currentMenuId, allergyIngredientIds);
     }
 }

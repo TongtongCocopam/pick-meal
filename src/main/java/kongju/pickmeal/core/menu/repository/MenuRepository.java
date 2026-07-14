@@ -1,5 +1,6 @@
 package kongju.pickmeal.core.menu.repository;
 
+import java.util.Set;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,4 +30,6 @@ public interface MenuRepository {
     Page<Menu> searchReplacementMenus(MenuCategory category, DishType dishType, Long menuId, String keyword, Pageable pageable);
 
     void delete(Menu menu);
+
+    List<Menu> findRecommendationCandidatesWithoutAllergy(MenuCategory category, DishType dishType, Long currentMenuId, Set<Long> allergyIngredientIds);
 }
