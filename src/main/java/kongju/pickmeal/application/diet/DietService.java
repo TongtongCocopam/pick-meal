@@ -848,6 +848,7 @@ public class DietService {
 
     /**
      * 추천 메뉴
+     *
      * @param userId 유저 아이디
      * @param dietId 식단 아이디
      * @return 3개 메뉴
@@ -856,11 +857,16 @@ public class DietService {
     public DietMenuDto.RecommendationResponse recommendations(Long userId, Long dietId) {
         User user = userReader.getById(userId);
         Diet diet = getDiet(dietId);
+
+        if (diet.getSource() == DietMenuSource.USER_PICKED) {
+            throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
+        }
+
         checkFamilyLeader(user, diet);
         Family family = user.getFamily();
 
         Menu menu = diet.getMenu();
-        // 선호, 알러지 정보 조회
+        // 알러지 정보 조회
         List<DietMenuDto.CandidateResponse> candidateResponses = getCandidateResponses(family, menu);
 
         return DietMenuDto.RecommendationResponse.builder()
@@ -872,8 +878,9 @@ public class DietService {
 
     /**
      * 알러지 제외하고 후보 메뉴 뽑기
+     *
      * @param family 가족
-     * @param menu 메뉴
+     * @param menu   메뉴
      * @return 후보 메뉴
      */
     private @NonNull List<DietMenuDto.CandidateResponse> getCandidateResponses(Family family, Menu menu) {
@@ -887,14 +894,26 @@ public class DietService {
                 .map(preference -> preference.getIngredient().getId())
                 .collect(Collectors.toSet());
 
-        List<Menu> candidates = menuRepository.findRecommendationCandidatesWithoutAllergy(
-                menu.getCategory(),
-                menu.getDishType(),
-                menu.getId(),
-                allergyIngredientIds);
+        List<Menu> candidates;
 
-        Collections.shuffle(candidates);
-        List<Menu> recommendedMenus = candidates.stream()
+        if (allergyIngredientIds.isEmpty()) {
+            candidates = menuRepository.findRecommendationCandidates(
+                    menu.getCategory(),
+                    menu.getDishType(),
+                    menu.getId()
+            );
+        } else {
+            candidates = menuRepository.findRecommendationCandidatesWithoutAllergy(
+                    menu.getCategory(),
+                    menu.getDishType(),
+                    menu.getId(),
+                    allergyIngredientIds
+            );
+        }
+
+        List<Menu> shuffledCandidates = new ArrayList<>(candidates);
+        Collections.shuffle(shuffledCandidates);
+        List<Menu> recommendedMenus = shuffledCandidates.stream()
                 .limit(3)
                 .toList();
 
@@ -910,13 +929,13 @@ public class DietService {
                                     .toList();
 
                     return DietMenuDto.CandidateResponse.builder()
-                            .menuId(menu.getId())
-                            .menuName(menu.getMenuName())
-                            .kcal(menu.getKcal())
-                            .carbs(menu.getCarbs())
-                            .protein(menu.getProtein())
-                            .fat(menu.getFat())
-                            .sodium(menu.getSodium())
+                            .menuId(candidate.getId())
+                            .menuName(candidate.getMenuName())
+                            .kcal(candidate.getKcal())
+                            .carbs(candidate.getCarbs())
+                            .protein(candidate.getProtein())
+                            .fat(candidate.getFat())
+                            .sodium(candidate.getSodium())
                             .ingredients(ingredientResponses)
                             .build();
                 })
