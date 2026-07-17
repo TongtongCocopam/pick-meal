@@ -33,7 +33,7 @@ public class Diet extends BaseTimeEntity {
     private MealType mealType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dietGeneration_id")
+    @JoinColumn(name = "diet_generation_id")
     private DietGeneration dietGeneration;
 
     @Enumerated(EnumType.STRING)
