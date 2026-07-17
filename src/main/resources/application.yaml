@@ -1,3 +1,91 @@
 spring:
   application:
     name: PickMeal
+
+  # Database 설정 (PostgreSQL)
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  # JPA/Hibernate 설정
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Redis 설정
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # 비동기(@Async) 스레드 풀 설정
+  task:
+    execution:
+      pool:
+        core-size: 5
+        max-size: 10
+        queue-capacity: 100
+      thread-name-prefix: diet-async-
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        model: gpt-5-nano
+        temperature: 0.3
+
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        # AI 응답은 오래 걸리므로 길게 설정
+        read-timeout: 30000
+
+# Swagger (OpenAPI) 설정
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    groups-order: DESC
+    operations-sorter: alpha
+  api-docs:
+    path: /api-docs
+
+# JWT 및 커스텀 보안 설정
+jwt:
+  access-secret: ${JWT_ACCESS_SECRET:local-test-access-secret-must-be-at-least-32-bytes-long}
+  refresh-secret: ${JWT_REFRESH_SECRET:local-test-refresh-secret-must-be-at-least-32-bytes-long}
+  access-expiration: 1800000 # 30분
+  refresh-expiration: 1209600000 # 14일
+
+# 공공 데이터 포털 api
+external:
+  recipe:
+    public-data:
+      base-url: http://211.237.50.150:7080/openapi
+      api-key: ${PUBLIC_DATA_API_KEY:sample}
+      type: json
+      recipe-info-api-url: Grid_20150827000000000226_1
+      recipe-ingredient-api-url: Grid_20150827000000000227_1
+
+    food-safety:
+      base-url: http://openapi.foodsafetykorea.go.kr/api/
+      api-key: ${FOOD_SAFETY_API_KEY:sample}
+      service-id: COOKRCP01
+      type: json
+
+
+# 로깅 설정
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+debug: true

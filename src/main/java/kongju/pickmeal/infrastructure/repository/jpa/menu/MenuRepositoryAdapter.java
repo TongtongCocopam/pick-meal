@@ -1,0 +1,77 @@
+package kongju.pickmeal.infrastructure.repository.jpa.menu;
+
+import java.util.Set;
+import java.util.List;
+import java.util.Optional;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Repository;
+
+import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.menu.type.DishType;
+import kongju.pickmeal.core.menu.type.MenuCategory;
+import kongju.pickmeal.core.menu.repository.MenuRepository;
+
+
+@Repository
+@RequiredArgsConstructor
+public class MenuRepositoryAdapter implements MenuRepository {
+    private final MenuJpaRepository menuJpaRepository;
+
+    @Override
+    public Optional<Menu> findByExternalRecipeId(Long externalRecipeId) {
+        return menuJpaRepository.findByExternalRecipeId(externalRecipeId);
+    }
+
+    @Override
+    public boolean existsByExternalRecipeId(Long externalRecipeId) {
+        return menuJpaRepository.existsByExternalRecipeId(externalRecipeId);
+    }
+
+    @Override
+    public List<Menu> saveAll(List<Menu> menus) {
+        return menuJpaRepository.saveAll(menus);
+    }
+
+    @Override
+    public Menu save(Menu menu) {
+        return menuJpaRepository.save(menu);
+    }
+
+    @Override
+    public Page<Menu> searchByFilters(MenuCategory category, DishType dishType, String keyword, Pageable pageable) {
+        return menuJpaRepository.searchByFilters(category, dishType, keyword, pageable);
+    }
+
+    @Override
+    public Optional<Menu> findById(Long id) {
+        return menuJpaRepository.findById(id);
+    }
+
+    @Override
+    public List<Menu> findAll() {
+        return menuJpaRepository.findAll();
+    }
+
+    @Override
+    public Page<Menu> searchReplacementMenus(MenuCategory category, DishType dishType, Long menuId, String keyword, Pageable pageable) {
+        return menuJpaRepository.searchReplacementMenus(category, dishType, menuId, keyword, pageable);
+    }
+
+    @Override
+    public void delete(Menu menu) {
+        menuJpaRepository.delete(menu);
+    }
+
+    @Override
+    public List<Menu> findRecommendationCandidatesWithoutAllergy(MenuCategory category, DishType dishType, Long currentMenuId, Set<Long> allergyIngredientIds) {
+        return menuJpaRepository.findRecommendationCandidatesWithoutAllergy(category, dishType, currentMenuId, allergyIngredientIds);
+    }
+
+    @Override
+    public List<Menu> findRecommendationCandidates(MenuCategory category, DishType dishType, Long currentMenuId) {
+        return menuJpaRepository.findRecommendationCandidates(category, dishType, currentMenuId);
+    }
+}
