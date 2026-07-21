@@ -31,6 +31,7 @@ import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.core.diet.type.DietMenuSource;
+import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 import kongju.pickmeal.application.diet.data.DietMenuDto;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
@@ -204,8 +205,14 @@ public class DietService {
      * @return 메뉴 선택
      */
     private @NonNull UserMenuPick getUserMenuPick(Long pickId, User user) {
-        return userMenuPickRepository.findByMenuIdAndUser(pickId, user)
+        UserMenuPick userMenuPick = userMenuPickRepository.findByMenuIdAndUser(pickId, user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "메뉴 선택 내역이 존재하지 않습니다."));
+
+        // 이미 확정 되었다면 변경 불가능
+        if (userMenuPick.getStatus() == UserMenuPickStatus.USED) {
+            throw new BusinessException(ErrorCode.MENU_PICK_ALREADY_USED);
+        }
+        return userMenuPick;
     }
 
     /**
@@ -264,6 +271,15 @@ public class DietService {
         LocalDate endDate = period.endDate();
         validateGenerationRequest(family, startDate, endDate, targetMonthDate);
 
+        // 유저 선택한 메뉴 전부 사용으로 변경
+        List<UserMenuPick> userMenuPicks = userMenuPickRepository.findAllPendingForUpdate(family, targetMonthDate, UserMenuPickStatus.PENDING);
+
+        List<Long> userMenuPickIds = userMenuPicks.stream()
+                .map(UserMenuPick::getId)
+                .toList();
+
+        userMenuPicks.forEach(UserMenuPick::used);
+
         DietGeneration generation = DietGeneration.createPending(
                 family,
                 startDate,
@@ -273,7 +289,7 @@ public class DietService {
         );
 
         DietGeneration saveGeneration = dietGenerationRepository.save(generation);
-        aiDietService.generateDietAsync(userId, saveGeneration.getId(), request, startDate, endDate);
+        aiDietService.generateDietAsync(userId, saveGeneration.getId(), request, startDate, endDate, userMenuPickIds);
 
         return DietGenerationDto.GenerateResponse.builder()
                 .generationId(generation.getId())

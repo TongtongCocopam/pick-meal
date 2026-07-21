@@ -2,7 +2,6 @@ package kongju.pickmeal.application.diet;
 
 import java.util.*;
 import java.time.Period;
-import java.time.YearMonth;
 import java.time.LocalDate;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
@@ -30,7 +29,6 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.user.UserHealthProfile;
 import kongju.pickmeal.core.diet.type.DietMenuSource;
-import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.UserIngredientPreference;
@@ -76,14 +74,15 @@ public class AiDietWorker {
             UUID generationId,
             DietGenerationDto.GenerateRequest request,
             LocalDate startDate,
-            LocalDate endDate
+            LocalDate endDate,
+            List<Long> userMenuPickIds
     ) {
         DietGeneration generation = dietGenerationRepository.findById(generationId)
                 .orElseThrow();
 
         generation.processing();
         // 전처리
-        AiDietGenerateDto.Command command = prepareAiDietGeneration(userId, request, startDate, endDate);
+        AiDietGenerateDto.Command command = prepareAiDietGeneration(userId, request, startDate, endDate, userMenuPickIds);
         // ai호출
         AiDietGenerateDto.Result result = dietAiGenerator.generate(command);
         // 검증
@@ -101,17 +100,17 @@ public class AiDietWorker {
      * @param request 신청 날짜와 끼니 개수
      * @return 질병정보, 건강정보, 메뉴, 선호 비선호 재료 등
      */
-    private AiDietGenerateDto.Command prepareAiDietGeneration(Long userId, DietGenerationDto.GenerateRequest request, LocalDate startDate, LocalDate endDate) {
+    private AiDietGenerateDto.Command prepareAiDietGeneration(
+            Long userId, DietGenerationDto.GenerateRequest request,
+            LocalDate startDate, LocalDate endDate, List<Long> userMenuPickIds) {
         User user = userReader.getById(userId);
         Family family = user.getFamily();
-
-        YearMonth targetMonth = request.targetMonth();
 
         List<User> users = userRepository.findAllFamily(family);
 
         List<AiDietGenerateDto.Disease> diseases = getFamilyDiseases(users);
         List<AiDietGenerateDto.HealthCondition> healthConditions = getFamilyHealthConditions(users);
-        UserMenuPickPreparation userMenuPickPreparation = getUserMenus(users, targetMonth);
+        UserMenuPickPreparation userMenuPickPreparation = getUserMenus(userMenuPickIds);
 
         IngredientPreferenceSummary preferenceSummary = getIngredientPreferenceSummary(users);
 
@@ -474,15 +473,13 @@ public class AiDietWorker {
     /**
      * 유저가 선택한 메뉴
      *
-     * @param users 가족
+     * @param userMenuPickIds 가족 선택 메뉴 아이디
      * @return 유저 선택 메뉴 리스트
      */
-    private UserMenuPickPreparation getUserMenus(List<User> users, YearMonth targetMonth) {
-        LocalDate month = YearMonth.from(targetMonth).atDay(1);
+    private UserMenuPickPreparation getUserMenus(List<Long> userMenuPickIds) {
+        List<UserMenuPick> userMenuPicks = userMenuPickRepository.findAllByIdInFetchMenu(userMenuPickIds);
 
-        List<UserMenuPick> userMenuPicks =
-                userMenuPickRepository.findAllByUserInAndTargetMonthAndStatusFetchMenu(users, month, UserMenuPickStatus.PENDING);
-
+        // 중복 제거
         List<Menu> pickedMenus = userMenuPicks.stream()
                 .map(UserMenuPick::getMenu)
                 .collect(Collectors.toMap(
@@ -494,9 +491,11 @@ public class AiDietWorker {
                 .stream()
                 .toList();
 
+        // 재료와 메뉴 연결
         Map<Long, List<MenuIngredient>> menuIngredientMap =
                 getMenuIngredientMap(pickedMenus);
 
+        // ai에게 넘겨줄 객체
         List<AiDietGenerateDto.UserMenu> userMenus = userMenuPicks.stream()
                 .map(userMenuPick -> {
                     Menu menu = userMenuPick.getMenu();
@@ -516,7 +515,6 @@ public class AiDietWorker {
                             .ingredients(ingredients)
                             .build();
                 })
-                .distinct()
                 .toList();
 
         return UserMenuPickPreparation.builder()
