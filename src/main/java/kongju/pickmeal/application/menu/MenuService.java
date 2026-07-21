@@ -171,7 +171,6 @@ public class MenuService {
         checkFamily(user);
 
         Menu menu = Menu.createFamilyMenu(
-                null,
                 request.menuName(),
                 request.category(),
                 request.dishType(),
