@@ -9,4 +9,6 @@ import kongju.pickmeal.core.user.UserPickCount;
 public interface UserPickCountRepository{
     UserPickCount save(UserPickCount userPickCount);
     Optional<UserPickCount> findByUser(User user);
+    Optional<UserPickCount> findByUserForUpdate(User user);
+
 }

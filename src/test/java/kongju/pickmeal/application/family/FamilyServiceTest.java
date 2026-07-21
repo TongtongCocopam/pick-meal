@@ -38,7 +38,6 @@ import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 import static kongju.pickmeal.support.fixture.FamilyFixture.family;
-import static kongju.pickmeal.support.fixture.FamilyFixture.familyWithId;
 
 
 @ExtendWith(SpringExtension.class)
@@ -154,8 +153,7 @@ public class FamilyServiceTest {
 
             User user = user();
 
-            Family family = Family.builder()
-                    .build();
+            Family family = family();
             given(userReader.getById(any())).willReturn(user);
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
@@ -179,8 +177,8 @@ public class FamilyServiceTest {
 
             User user = user();
 
-            Family family = Family.builder()
-                    .build();
+            Family family = family();
+
             given(userReader.getById(any())).willReturn(user);
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
@@ -221,11 +219,7 @@ public class FamilyServiceTest {
 
             given(userReader.getById(any())).willReturn(user);
 
-            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                    .family(family)
-                    .status(ApplyStatus.PENDING)
-                    .user(user)
-                    .build();
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user, family);
 
             List<FamilyJoinRequest> familyJoinRequestList = new ArrayList<>();
             familyJoinRequestList.add(familyJoinRequest);
@@ -292,12 +286,9 @@ public class FamilyServiceTest {
             Family family = family();
             user.joinFamilyLeader(family);
 
-            Family family1 = Family.builder().build();
+            Family family1 = family();
             User user2 = user("custom", "custom1234@gmail.com", "냠냠짬", "password1234");
-            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                    .family(family1)
-                    .user(user2)
-                    .build();
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user2, family1);
 
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
@@ -326,10 +317,8 @@ public class FamilyServiceTest {
             User user2 = user("custom", "custom1234@gmail.com", "배고파", "password1234");
             user2.joinFamilyLeader(family);
 
-            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                    .family(family)
-                    .user(user2)
-                    .build();
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user2, family);
+
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
             BusinessException exception = assertThrows(
@@ -355,10 +344,7 @@ public class FamilyServiceTest {
 
             User user2 = user("custom", "custom1234@gmail.com", "배불러", "password1234");
 
-            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                    .family(family)
-                    .user(user2)
-                    .build();
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user2, family);
 
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
@@ -468,9 +454,9 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("성공 케이스")
         public void should_success_get_members() {
-            User user = user("testUser1", "test1111@gmail.com", "유저1", "password1234");
-            User user2 = user("testUser2", "test2222@gmail.com", "유저2", "password1234");
-            User user3 = user("testUser3", "test3333@gmail.com", "유저3", "password1234");
+            User user = user("유저1", "testUser1", "test1111@gmail.com", "password1234");
+            User user2 = user("유저2", "testUser2", "test2222@gmail.com", "password1234");
+            User user3 = user("유저3", "testUser3", "test3333@gmail.com", "password1234");
 
             given(userReader.getById(any())).willReturn(user);
 
@@ -533,8 +519,8 @@ public class FamilyServiceTest {
         @DisplayName("성공 케이스")
         public void should_success_disband_family() {
             User user = user();
-            Family family = Family.builder()
-                    .build();
+            Family family = family();
+
             user.joinFamilyLeader(family);
 
             given(userReader.getById(any())).willReturn(user);
@@ -589,8 +575,8 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("성공 케이스")
         public void should_success_kick_member() {
-            User member = user("test", "test1234@gmail.com", "testNickname", "password1234");
-            User leader = user("test1", "test12222@gmail.com", "testNickname1", "password1234");
+            User member = user("testNickname", "test", "test1234@gmail.com", "password1234");
+            User leader = user("testNickname1", "test1", "test12222@gmail.com", "password1234");
             given(userReader.getById(1L)).willReturn(member);
             given(userReader.getById(2L)).willReturn(leader);
 
@@ -685,13 +671,13 @@ public class FamilyServiceTest {
             Long userId = 2L;
 
             User user = user();
-            Family family = familyWithId("family", 1L);
+            Family family = family("family");
             user.joinFamilyLeader(family);
 
             given(userReader.getById(leaderId)).willReturn(user);
 
             User user2 = user("test22", "test2222@gmail.com", "testNickname", "password1234");
-            Family family2 = familyWithId("family2", 2L);
+            Family family2 = family("family2");
             user2.joinFamilyLeader(family2);
 
             given(userReader.getById(userId)).willReturn(user2);
@@ -722,7 +708,7 @@ public class FamilyServiceTest {
             Long userId = 2L;
 
             User user = user();
-            Family family = familyWithId("family", 1L);
+            Family family = family("family");
             user.joinFamilyLeader(family);
 
             given(userReader.getById(leaderId)).willReturn(user);
@@ -792,7 +778,7 @@ public class FamilyServiceTest {
             Long leaderId = 1L;
 
             User leader = user();
-            Family family = familyWithId("family", 1L);
+            Family family = family("family");
             leader.joinFamilyLeader(family);
 
             given(userReader.getById(leaderId)).willReturn(leader);

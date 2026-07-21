@@ -149,7 +149,7 @@ public class MenuServiceTest {
                                     FamilyCustomMenuDto.IngredientRequest.builder()
                                             .ingredientId(1L)
                                             .ingredientName("소금")
-                                            .quantity(3.0)
+                                            .quantity(BigDecimal.valueOf(3.0))
                                             .unit(IngredientUnit.G)
                                             .type(IngredientType.SEASONING)
                                             .build()
@@ -189,7 +189,7 @@ public class MenuServiceTest {
                                     FamilyCustomMenuDto.IngredientRequest.builder()
                                             .ingredientId(1L)
                                             .ingredientName("소금")
-                                            .quantity(3.0)
+                                            .quantity(BigDecimal.valueOf(3.0))
                                             .unit(IngredientUnit.G)
                                             .type(IngredientType.SEASONING)
                                             .build()
@@ -241,7 +241,7 @@ public class MenuServiceTest {
             given(userReader.getById(userId)).willReturn(user);
 
             Family family1 = FamilyFixture.family();
-            Menu menu = Menu.createFamilyMenu(null,
+            Menu menu = Menu.createFamilyMenu(
                     "된장국",
                     MenuCategory.KOREAN,
                     DishType.MAIN_DISH,
@@ -270,7 +270,7 @@ public class MenuServiceTest {
             user.joinFamilyLeader(family);
             given(userReader.getById(userId)).willReturn(user);
 
-            Menu menu = Menu.createFamilyMenu(null,
+            Menu menu = Menu.createFamilyMenu(
                     "된장국",
                     MenuCategory.KOREAN,
                     DishType.MAIN_DISH,

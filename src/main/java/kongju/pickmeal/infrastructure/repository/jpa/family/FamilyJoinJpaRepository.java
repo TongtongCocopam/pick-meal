@@ -29,9 +29,4 @@ public interface FamilyJoinJpaRepository extends JpaRepository<FamilyJoinRequest
     )
     List<FamilyJoinRequest> findAllByFamilyAndStatus(Family family, ApplyStatus status);
 
-    @Query("SELECT ja FROM FamilyJoinRequest ja " +
-            "JOIN FETCH ja.user AND " +
-            "WHERE ja.family = :family"
-    )
-    Optional<FamilyJoinRequest> findByIdAndFamily(Long id, Long family);
 }

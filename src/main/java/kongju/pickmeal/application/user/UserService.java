@@ -57,18 +57,11 @@ public class UserService {
         // 비밀번호 해시 저장
         String password = passwordEncoder.encode(request.password());
 
-        User user = User.builder()
-                .loginId(request.loginId())
-                .email(request.email())
-                .password(password)
-                .birthDate(request.birthDate())
-                .nickname(request.nickname())
-                .build();
-
-        UserPickCount userPickCount = UserPickCount.initialize(user);
-        userPickCountRepository.save(userPickCount);
-
+        User user = User.create(request.nickname(), request.birthDate(), request.loginId(), request.email(), password);
         User savedUser = userRepository.save(user);
+
+        UserPickCount userPickCount = UserPickCount.initialize(savedUser);
+        userPickCountRepository.save(userPickCount);
 
         return UserDto.SignupResponse.builder()
                 .userId(savedUser.getId())
@@ -130,12 +123,7 @@ public class UserService {
         List<UserDisease> userDiseases = Objects.requireNonNull(diseases)
                 .stream()
                 .map(disease ->
-                        UserDisease.builder()
-                                .category(disease.category())
-                                .description(disease.description())
-                                .detailName(disease.detailName())
-                                .user(user)
-                                .build()
+                        UserDisease.create(disease.category(), disease.detailName(), disease.description(), user)
                 )
                 .toList();
 
@@ -167,8 +155,9 @@ public class UserService {
 
     /**
      * 재료 선호도 업데이트
+     *
      * @param request 선호도 정보
-     * @param userId 유저 아이디
+     * @param userId  유저 아이디
      */
     public void updateIngredientPreference(UserDietProfileDto.UpdateIngredientPreferenceRequest request, Long userId) {
         User user = userReader.getById(userId);
@@ -254,9 +243,7 @@ public class UserService {
         User user = userReader.getById(userId);
 
         UserHealthProfile health = userHealthRepository.findByUser(user)
-                .orElseGet(() -> UserHealthProfile.builder()
-                        .user(user)
-                        .build());
+                .orElseGet(() -> UserHealthProfile.create(null, null, null, user));
 
         health.update(
                 request.gender(),
@@ -305,23 +292,24 @@ public class UserService {
 
     /**
      * 비밀번호 변경
+     *
      * @param request 변경할 비밀번호, 기존 비밀번호
-     * @param userId 유저
+     * @param userId  유저
      */
     public void updatePassword(UserPasswordDto.UpdateRequest request, Long userId) {
         User user = userReader.getById(userId);
         // 현재 비빌번호 일치 확인
-        if(!passwordEncoder.matches(request.currentPassword(), user.getPassword())){
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
         }
 
         // 새 비밀번호 확인과 일치하는지 확인하고 저장
-        if(!request.newPassword().equals(request.confirmPassword())){
+        if (!request.newPassword().equals(request.confirmPassword())) {
             throw new BusinessException(ErrorCode.MISMATCH_CONFIRM_PASSWORD);
         }
 
         // 현재 비밀번호와 새 비밀번호가 같은지 확인
-        if(passwordEncoder.matches(request.newPassword(), user.getPassword())){
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
             throw new BusinessException(ErrorCode.SAME_AS_OLD_PASSWORD);
         }
 

@@ -6,7 +6,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.validation.constraints.Size;
 
 import kongju.pickmeal.core.common.BaseTimeEntity;
 
@@ -15,9 +14,8 @@ import kongju.pickmeal.core.common.BaseTimeEntity;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Ingredient extends BaseTimeEntity {
-    @Column(unique = true, nullable = false)
-    @Size(min = 1, max = 100)
-    String name;
+    @Column(unique = true, nullable = false, length = 100)
+    private String name;
 
     @Builder(access = AccessLevel.PRIVATE)
     public Ingredient(String name) {

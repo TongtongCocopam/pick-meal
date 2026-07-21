@@ -92,10 +92,11 @@ public class DietService {
                 .map(menuId -> {
                     Menu menu = getMenu(menuId);
 
+                    UUID uuid = UUID.randomUUID();
                     debitPickCount(user, count);
-                    debitHistory(user, count, UUID.randomUUID());
+                    debitHistory(user, count, uuid);
 
-                    return UserMenuPick.create(user, menu, targetMonth.atDay(1));
+                    return UserMenuPick.create(user, menu, targetMonth.atDay(1), uuid);
                 })
                 .toList();
 
@@ -135,7 +136,7 @@ public class DietService {
      * @param count 개수
      */
     private void debitPickCount(User user, Long count) {
-        UserPickCount userPickCount = userPickCountRepository.findByUser(user)
+        UserPickCount userPickCount = userPickCountRepository.findByUserForUpdate(user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "유저 선택권 정보를 찾을 수 없습니다."));
 
         userPickCount.useCount(count);
@@ -223,6 +224,15 @@ public class DietService {
 
         Long menuId = userMenuPick.getMenu().getId();
         userMenuPickRepository.delete(userMenuPick);
+
+        Long count = 1L;
+        PickCountHistory pickCountHistory = PickCountHistory.refund(user, count, userMenuPick.getTransactionId());
+
+        UserPickCount userPickCount = userPickCountRepository.findByUser(user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        pickCountHistoryRepository.save(pickCountHistory);
+        userPickCount.restoreCount(count);
 
         return MenuPickDto.DeleteResponse.builder()
                 .menuId(menuId)
@@ -598,7 +608,7 @@ public class DietService {
     private void addTotalIngredient(
             Map<String, DietDto.IngredientsResponse> totalIngredientMap,
             Ingredient ingredient,
-            Double quantity,
+            BigDecimal quantity,
             IngredientUnit unit
     ) {
         // 재료 아이디와 단위가 같은 경우
@@ -626,19 +636,24 @@ public class DietService {
     }
 
     /**
-     * Double 계산
+     * BigDecimal 계산
      *
      * @param a 숫자
      * @param b 숫자
      * @return null이 아니라면 더함
      */
-    private Double addNullable(Double a, Double b) {
+    private BigDecimal addNullable(BigDecimal a, BigDecimal b) {
         if (a == null && b == null) {
             return null;
         }
-        if (a == null) return b;
-        if (b == null) return a;
-        return a + b;
+        if (a == null) {
+            return b;
+        }
+        if (b == null) {
+            return a;
+        }
+
+        return a.add(b);
     }
 
     /**

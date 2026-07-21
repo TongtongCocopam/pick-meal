@@ -5,19 +5,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 public class FamilyFixture {
     public static Family family(){
-        return Family.builder()
-                .familyName("Family")
-                .invitationCode("1234asdf")
-                .build();
+        return Family.create("Family", "1234asdf");
+
     }
 
-    public static Family familyWithId(String familyName, Long id) {
-        Family family = Family.builder()
-                .familyName(familyName)
-                .invitationCode("1234asdf")
-                .build();
+    public static Family family(String familyName) {
 
-        ReflectionTestUtils.setField(family, "id", id);
-        return family;
+        return Family.create(familyName, "1234asdf");
     }
 }

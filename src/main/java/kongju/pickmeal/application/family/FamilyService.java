@@ -47,11 +47,8 @@ public class FamilyService {
         // 초대 코드 생성
         String invitationCode = invitationCodeGenerator.generateUniqueCode();
         // 가족 엔티티 생성
-        Family family = Family.builder()
-                .familyName(request.familyName())
-                .invitationCode(invitationCode)
-                .leaderId(userId)
-                .build();
+        Family family = Family.create(request.familyName(), invitationCode);
+
         // 저장
         familyRepository.save(family);
         // 현재 유저를 리더로 가족 아이디와 연결
@@ -78,11 +75,7 @@ public class FamilyService {
         Family family = validationJoinRequest(request.invitationCode(), user);
 
         // 신청 테이블 만들기
-        FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                .user(user)
-                .family(family)
-                .status(ApplyStatus.PENDING)
-                .build();
+        FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user, family);
 
         familyJoinRepository.save(familyJoinRequest);
     }
@@ -330,7 +323,7 @@ public class FamilyService {
 
         // member가 없으면 없애기
         familyRepository.delete(family);
-        user.deleteFamilyLeader();
+        user.leaveFamily();
     }
 
     /**
@@ -351,7 +344,7 @@ public class FamilyService {
         }
 
         // 멤버 제거, 권한 제거
-        member.deleteFamilyMember();
+        member.leaveFamily();
         return FamilyMemberDto.KickResponse.builder()
                 .kickedNickname(member.getNickname())
                 .build();
@@ -368,7 +361,7 @@ public class FamilyService {
         validationFamily(user);
 
         // 권한 변경
-        user.deleteFamilyMember();
+        user.leaveFamily();
     }
 
     /**

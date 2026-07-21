@@ -10,6 +10,8 @@ import kongju.pickmeal.core.common.BaseEntity;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.core.menu.type.IngredientType;
 
+import java.math.BigDecimal;
+
 
 @Entity
 @Getter
@@ -18,24 +20,24 @@ import kongju.pickmeal.core.menu.type.IngredientType;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_menu_ingredient",
-                        columnNames = {"menu_id", "ingredient_id"}
+                        columnNames = {"menu_id", "ingredient_id", "ingredient_type"}
                 )
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MenuIngredient extends BaseEntity {
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "menu_id", nullable = false)
     private Menu menu;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ingredient_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ingredient_id", nullable = false)
     private Ingredient ingredient;
 
     @Column(name = "quantity_text", length = 100)
     private String quantityText;
 
-    private Double quantity;
+    private BigDecimal quantity;
 
     @Enumerated(EnumType.STRING)
     private IngredientUnit unit;
@@ -45,8 +47,8 @@ public class MenuIngredient extends BaseEntity {
     private IngredientType ingredientType;
 
     @Builder(access = AccessLevel.PRIVATE)
-    public MenuIngredient(Menu menu, Ingredient ingredient, String quantityText,
-                          Double quantity, IngredientUnit unit,  IngredientType ingredientType
+    private MenuIngredient(Menu menu, Ingredient ingredient, String quantityText,
+                           BigDecimal quantity, IngredientUnit unit, IngredientType ingredientType
     ) {
         this.menu = menu;
         this.ingredient = ingredient;
@@ -60,10 +62,10 @@ public class MenuIngredient extends BaseEntity {
             Menu menu,
             Ingredient ingredient,
             String quantityText,
-            Double quantity,
+            BigDecimal quantity,
             IngredientUnit unit,
             IngredientType ingredientType
-    ){
+    ) {
         return MenuIngredient.builder()
                 .menu(menu)
                 .ingredient(ingredient)

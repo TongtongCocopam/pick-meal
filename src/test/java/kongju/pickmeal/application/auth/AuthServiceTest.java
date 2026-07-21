@@ -1,6 +1,7 @@
 package kongju.pickmeal.application.auth;
 
 import java.util.Optional;
+import java.time.LocalDate;
 import java.util.concurrent.TimeUnit;
 
 import org.mockito.Mock;
@@ -90,10 +91,7 @@ public class AuthServiceTest {
                     .loginId("test1234")
                     .password("password1234")
                     .build();
-            User user = User.builder()
-                    .loginId("test1234")
-                    .password("password1234")
-                    .build();
+            User user = User.create("nickname", LocalDate.parse("2003-12-30"), "test1234", "dldld@naver.com", "password1234");
 
             given(userRepository.findByLoginId("test1234")).willReturn(Optional.of(user));
 
@@ -273,7 +271,7 @@ public class AuthServiceTest {
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
             given(valueOperations.get("rt:test1234")).willReturn("oldRefreshToken");
             // 유저 객체 반환
-            given(userRepository.findByLoginId(anyString())).willReturn(Optional.ofNullable(user));
+            given(userRepository.findByLoginId(anyString())).willReturn(Optional.of(user));
 
             given(jwtService.createAccessToken(user)).willReturn("newAccessToken");
             given(jwtService.createRefreshToken(user)).willReturn("newRefreshToken");

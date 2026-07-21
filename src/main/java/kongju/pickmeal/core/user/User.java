@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 
 import lombok.*;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Past;
-import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.LastModifiedDate;
 
 import kongju.pickmeal.core.family.Family;
@@ -23,19 +21,23 @@ import kongju.pickmeal.common.exception.BusinessException;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String nickname;
+
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private UserRole role;
-    @NotNull
-    @Past(message = "생년월일은 미래일 수 없습니다.")
+
+    @Column(nullable = false)
     private LocalDate birthDate;
-    @Column(nullable = false, unique = true)
+
+    @Column(nullable = false, unique = true, length = 15)
     private String loginId;
+
     @Column(nullable = false)
     private String password;
-    @Column(nullable = false)
+
+    @Column(nullable = false, unique = true, length = 100)
     private String email;
 
     @LastModifiedDate
@@ -45,8 +47,8 @@ public class User extends BaseTimeEntity {
     @JoinColumn(name = "family_id")
     private Family family;
 
-    @Builder
-    public User(String nickname, LocalDate birthDate, String loginId, String email, String password){
+    @Builder(access = AccessLevel.PRIVATE)
+    private User(String nickname, LocalDate birthDate, String loginId, String email, String password){
         this.nickname = nickname;
         this.birthDate = birthDate;
         this.loginId = loginId;
@@ -55,28 +57,37 @@ public class User extends BaseTimeEntity {
         this.role = UserRole.GUEST;
     }
 
+    public static User create(String nickname, LocalDate birthDate, String loginId, String email, String password){
+        return User.builder()
+                .nickname(nickname)
+                .birthDate(birthDate)
+                .loginId(loginId)
+                .email(email)
+                .password(password)
+                .build();
+    }
+
     public void joinFamilyLeader(Family family){
-        if(this.family != null){
-            throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
-        }
+        validateNotJoinedFamily();
+
         this.family = family;
         this.role = UserRole.LEADER;
     }
 
     public void joinFamilyMember(Family family){
-        if(this.family != null){
-            throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
-        }
+        validateNotJoinedFamily();
+
         this.family = family;
         this.role = UserRole.MEMBER;
     }
 
-    public void deleteFamilyLeader(){
-        this.role = UserRole.GUEST;
-        this.family = null;
+    private void validateNotJoinedFamily() {
+        if (family != null) {
+            throw new BusinessException(ErrorCode.ALREADY_HAS_FAMILY);
+        }
     }
 
-    public void deleteFamilyMember(){
+    public void leaveFamily() {
         this.role = UserRole.GUEST;
         this.family = null;
     }
