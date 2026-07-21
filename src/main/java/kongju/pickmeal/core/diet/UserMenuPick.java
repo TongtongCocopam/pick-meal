@@ -64,4 +64,10 @@ public class UserMenuPick extends BaseTimeEntity {
     public void used() {
         this.status = UserMenuPickStatus.USED;
     }
+
+    public void rollbackUse() {
+        if (this.status == UserMenuPickStatus.USED) {
+            this.status = UserMenuPickStatus.PENDING;
+        }
+    }
 }
