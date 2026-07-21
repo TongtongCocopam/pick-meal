@@ -23,7 +23,7 @@ public class IngredientMenuParser {
      * @param quantityText 용량
      * @return 재료 용량 반환
      */
-    public Double parseQuantity(String quantityText) {
+    public BigDecimal parseQuantity(String quantityText) {
         if (quantityText == null || quantityText.isBlank()) {
             return null;
         }
@@ -41,7 +41,7 @@ public class IngredientMenuParser {
         }
 
         try {
-            return Double.parseDouble(number);
+            return new BigDecimal(number);
         } catch (NumberFormatException e) {
             return null;
         }
