@@ -10,10 +10,10 @@ import lombok.AccessLevel;
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.diet.type.DietGenerationStatus;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity

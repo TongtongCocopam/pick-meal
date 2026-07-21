@@ -1,5 +1,6 @@
 package kongju.pickmeal.core.diet;
 
+import java.util.UUID;
 import java.time.LocalDate;
 
 import lombok.Getter;
@@ -34,20 +35,25 @@ public class UserMenuPick extends BaseTimeEntity {
     @Column(nullable = false)
     private LocalDate targetMonth;
 
+    @Column(name = "transaction_id", nullable = false, unique = true)
+    private UUID transactionId;
+
     @Builder(access = AccessLevel.PRIVATE)
-    private UserMenuPick(User user, Menu menu, UserMenuPickStatus status, LocalDate targetMonth) {
+    private UserMenuPick(User user, Menu menu, UserMenuPickStatus status, LocalDate targetMonth, UUID transactionId) {
         this.user = user;
         this.menu = menu;
         this.status = status;
         this.targetMonth = targetMonth;
+        this.transactionId = transactionId;
     }
 
-    public static UserMenuPick create(User user, Menu menu, LocalDate targetMonth) {
+    public static UserMenuPick create(User user, Menu menu, LocalDate targetMonth, UUID transactionId) {
         return UserMenuPick.builder()
                 .menu(menu)
                 .user(user)
                 .status(UserMenuPickStatus.PENDING)
                 .targetMonth(targetMonth)
+                .transactionId(transactionId)
                 .build();
     }
 

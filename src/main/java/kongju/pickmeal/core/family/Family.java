@@ -24,18 +24,23 @@ public class Family extends BaseTimeEntity {
     @Column(nullable = false, unique = true)
     private String invitationCode;
     private Long pickCount = 0L;
-    private Long leaderId;
     private LocalDateTime invitationCodeUpdatedAt;
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    @Builder
-    public Family(String familyName, String invitationCode, Long leaderId) {
+    @Builder(access =  AccessLevel.PRIVATE)
+    private Family(String familyName, String invitationCode) {
         this.familyName = familyName;
         this.invitationCode = invitationCode;
         this.pickCount = 0L;
-        this.leaderId = leaderId;
+    }
+
+    public static Family create(String familyName, String invitationCode) {
+        return Family.builder()
+                .familyName(familyName)
+                .invitationCode(invitationCode)
+                .build();
     }
 
     /**
