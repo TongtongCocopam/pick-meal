@@ -30,6 +30,7 @@ public class UserDto {
             String nickname,
             @NotNull
             @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+            @Past(message = "생년월일은 미래일 수 없습니다.")
             LocalDate birthDate
             ){}
 
