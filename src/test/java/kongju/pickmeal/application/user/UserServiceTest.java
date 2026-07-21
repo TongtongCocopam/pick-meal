@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.stream.LongStream;
 
-import kongju.pickmeal.core.user.repository.*;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -29,6 +28,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import kongju.pickmeal.core.user.*;
 import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.user.type.Gender;
+import kongju.pickmeal.core.user.repository.*;
 import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.type.DiseaseName;
@@ -126,9 +126,9 @@ public class UserServiceTest {
             given(userRepository.existsByLoginId(any())).willReturn(false);
             given(userRepository.existsByEmail(any())).willReturn(false);
 
-
+            String hashPassword = "hash_pw";
             // 비밀번호 암호화
-            given(passwordEncoder.encode(anyString())).willReturn("hash_pw");
+            given(passwordEncoder.encode(anyString())).willReturn(hashPassword);
 
             User mockUser = user();
             given(userRepository.save(any(User.class))).willReturn(mockUser);
@@ -141,7 +141,7 @@ public class UserServiceTest {
 
             // 가져온 객체 꺼내기
             User savedUser = user.getValue();
-            assertThat(savedUser.getPassword()).isEqualTo("hash_pw");
+            assertThat(savedUser.getPassword()).isEqualTo(hashPassword);
             assertThat(response.nickname()).isEqualTo(request.nickname());
         }
     }
