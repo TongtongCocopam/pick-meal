@@ -78,7 +78,7 @@ public class DietDto {
     public record IngredientsResponse(
             Long ingredientId,
             String name,
-            Double quantity,
+            BigDecimal quantity,
             IngredientUnit unit
     ) {
     }
