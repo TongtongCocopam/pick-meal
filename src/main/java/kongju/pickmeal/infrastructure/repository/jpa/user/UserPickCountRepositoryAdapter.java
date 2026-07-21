@@ -24,4 +24,9 @@ public class UserPickCountRepositoryAdapter implements UserPickCountRepository {
     public Optional<UserPickCount> findByUser(User user) {
         return userPickCountJpaRepository.findByUser(user);
     }
+
+    @Override
+    public Optional<UserPickCount> findByUserForUpdate(User user) {
+        return userPickCountJpaRepository.findByUserForUpdate(user);
+    }
 }
