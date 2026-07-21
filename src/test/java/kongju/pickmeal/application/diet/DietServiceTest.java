@@ -1,25 +1,22 @@
 package kongju.pickmeal.application.diet;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.Optional;
 import java.time.YearMonth;
 import java.time.LocalDate;
-import java.util.Set;
+import java.math.BigDecimal;
 
-import kongju.pickmeal.core.user.UserIngredientPreference;
-import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
-import kongju.pickmeal.core.user.repository.UserRepository;
-import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -50,14 +47,18 @@ import kongju.pickmeal.support.fixture.FamilyFixture;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
+import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.application.diet.data.DietMenuDto;
+import kongju.pickmeal.core.user.UserIngredientPreference;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.diet.repository.DietRepository;
+import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
+import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 
 @ExtendWith(SpringExtension.class)
@@ -144,7 +145,7 @@ public class DietServiceTest {
             given(menuRepository.findById(any())).willReturn(Optional.of(menu));
 
             UserPickCount userPickCount = UserPickCount.initialize(user);
-            given(userPickCountRepository.findByUser(any())).willReturn(Optional.of(userPickCount));
+            given(userPickCountRepository.findByUserForUpdate(any())).willReturn(Optional.of(userPickCount));
 
             given(pickCountHistoryRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
@@ -182,14 +183,15 @@ public class DietServiceTest {
             userPickCount.restoreCount(5L);
 
             // 개수 차감할 객체
-            given(userPickCountRepository.findByUser(user)).willReturn(Optional.of(userPickCount));
+            given(userPickCountRepository.findByUserForUpdate(user)).willReturn(Optional.of(userPickCount));
             // 히스토리 저장
             given(pickCountHistoryRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
+
             given(userMenuPickRepository.saveAll(anyList()))
                     .willReturn(
-                            List.of(UserMenuPick.create(user, menu1, targetMonth),
-                                    UserMenuPick.create(user, menu2, targetMonth)));
+                            List.of(UserMenuPick.create(user, menu1, targetMonth, UUID.randomUUID()),
+                                    UserMenuPick.create(user, menu2, targetMonth, UUID.randomUUID())));
 
             MenuPickDto.CreateResponse response = dietService.menuPick(userId, request);
 
@@ -250,7 +252,7 @@ public class DietServiceTest {
             given(userReader.getById(any())).willReturn(user);
 
             Menu menu = MenuFixture.menu();
-            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth, UUID.randomUUID());
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
 
             given(menuRepository.findById(any())).willReturn(Optional.empty());
@@ -276,7 +278,7 @@ public class DietServiceTest {
 
             Menu menu = MenuFixture.menu();
             given(menuRepository.findById(pickId)).willReturn(Optional.of(menu));
-            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth, UUID.randomUUID());
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
 
             BusinessException exception = assertThrows(BusinessException.class,
@@ -304,7 +306,7 @@ public class DietServiceTest {
             given(menuRepository.findById(any())).willReturn(Optional.of(menu));
 
             Menu menu1 = MenuFixture.menu("마라탕");
-            UserMenuPick userMenuPick = UserMenuPick.create(user, menu1, targetMonth);
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu1, targetMonth, UUID.randomUUID());
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
 
             MenuPickDto.UpdateResponse response = dietService.updatePickMenu(userId, pickId, request);
@@ -359,8 +361,17 @@ public class DietServiceTest {
             given(userReader.getById(any())).willReturn(user);
 
             Menu menu = MenuFixture.menu();
-            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth);
+            UUID transactionId = UUID.randomUUID();
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth, transactionId);
+
             given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
+
+            UserPickCount userPickCount = UserPickCount.initialize(user);
+            given(userPickCountRepository.findByUser(user)).willReturn(Optional.of(userPickCount));
+
+            given(pickCountHistoryRepository.save(any()))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
             MenuPickDto.DeleteResponse response = dietService.deletePickMenu(userId, pickId);
 
             assertEquals(menu.getId(), response.menuId());
@@ -468,10 +479,10 @@ public class DietServiceTest {
             Ingredient kimchi = Ingredient.create("김치");
             Ingredient egg = Ingredient.create("계란");
             given(menuIngredientRepository.findAllByMenuWithIngredient(menu1))
-                    .willReturn(List.of(MenuIngredient.create(menu1, kimchi, "100.0", 100.0, IngredientUnit.G, IngredientType.MAIN)));
+                    .willReturn(List.of(MenuIngredient.create(menu1, kimchi, "100.0", BigDecimal.valueOf(100.0), IngredientUnit.G, IngredientType.MAIN)));
 
             given(menuIngredientRepository.findAllByMenuWithIngredient(menu2))
-                    .willReturn(List.of(MenuIngredient.create(menu2, egg, "2.0", 2.0, IngredientUnit.PIECE, IngredientType.SUB)));
+                    .willReturn(List.of(MenuIngredient.create(menu2, egg, "2.0", BigDecimal.valueOf(2.0), IngredientUnit.PIECE, IngredientType.SUB)));
 
             DietDto.DailyDetailResponse response =
                     dietService.getDailyMeals(userId, date);
@@ -681,7 +692,7 @@ public class DietServiceTest {
 
     @Nested
     @DisplayName("대체 식단 상세 정보")
-    class ReplaceMenuDetails{
+    class ReplaceMenuDetails {
         @Test
         @DisplayName("내 가족 식단인지 확인")
         public void should_fail_replace_menu_detail_when_not_my_family() {
@@ -759,7 +770,7 @@ public class DietServiceTest {
 
         @Test
         @DisplayName("성공케이스")
-        public void should_success_replace_menu_detail(){
+        public void should_success_replace_menu_detail() {
             Long userId = 1L;
             Long dietId = 2L;
             Long menuId = 3L;
@@ -785,7 +796,7 @@ public class DietServiceTest {
 
     @Nested
     @DisplayName("대체 메뉴 추천")
-    class MenuSuggestion{
+    class MenuSuggestion {
         @Test
         @DisplayName("식단을 찾을 수 없음")
         public void should_fail_menu_suggestion_when_diet_not_found() {
@@ -824,7 +835,7 @@ public class DietServiceTest {
             member1.joinFamilyMember(family);
             member2.joinFamilyMember(family);
 
-            List<User> users = List.of(user, member1,  member2);
+            List<User> users = List.of(user, member1, member2);
             given(userRepository.findAllFamily(family)).willReturn(users);
 
             Ingredient ingredient = Ingredient.create("감자");
@@ -844,7 +855,7 @@ public class DietServiceTest {
 
             given(menuRepository.findRecommendationCandidatesWithoutAllergy(any(), any(), any(), anySet())).willReturn(List.of(menu2, menu3, menu4));
 
-            MenuIngredient menuIngredient = MenuIngredient.create(menu2, ingredient, "14g", 14.0, IngredientUnit.G, IngredientType.SUB);
+            MenuIngredient menuIngredient = MenuIngredient.create(menu2, ingredient, "14g", BigDecimal.valueOf(14.0), IngredientUnit.G, IngredientType.SUB);
 
             given(menuIngredientRepository.findAllByMenuWithIngredient(any())).willReturn(List.of(menuIngredient));
 
