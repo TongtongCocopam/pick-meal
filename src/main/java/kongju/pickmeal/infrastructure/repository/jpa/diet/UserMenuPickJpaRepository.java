@@ -45,4 +45,6 @@ public interface UserMenuPickJpaRepository extends JpaRepository<UserMenuPick, L
                 where ump.id in :ids
             """)
     List<UserMenuPick> findAllByIdInForUpdate(List<Long> ids);
+
+    void deleteAllByUser(User user);
 }
