@@ -18,4 +18,6 @@ public interface FamilyJoinRepository {
     FamilyJoinRequest save(FamilyJoinRequest familyJoinRequest);
 
     Optional<FamilyJoinRequest> findById(Long id);
+
+    void deleteByUser(User user);
 }

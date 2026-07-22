@@ -38,4 +38,9 @@ public class FamilyJoinRepositoryAdapter implements FamilyJoinRepository {
     public Optional<FamilyJoinRequest> findById(Long id) {
         return familyJoinJpaRepository.findById(id);
     }
+
+    @Override
+    public void deleteByUser(User user) {
+        familyJoinJpaRepository.deleteByUser(user);
+    }
 }
