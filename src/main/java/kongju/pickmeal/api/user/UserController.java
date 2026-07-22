@@ -12,6 +12,7 @@ import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.application.user.UserService;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
 import kongju.pickmeal.api.security.CustomUserDetails;
+import kongju.pickmeal.application.user.data.UserDto.WithdrawRequest;
 
 
 @RestController
@@ -81,6 +82,15 @@ public class UserController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         userService.updatePassword(request, userDetails.id());
+        return ResponseEntity
+                .ok(ApiResponse.success());
+    }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid WithdrawRequest request) {
+        userService.deleteUser(userDetails.id(), request);
         return ResponseEntity
                 .ok(ApiResponse.success());
     }
