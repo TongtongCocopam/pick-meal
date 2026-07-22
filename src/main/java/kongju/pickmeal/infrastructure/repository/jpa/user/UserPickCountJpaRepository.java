@@ -1,13 +1,15 @@
 package kongju.pickmeal.infrastructure.repository.jpa.user;
 
+import java.util.Optional;
+
 import jakarta.persistence.LockModeType;
-import kongju.pickmeal.core.user.User;
-import kongju.pickmeal.core.user.UserPickCount;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.user.UserPickCount;
+
 
 public interface UserPickCountJpaRepository extends JpaRepository<UserPickCount, Long> {
     Optional<UserPickCount> findByUser(User user);
@@ -19,4 +21,6 @@ public interface UserPickCountJpaRepository extends JpaRepository<UserPickCount,
                 where upc.user.id = :userId
             """)
     Optional<UserPickCount> findByUserForUpdate(User user);
+
+    void deleteByUser(User user);
 }
