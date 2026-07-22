@@ -1,8 +1,8 @@
 package kongju.pickmeal.infrastructure.repository.jpa.diet;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -47,6 +47,11 @@ public class UserMenuPickRepositoryAdapter implements UserMenuPickRepository {
     @Override
     public List<UserMenuPick> findAllByIdInForUpdate(List<Long> ids){
         return userMenuPickJpaRepository.findAllByIdInForUpdate(ids);
+    }
+
+    @Override
+    public void deleteAllByUser(User user) {
+        userMenuPickJpaRepository.deleteAllByUser(user);
     }
 
 }

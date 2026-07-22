@@ -22,4 +22,6 @@ public interface UserMenuPickRepository {
     List<UserMenuPick> findAllPendingForUpdate(Family family,LocalDate targetMonthDate, UserMenuPickStatus status);
 
     List<UserMenuPick> findAllByIdInForUpdate(List<Long> ids);
+
+    void deleteAllByUser(User user);
 }

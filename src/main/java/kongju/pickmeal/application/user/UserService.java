@@ -4,7 +4,6 @@ import java.util.*;
 import java.time.LocalDate;
 import java.util.regex.Pattern;
 
-import kongju.pickmeal.core.user.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,11 +11,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import kongju.pickmeal.core.user.*;
 import kongju.pickmeal.core.menu.Ingredient;
+import kongju.pickmeal.core.user.repository.*;
 import kongju.pickmeal.application.user.data.*;
+import kongju.pickmeal.core.user.type.UserRole;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.common.exception.ErrorCode;
+import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.IngredientRepository;
+import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
+import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 
 
 @Service
@@ -27,10 +31,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final IngredientRepository ingredientRepository;
-    private final UserDiseaseRepository userDiseaseRepository;
     private final UserHealthRepository userHealthRepository;
-    private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
+    private final FamilyJoinRepository familyJoinRepository;
+    private final UserDiseaseRepository userDiseaseRepository;
+    private final UserMenuPickRepository userMenuPickRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserPickCountRepository userPickCountRepository;
+    private final PickCountHistoryRepository pickCountHistoryRepository;
+    private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
 
     private static final Pattern PASSWORD_PATTERN =
             Pattern.compile("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d\\W]{8,16}$");
@@ -299,9 +307,7 @@ public class UserService {
     public void updatePassword(UserPasswordDto.UpdateRequest request, Long userId) {
         User user = userReader.getById(userId);
         // 현재 비빌번호 일치 확인
-        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
-        }
+        validatePassword(request.currentPassword(), user);
 
         // 새 비밀번호 확인과 일치하는지 확인하고 저장
         if (!request.newPassword().equals(request.confirmPassword())) {
@@ -315,5 +321,75 @@ public class UserService {
 
         String password = passwordEncoder.encode(request.newPassword());
         user.updatePassword(password);
+    }
+
+    /**
+     * 회원 탈퇴
+     *
+     * @param userId  유저 아이디
+     * @param request 비밀번호
+     */
+    public void deleteUser(Long userId, UserDto.WithdrawRequest request) {
+        User user = userReader.getById(userId);
+
+        validatePassword(request.password(), user);
+
+        familyCheckAndLeave(user);
+
+        deleteUserRelatedData(user);
+    }
+
+    /**
+     * 연관 데이터 삭제
+     *
+     * @param user 유저
+     */
+    private void deleteUserRelatedData(User user) {
+        // 토큰 삭제
+        refreshTokenRepository.deleteById(user.getLoginId());
+        // 유저 건강 정보 삭제
+        userHealthRepository.deleteByUser(user);
+        // 유저 질병 정보 삭제
+        userDiseaseRepository.deleteAllByUser(user);
+        // 유저 선호 정보 삭제
+        userIngredientPreferenceRepository.deleteAllByUser(user);
+        // 유저 픽 카운트 삭제
+        userPickCountRepository.deleteByUser(user);
+        // 가족 조인 요청 삭제
+        familyJoinRepository.deleteByUser(user);
+        // 픽 카운트 사용 기록 삭제
+        pickCountHistoryRepository.deleteAllByUser(user);
+        // 유저 삭제
+        userRepository.delete(user);
+    }
+
+    /**
+     * 가족 여부 체크, 멤버라면 탈퇴
+     *
+     * @param user 유저
+     */
+    private void familyCheckAndLeave(User user) {
+        if (user.getRole() == UserRole.LEADER) {
+            // 가족이 있다면 삭제 불가
+            throw new BusinessException(ErrorCode.FAMILY_LEADER_MUST_DISBAND);
+        }
+        // 멤버라면
+        if (user.getRole() == UserRole.MEMBER) {
+            // 유저 선호 메뉴 선택 삭제
+            userMenuPickRepository.deleteAllByUser(user);
+            user.leaveFamily();
+        }
+    }
+
+    /**
+     * 비밀번호 검사
+     *
+     * @param password 비밀번호
+     * @param user     유저
+     */
+    private void validatePassword(String password, User user) {
+        if (passwordEncoder.matches(password, user.getPassword())) {
+            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
+        }
     }
 }

@@ -1,7 +1,6 @@
 package kongju.pickmeal.infrastructure.repository.jpa.family;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.jpa.repository.Query;
 
@@ -29,4 +28,5 @@ public interface FamilyJoinJpaRepository extends JpaRepository<FamilyJoinRequest
     )
     List<FamilyJoinRequest> findAllByFamilyAndStatus(Family family, ApplyStatus status);
 
+    void deleteByUser(User user);
 }
