@@ -1,11 +1,15 @@
 package kongju.pickmeal.infrastructure.repository.jpa.user;
 
-import kongju.pickmeal.core.user.PickCountHistory;
-import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
+
+import java.util.List;
+
+import kongju.pickmeal.core.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import kongju.pickmeal.core.user.PickCountHistory;
+import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
+
 
 @Repository
 @RequiredArgsConstructor
@@ -20,5 +24,10 @@ public class PickCountHistoryRepositoryAdapter implements PickCountHistoryReposi
     @Override
     public PickCountHistory save(PickCountHistory pickCountHistory) {
         return pickCountHistoryJpaRepository.save(pickCountHistory);
+    }
+
+    @Override
+    public void deleteAllByUser(User user) {
+        pickCountHistoryJpaRepository.deleteAllByUser(user);
     }
 }
