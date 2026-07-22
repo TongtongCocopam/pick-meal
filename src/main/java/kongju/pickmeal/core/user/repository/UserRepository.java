@@ -25,4 +25,6 @@ public interface UserRepository {
     User save(User user);
 
     List<User> findAllFamily(Family family);
+
+    void delete(User user);
 }

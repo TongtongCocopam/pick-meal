@@ -55,4 +55,9 @@ public class UserRepositoryAdapter implements UserRepository {
     public List<User> findAllFamily(Family family) {
         return userJpaRepository.findAllByFamily(family);
     }
+
+    @Override
+    public void delete(User user) {
+        userJpaRepository.delete(user);
+    }
 }
