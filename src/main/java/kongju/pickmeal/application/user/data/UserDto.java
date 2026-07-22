@@ -39,4 +39,10 @@ public class UserDto {
             Long userId,
             String nickname
     ){}
+
+    @Builder
+    public record WithdrawRequest(
+            @NotBlank
+            String password
+    ){}
 }
