@@ -18,10 +18,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static kongju.pickmeal.support.fixture.MenuFixture.menu;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import kongju.pickmeal.core.family.*;
+import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserPickCount;
 import kongju.pickmeal.core.user.type.UserRole;
@@ -30,10 +32,13 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.diet.repository.DietRepository;
+import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
@@ -51,7 +56,13 @@ public class FamilyServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private DietRepository dietRepository;
+    @Mock
+    private DietGenerationRepository dietGenerationRepository;
+    @Mock
     private UserPickCountRepository userPickCountRepository;
+    @Mock
+    private MenuRepository menuRepository;
     @Mock
     private PickCountHistoryRepository pickCountHistoryRepository;
     @Mock
@@ -527,6 +538,10 @@ public class FamilyServiceTest {
 
             given(familyRepository.findById(any())).willReturn(Optional.of(family));
             given(userRepository.findAllByFamily(any())).willReturn(List.of(user));
+            Menu menu1 = menu();
+            Menu menu2 = menu();
+
+            given(menuRepository.findAllByFamily(any())).willReturn(List.of(menu1, menu2));
 
             assertDoesNotThrow(() -> familyService.disbandFamily(1L));
 
