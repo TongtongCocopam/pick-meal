@@ -33,11 +33,14 @@ import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
+import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.IngredientRepository;
+import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
+import static kongju.pickmeal.support.fixture.FamilyFixture.family;
 import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
 
 
@@ -63,6 +66,15 @@ public class UserServiceTest {
 
     @Mock
     private UserPickCountRepository userPickCountRepository;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private FamilyJoinRepository  familyJoinRepository;
+
+    @Mock
+    private PickCountHistoryRepository pickCountHistoryRepository;
 
     @Mock
     private UserReader userReader;
@@ -449,6 +461,87 @@ public class UserServiceTest {
 
             assertDoesNotThrow(() -> userService.updatePassword(request, userId));
             verify(passwordEncoder).encode(request.newPassword());
+        }
+    }
+
+    @Nested
+    @DisplayName("회원탈퇴")
+    class UserDelete{
+        @Test
+        @DisplayName("유저를 찾지 못함")
+        public void should_fail_delete_user_when_user_not_found() {
+            Long userId = 1L;
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password("password1234")
+                    .build();
+            given(userReader.getById(userId)).willThrow(new BusinessException(ErrorCode.USER_NOT_FOUND));
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.deleteUser(userId, request));
+
+            assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("비밀번호 불일치")
+        public void should_fail_delete_user_when_current_password_is_incorrect() {
+            Long userId = 1L;
+            String password = "dfdfdf1234";
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password(password)
+                    .build();
+            User user = user();
+            given(userReader.getById(userId)).willReturn(user);
+            given(passwordEncoder.matches(password, user.getPassword())).willReturn(false);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.deleteUser(userId, request));
+
+            assertEquals(ErrorCode.PASSWORD_MISMATCH, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("리더일 경우")
+        public void should_fail_delete_user_when_family_leader() {
+            Long userId = 1L;
+            String password = "password1234";
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password(password)
+                    .build();
+            User user = user();
+            user.joinFamilyLeader(family());
+            given(userReader.getById(userId)).willReturn(user);
+            given(passwordEncoder.matches(password, user.getPassword())).willReturn(true);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.deleteUser(userId, request));
+
+            assertEquals(ErrorCode.FAMILY_LEADER_MUST_DISBAND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_delete_user() {
+            Long userId = 1L;
+            String password = "password1234";
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password(password)
+                    .build();
+            User user = user();
+            given(userReader.getById(userId)).willReturn(user);
+            given(passwordEncoder.matches(password, user.getPassword())).willReturn(true);
+
+            userService.deleteUser(userId, request);
+
+            verify(passwordEncoder).matches(password, user.getPassword());
+            verify(refreshTokenRepository).deleteById(any());
+            verify(userHealthRepository).deleteByUser(any());
+            verify(userDiseaseRepository).deleteAllByUser(any());
+            verify(userIngredientPreferenceRepository).deleteAllByUser(any());
+            verify(userPickCountRepository).deleteByUser(any());
+            verify(familyJoinRepository).deleteByUser(any());
+            verify(pickCountHistoryRepository).deleteAllByUser(any());
+            verify(userRepository).delete(any());
+
         }
     }
 }

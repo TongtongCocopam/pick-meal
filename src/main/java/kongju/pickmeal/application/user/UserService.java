@@ -331,11 +331,11 @@ public class UserService {
      */
     public void deleteUser(Long userId, UserDto.WithdrawRequest request) {
         User user = userReader.getById(userId);
-
+        // 비밀번호 체크
         validatePassword(request.password(), user);
-
+        // 가족 여부 체크
         familyCheckAndLeave(user);
-
+        // 연관 데이터 삭제
         deleteUserRelatedData(user);
     }
 
