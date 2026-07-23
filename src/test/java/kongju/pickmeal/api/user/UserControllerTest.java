@@ -336,4 +336,12 @@ public class UserControllerTest {
                     .andExpect(jsonPath("$.success").value(true));
         }
     }
+
+    @Nested
+    @DisplayName("회원탈퇴")
+    class UserDelete{
+
+
+
+    }
 }
