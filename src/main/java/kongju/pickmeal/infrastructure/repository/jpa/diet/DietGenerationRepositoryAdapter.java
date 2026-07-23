@@ -37,4 +37,9 @@ public class DietGenerationRepositoryAdapter implements DietGenerationRepository
     public long countByFamilyAndTargetMonthAndStatusIn(Family family, LocalDate targetMonth, List<DietGenerationStatus> statuses) {
         return dietGenerationJpaRepository.countByFamilyAndTargetMonthAndStatusIn(family, targetMonth, statuses);
     }
+
+    @Override
+    public void deleteAllByFamily(Family family) {
+        dietGenerationJpaRepository.deleteAllByFamily(family);
+    }
 }

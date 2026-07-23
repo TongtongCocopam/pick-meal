@@ -1,12 +1,15 @@
 package kongju.pickmeal.infrastructure.repository.jpa.diet;
 
+import java.util.List;
+import java.time.LocalDate;
+
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import kongju.pickmeal.core.diet.Diet;
 import kongju.pickmeal.core.family.Family;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 
-import java.time.LocalDate;
-import java.util.List;
 
 public interface DietJpaRepository extends JpaRepository<Diet, Long> {
     @Query("""
@@ -17,7 +20,10 @@ public interface DietJpaRepository extends JpaRepository<Diet, Long> {
             and d.mealDate between :startDate and :endDate
             order by d.mealDate asc
             """)
-    List<Diet> findMonthlyDiets(Family family, LocalDate startDate, LocalDate endDate);
+    List<Diet> findMonthlyDiets(
+            @Param("family") Family family,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
     @Query("""
                 select d
@@ -26,5 +32,9 @@ public interface DietJpaRepository extends JpaRepository<Diet, Long> {
                 where d.mealDate = :date
                 and d.family = :family
             """)
-    List<Diet> findAllFamilyAndMealDate(Family family, LocalDate date);
+    List<Diet> findAllFamilyAndMealDate(
+            @Param("family") Family family,
+            @Param("date") LocalDate date);
+
+    void deleteAllByFamily(Family family);
 }
