@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserHealthProfile;
@@ -19,7 +20,7 @@ public interface UserHealthJpaRepository extends JpaRepository<UserHealthProfile
                     join fetch uhp.user
                     where uhp.user in :users
             """)
-    List<UserHealthProfile> findAllByUserInFetchUser(List<User> users);
+    List<UserHealthProfile> findAllByUserInFetchUser(@Param("users") List<User> users);
 
     void deleteByUser(User user);
 

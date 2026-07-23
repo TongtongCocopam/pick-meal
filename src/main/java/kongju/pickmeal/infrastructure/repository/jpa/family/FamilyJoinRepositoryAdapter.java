@@ -43,4 +43,9 @@ public class FamilyJoinRepositoryAdapter implements FamilyJoinRepository {
     public void deleteByUser(User user) {
         familyJoinJpaRepository.deleteByUser(user);
     }
+
+    @Override
+    public void deleteAllByFamily(Family family) {
+        familyJoinJpaRepository.deleteAllByFamily(family);
+    }
 }

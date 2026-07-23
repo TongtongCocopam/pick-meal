@@ -1,13 +1,14 @@
 package kongju.pickmeal.infrastructure.repository.jpa.user;
 
-import kongju.pickmeal.core.user.User;
+import java.util.Optional;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.user.UserPickCount;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
-
-import java.util.Optional;
 
 
 @Repository
@@ -33,5 +34,10 @@ public class UserPickCountRepositoryAdapter implements UserPickCountRepository {
     @Override
     public void deleteByUser(User user) {
         userPickCountJpaRepository.deleteByUser(user);
+    }
+
+    @Override
+    public void deleteAllByUser_Family(Family family) {
+        userPickCountJpaRepository.deleteAllByUser_Family(family);
     }
 }

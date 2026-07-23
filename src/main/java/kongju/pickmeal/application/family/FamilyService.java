@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.family.*;
+import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserPickCount;
 import kongju.pickmeal.core.user.type.UserRole;
@@ -18,11 +19,15 @@ import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.diet.repository.DietRepository;
+import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
+
 
 @Service
 @Transactional
@@ -30,10 +35,13 @@ import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 public class FamilyService {
     private final UserReader userReader;
     private final UserRepository userRepository;
+    private final MenuRepository menuRepository;
+    private final DietRepository dietRepository;
     private final FamilyRepository familyRepository;
     private final FamilyJoinRepository familyJoinRepository;
     private final InvitationCodeGenerator invitationCodeGenerator;
     private final UserPickCountRepository userPickCountRepository;
+    private final DietGenerationRepository dietGenerationRepository;
     private final PickCountHistoryRepository pickCountHistoryRepository;
 
     /**
@@ -321,9 +329,26 @@ public class FamilyService {
             throw new BusinessException(ErrorCode.FAMILY_MEMBER_EXISTS);
         }
 
+        deleteFamilyRelatedData(family);
         // member가 없으면 없애기
         familyRepository.delete(family);
         user.leaveFamily();
+    }
+
+    private void deleteFamilyRelatedData(Family family) {
+        familyJoinRepository.deleteAllByFamily(family);
+        // 가족 메뉴 삭제
+        List<Menu> menus = menuRepository.findAllByFamily(family);
+        // 가족 메뉴 재료 연결 테이블 삭제
+        menuRepository.deleteAll(menus);
+        // pickCountHistory 삭제
+        pickCountHistoryRepository.deleteAllByUser_Family(family);
+        // userPickCount 삭제
+        userPickCountRepository.deleteAllByUser_Family(family);
+        // diet 삭제
+        dietRepository.deleteAllByFamily(family);
+        // dietGeneration 삭제
+        dietGenerationRepository.deleteAllByFamily(family);
     }
 
     /**

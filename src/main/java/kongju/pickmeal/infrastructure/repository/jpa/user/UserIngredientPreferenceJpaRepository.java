@@ -3,6 +3,7 @@ package kongju.pickmeal.infrastructure.repository.jpa.user;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserIngredientPreference;
@@ -18,5 +19,5 @@ public interface UserIngredientPreferenceJpaRepository extends JpaRepository<Use
                 join fetch uip.ingredient
                 where uip.user in :users
             """)
-    List<UserIngredientPreference> findAllByUserInFetchIngredient(List<User> users);
+    List<UserIngredientPreference> findAllByUserInFetchIngredient(@Param("users") List<User> users);
 }

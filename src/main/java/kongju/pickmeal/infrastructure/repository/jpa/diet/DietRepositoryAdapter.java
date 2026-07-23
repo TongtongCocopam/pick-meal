@@ -36,4 +36,9 @@ public class DietRepositoryAdapter implements DietRepository {
     public Optional<Diet> findById(Long id) {
         return dietJpaRepository.findById(id);
     }
+
+    @Override
+    public void deleteAllByFamily(Family family) {
+        dietJpaRepository.deleteAllByFamily(family);
+    }
 }

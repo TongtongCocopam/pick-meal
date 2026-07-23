@@ -1,5 +1,7 @@
 package kongju.pickmeal.core.menu;
 
+import java.util.List;
+import java.util.ArrayList;
 import java.math.BigDecimal;
 
 import lombok.Getter;
@@ -51,6 +53,13 @@ public class Menu extends BaseTimeEntity {
 
     @Column(name = "external_recipe_id", unique = true)
     private Long externalRecipeId;
+
+    @OneToMany(
+            mappedBy = "menu",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private final List<MenuIngredient> menuIngredients = new ArrayList<>();
 
     @Builder(access = AccessLevel.PRIVATE)
     private Menu(
@@ -129,7 +138,7 @@ public class Menu extends BaseTimeEntity {
         this.kcal = kcal;
         this.carbs = carbs;
         this.protein = protein;
-        this.fat=fat;
+        this.fat = fat;
         this.sodium = sodium;
     }
 
