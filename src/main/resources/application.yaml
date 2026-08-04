@@ -89,3 +89,10 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 debug: true
+
+# prometheus
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
