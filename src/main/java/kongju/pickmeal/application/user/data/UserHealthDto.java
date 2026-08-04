@@ -7,12 +7,13 @@ import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import kongju.pickmeal.core.user.type.Gender;
 
-
 public class UserHealthDto {
     @Builder
+    @Schema(name = "UserHealthUpdate")
     public record UpdateRequest(
             @NotNull
             Gender gender,
