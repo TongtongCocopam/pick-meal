@@ -258,6 +258,13 @@ bash gradlew test
 
 ## 외부 API 데이터 Import
 
+Linux/macOS에서 .env를 현재 셸 환경변수로 등록한다.
+```
+set -a
+source .env
+set +a
+```
+
 공공데이터 기반 메뉴/재료 데이터 적재:
 
 ```
