@@ -597,6 +597,9 @@ public class FamilyServiceTest {
 
             given(userRepository.existsByIdAndFamily(any(), any())).willReturn(true);
 
+            UserPickCount userPickCount = UserPickCount.initialize(member);
+            given(userPickCountRepository.findByUser(member)).willReturn(Optional.of(userPickCount));
+
             FamilyMemberDto.KickResponse response = familyService.kickMember(1L, 2L);
             assertThat(response.kickedNickname()).isEqualTo("testNickname");
         }
@@ -633,6 +636,8 @@ public class FamilyServiceTest {
             given(userReader.getById(1L)).willReturn(user);
 
             given(familyRepository.findById(any())).willReturn(Optional.of(family));
+            UserPickCount userPickCount = UserPickCount.initialize(user);
+            given(userPickCountRepository.findByUser(user)).willReturn(Optional.of(userPickCount));
 
             assertDoesNotThrow(() -> familyService.leaveMember(1L));
             assertThat(user.getRole()).isEqualTo(UserRole.GUEST);
@@ -654,9 +659,8 @@ public class FamilyServiceTest {
 
             given(userReader.getById(leaderId)).willReturn(user);
 
-            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations =
-                    FamilyPickDto.UpdateConfigRequest
-                            .pickAllocations.builder()
+            FamilyPickDto.UpdateConfigRequest.PickAllocations pickAllocations =
+                    FamilyPickDto.UpdateConfigRequest.PickAllocations.builder()
                             .userId(userId)
                             .pickCount(null)
                             .build();
@@ -697,8 +701,8 @@ public class FamilyServiceTest {
 
             given(userReader.getById(userId)).willReturn(user2);
 
-            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations =
-                    FamilyPickDto.UpdateConfigRequest.pickAllocations.builder()
+            FamilyPickDto.UpdateConfigRequest.PickAllocations pickAllocations =
+                    FamilyPickDto.UpdateConfigRequest.PickAllocations.builder()
                             .userId(userId)
                             .pickCount(2L)
                             .build();
@@ -732,8 +736,8 @@ public class FamilyServiceTest {
                     "testNickname", "password1234");
             user2.joinFamilyLeader(family);
 
-            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations =
-                    FamilyPickDto.UpdateConfigRequest.pickAllocations.builder()
+            FamilyPickDto.UpdateConfigRequest.PickAllocations pickAllocations =
+                    FamilyPickDto.UpdateConfigRequest.PickAllocations.builder()
                             .userId(userId)
                             .pickCount(2L)
                             .build();
