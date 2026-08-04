@@ -19,14 +19,14 @@
 
 ## 2. 기술 스택
 
-| 구분           | 기술                                |
-|--------------|-----------------------------------|
-| Backend      | Spring Boot, Spring Security, JPA |
-| Database     | PostgreSQL                        |
-| Cache/Auth   | Redis, JWT                        |
-| Test         | JUnit5, Mockito, MockMvc          |
-| Infra        | Docker, GitHub Actions            |
-| External API | 공공데이터 레시피 API                     |
+| 구분           | 기술                       |
+|--------------|--------------------------|
+| Backend      | Spring Boot              |
+| Database     | PostgreSQL               |
+| Cache/Auth   | Redis, JWT               |
+| Test         | JUnit5, Mockito, MockMvc |
+| Infra        | Docker, GitHub Actions   |
+| External API | 공공데이터 레시피 API            |
 
 ## 3. 주요 기능
 
@@ -135,7 +135,7 @@ application 및 core 계층의 변경을 최소화할 수 있도록 설계했습
 
 ## 5. ERD / 핵심 도메인 구조
 
-![ERD](./docs/erd.png)
+![ERD](erd.png)
 
 ### 핵심 도메인
 
