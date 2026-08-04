@@ -368,6 +368,8 @@ public class FamilyService {
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "해당 가족의 리더가 아닙니다.");
         }
 
+        resetPickCount(member);
+
         // 멤버 제거, 권한 제거
         member.leaveFamily();
         return FamilyMemberDto.KickResponse.builder()
@@ -384,7 +386,8 @@ public class FamilyService {
         User user = userReader.getById(userId);
         // 가족이 없는 경우
         validationFamily(user);
-
+        
+        resetPickCount(user);
         // 권한 변경
         user.leaveFamily();
     }
@@ -415,7 +418,7 @@ public class FamilyService {
 
         } else {
             // false라면 멤버별 선택권 넣기
-            List<FamilyPickDto.UpdateConfigRequest.pickAllocations> pickAllocations = request.pickAllocations();
+            List<FamilyPickDto.UpdateConfigRequest.PickAllocations> pickAllocations = request.pickAllocations();
 
             pickAllocations
                     .forEach(pick -> {
