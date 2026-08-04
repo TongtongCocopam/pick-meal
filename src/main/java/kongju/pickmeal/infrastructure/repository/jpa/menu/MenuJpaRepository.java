@@ -81,6 +81,4 @@ public interface MenuJpaRepository extends JpaRepository<Menu, Long> {
             where m.family = :family
             """)
     List<Menu> findAllByFamily(@Param("family") Family family);
-
-    void deleteAll(List<Menu> menus);
 }
