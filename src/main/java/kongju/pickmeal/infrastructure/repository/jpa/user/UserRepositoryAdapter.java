@@ -37,6 +37,11 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public boolean existsByNickname(String nickname) {
+        return userJpaRepository.existsByNickname(nickname);
+    }
+
+    @Override
     public List<User> findAllByFamily(Family family) {
         return userJpaRepository.findAllByFamily(family);
     }

@@ -533,7 +533,7 @@ public class UserServiceTest {
             userService.deleteUser(userId, request);
 
             verify(passwordEncoder).matches(password, user.getPassword());
-            verify(refreshTokenRepository).deleteById(any());
+            verify(refreshTokenRepository).deleteByUserId(any());
             verify(userHealthRepository).deleteByUser(any());
             verify(userDiseaseRepository).deleteAllByUser(any());
             verify(userIngredientPreferenceRepository).deleteAllByUser(any());
