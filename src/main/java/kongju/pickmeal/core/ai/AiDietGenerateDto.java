@@ -18,15 +18,14 @@ public class AiDietGenerateDto {
             Long userId,
             LocalDate startDate,
             LocalDate endDate,
+            int dailyMealCount,
             List<MenuCandidate> menuCandidates,
             // 유저가 선택한 메뉴 뽑음
             List<UserMenu> userMenus,
             // 객체 그대로 전달
             List<UserMenuPick> userMenuPicks,
-
             List<HealthCondition> healthConditions,
             List<Disease> disease,
-
             List<String> preferredIngredients,
             List<String> dislikedIngredients,
             List<String> allergyIngredients
@@ -39,7 +38,8 @@ public class AiDietGenerateDto {
             // 질병 이름 상세설명
             String diseaseName,
             String description
-    ){}
+    ) {
+    }
 
 
     @Builder
@@ -49,7 +49,8 @@ public class AiDietGenerateDto {
             BigDecimal weight,
             BigDecimal height,
             int age
-    ){}
+    ) {
+    }
 
     @Builder
     public record MenuCandidate(
@@ -72,9 +73,31 @@ public class AiDietGenerateDto {
 
     @Builder
     public record Result(
-            LocalDate startDate,
-            LocalDate endDate,
-            List<MealPlan> mealPlans
+//            List<Long> mainDishMenuIds,
+            List<Long> soupMenuIds,
+            List<Long> sideDishMenuIds
+    ) {
+    }
+
+    @Builder
+    public record RankCandidate(
+            Long menuId,
+            String menuName,
+            DishType dishType,
+            List<String> ingredients,
+            boolean userSelected
+    ) {
+    }
+
+    @Builder
+    public record PromptData(
+            List<RankCandidate> candidates,
+            List<AiDietGenerateDto.HealthCondition> healthConditions,
+            List<AiDietGenerateDto.Disease> diseases,
+            List<String> preferredIngredients,
+            List<String> dislikedIngredients,
+            int requiredSoupCount,
+            int requiredSideDishCount
     ) {
     }
 

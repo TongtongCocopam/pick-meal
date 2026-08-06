@@ -1,103 +1,142 @@
 package kongju.pickmeal.infrastructure.external.ai;
 
+import java.util.*;
+import java.time.LocalDate;
+import java.util.stream.Stream;
+import java.time.temporal.ChronoUnit;
+
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import kongju.pickmeal.core.ai.AiDietGenerateDto;
 
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OpenAiPromptBuilder {
+    private final ObjectMapper objectMapper;
+
     public String system() {
         return """
-                너는 가족 구성원의 선호, 건강 정보, 질병 정보를 고려해 식단을 구성하는 한국 영양사 AI다.
-                
-                핵심 규칙:
-                - 반드시 제공된 menuId만 사용한다.
-                - 제공되지 않은 메뉴, 재료, menuId를 절대 생성하지 않는다.
-                - 응답은 반드시 지정된 JSON 구조로만 반환한다.
-                - 설명 문장, 마크다운, 코드블록은 절대 포함하지 않는다.
-                - 알러지 재료가 포함된 메뉴는 절대 선택하지 않는다.
-                - 기본 식단 베이스는 한식이다.
-                - 단, 가족 선호 메뉴나 요청에 따라 한식 외 메뉴도 일부 포함할 수 있다.
-                - 가족 구성원의 나이, 건강 정보, 질병을 고려해 지나치게 자극적이거나 건강에 좋지 않은 메뉴는 최소화한다.
-                - 모든 가족의 요구를 완벽히 만족할 수 없다면 건강상 안전성과 영양 균형을 우선한다.
-                
-                식단 구성 규칙:
-                - 각 mealPlan은 하나의 식사 전체가 아니라, 특정 식사에 포함되는 메뉴 하나를 나타낸다.
-                - 같은 날짜와 같은 mealType에 여러 메뉴가 필요한 경우 mealPlan을 여러 개 생성한다.
-                - 각 식사는 제공된 메뉴 후보의 dishType을 기준으로 구성한다.
-                - MAIN_DISH는 메인 메뉴다.
-                - SOUP은 국 또는 찌개류다.
-                - SIDE_DISH는 반찬이다.
-                - MAIN_DISH가 충분히 한 끼 역할을 할 수 있다면 MAIN_DISH 1개만 선택할 수 있다.
-                - 기본적으로 반찬은 3가지를 권장한다.
-                - MAIN_DISH가 포함된 경우 SIDE_DISH는 1~3개로 구성할 수 있다.
-                - SOUP이 포함된 식사에는 SIDE_DISH를 2개 이상 포함해야 한다.
-                - SOUP 단독 식사는 금지한다.
-                - SIDE_DISH만으로 구성된 식사는 금지한다.
-                - 같은 날짜와 같은 mealType 안에서 동일한 menuId를 중복 사용하지 않는다.
-                - 전체 생성 기간 동안 동일한 메뉴가 과도하게 반복되지 않도록 한다.
-                - 가족이 직접 선택한 메뉴는 제공된 menuId 그대로 생성 기간 안에 반드시 포함한다.
-                
+                너는 가족 구성원의 건강 정보, 질병 정보와 음식 선호도를 고려하여
+                제공된 메뉴 후보의 추천 우선순위를 결정하는 한국 식단 추천 AI다.
+    
+                평가 원칙:
+                - 가족 구성원의 성별, 나이, 키, 몸무게와 질병 정보를 고려한다.
+                - 선호 재료가 포함된 메뉴를 우선적으로 고려한다.
+                - 비선호 재료가 포함된 메뉴는 가능한 한 후순위로 배치한다.
+                - 입력된 후보는 알레르기 재료가 포함된 메뉴가 사전에 제거된 목록이다.
+                - 제공되지 않은 메뉴나 menuId를 새로 만들거나 추측하지 않는다.
+                - 입력된 menuId와 dishType을 임의로 변경하지 않는다.
+    
+                사용자 선택 메뉴 규칙:
+                - userSelected가 true인 메뉴는 같은 dishType의 일반 후보보다 앞에 배치한다.
+                - SOUP인 사용자 선택 메뉴는 모두 soupMenuIds의
+                  requiredSoupCount번째 이내에 포함한다.
+                - SIDE_DISH인 사용자 선택 메뉴는 모두 sideDishMenuIds의
+                  requiredSideDishCount번째 이내에 포함한다.
+                - userSelected가 true인 메뉴를 누락하거나 중복하지 않는다.
+    
+                정렬 규칙:
+                - SOUP 후보의 menuId는 soupMenuIds에 넣는다.
+                - SIDE_DISH 후보의 menuId는 sideDishMenuIds에 넣는다.
+                - 각 배열은 가족에게 적합한 추천 우선순위가 높은 순서로 정렬한다.
+                - 건강 정보, 질병 정보, 선호도에 따라 명확한 우선순위 차이가 없는
+                  일반 후보들은 입력 순서를 그대로 복사하지 말고 순서를 다양하게 섞는다.
+                - 같은 menuId는 한 번만 반환한다.
+                - 후보의 menuId를 다른 dishType 배열에 넣지 않는다.
+    
                 출력 규칙:
-                - startDate와 endDate는 입력받은 생성 기간과 정확히 동일해야 한다.
-                - mealPlans는 입력받은 생성 기간 안의 날짜만 포함해야 한다.
-                - 각 mealPlan에는 date, mealType, menuId만 포함한다.
-                - menuName, dishType, reason, menuItems 같은 추가 필드는 반환하지 않는다.
-                - 같은 날짜와 같은 mealType에 메뉴가 여러 개라면 동일한 date와 mealType을 가진 mealPlan 객체를 여러 개 생성한다.
+                - 최종 응답은 soupMenuIds와 sideDishMenuIds를 가진 객체다.
+                - 각 필드는 menuId만 포함하는 배열이다.
+                - menuName, dishType, ingredients, reason 같은 필드는 반환하지 않는다.
+                - 지정된 객체 외의 설명이나 추가 텍스트를 반환하지 않는다.
                 """;
     }
 
     public String user(AiDietGenerateDto.Command command) {
+        AiDietGenerateDto.PromptData promptData = createPromptData(command);
+
+        String promptDataJson = toJson(promptData);
+
         return """
-                다음 조건에 맞춰 가족 식단을 생성해라.
+                다음 입력 데이터를 기준으로 모든 메뉴 후보를
+                dishType별 추천 우선순위대로 정렬해라.
                 
-                생성 기간:
-                %s ~ %s
-                
-                선호 재료:
+                입력 데이터:
                 %s
                 
-                비선호 재료:
-                %s
-                
-                알러지 재료:
-                %s
-                
-                가족 건강 정보:
-                %s
-                
-                가족 질병 정보:
-                %s
-                
-                가족이 직접 선택한 메뉴:
-                %s
-                
-                사용 가능한 메뉴 후보:
-                %s
-                
-                생성 요구사항:
-                - startDate와 endDate는 생성 기간과 정확히 동일하게 설정한다.
-                - 생성 기간의 모든 날짜에 대해 식단을 생성한다.
-                - 각 mealPlan은 특정 날짜의 특정 식사에 포함되는 메뉴 하나를 나타낸다.
-                - 같은 날짜와 mealType에 메뉴가 여러 개라면 mealPlan을 여러 개 생성한다.
-                - mealType은 BREAKFAST, LUNCH, DINNER 중 하나만 사용한다.
-                - menuId는 반드시 사용 가능한 메뉴 후보에 포함된 값만 사용한다.
-                - 가족이 직접 선택한 메뉴는 생성 기간 내에 반드시 포함한다.
-                - 알러지 재료가 포함된 메뉴는 선택하지 않는다.
-                """.formatted(
-                command.startDate(),
-                command.endDate(),
-                command.preferredIngredients(),
-                command.dislikedIngredients(),
-                command.allergyIngredients(),
-                command.healthConditions(),
-                command.disease(),
-                command.userMenuPicks(),
-                command.menuCandidates()
-        );
+                """.formatted(promptDataJson);
     }
 
+    private AiDietGenerateDto.PromptData createPromptData(
+            AiDietGenerateDto.Command command
+    ) {
+        Set<Long> seenMenuIds = new HashSet<>();
+
+        List<AiDietGenerateDto.RankCandidate> candidates = Stream.concat(
+                        // 사용자 선택 메뉴를 먼저 배치
+                        command.userMenus().stream()
+                                .map(menu -> AiDietGenerateDto.RankCandidate.builder()
+                                        .menuId(menu.menuId())
+                                        .menuName(menu.menuName())
+                                        .dishType(menu.dishType())
+                                        .ingredients(menu.ingredients())
+                                        .userSelected(true)
+                                        .build()),
+
+                        // 일반 후보는 나중에 배치
+                        command.menuCandidates().stream()
+                                .map(menu -> AiDietGenerateDto.RankCandidate.builder()
+                                        .menuId(menu.menuId())
+                                        .menuName(menu.menuName())
+                                        .dishType(menu.dishType())
+                                        .ingredients(menu.ingredients())
+                                        .userSelected(false)
+                                        .build())
+                )
+                .filter(candidate -> seenMenuIds.add(candidate.menuId()))
+                .toList();
+
+        log.info("AI 전달 후보 개수: {}", (long) candidates.size());
+
+        int totalMealCount = calculateTotalMealCount(command.startDate(), command.endDate(), command.dailyMealCount());
+
+        return AiDietGenerateDto.PromptData.builder()
+                .candidates(candidates)
+                .healthConditions(command.healthConditions())
+                .diseases(command.disease())
+                .preferredIngredients(command.preferredIngredients())
+                .dislikedIngredients(command.dislikedIngredients())
+                .requiredSoupCount(totalMealCount)
+                .requiredSideDishCount(totalMealCount * 2)
+                .build();
+    }
+
+    /**
+     * 식단 개수 계산
+     * @param startDate 시작
+     * @param endDate 종료
+     * @param dailyMealCount 하루 식단 개수
+     * @return 식단 개수
+     */
+    private int calculateTotalMealCount(LocalDate startDate, LocalDate endDate, int dailyMealCount
+    ) {
+        int dayCount = Math.toIntExact(ChronoUnit.DAYS.between(startDate, endDate) + 1);
+
+        return dayCount * dailyMealCount;
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("AI 프롬프트 데이터 JSON 변환에 실패했습니다.", e);
+        }
+    }
 }
