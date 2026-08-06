@@ -93,8 +93,10 @@ public class DietServiceTest {
             Long userId = 1L;
 
             User user = UserFixture.user();
+            UserPickCount userPickCount = UserPickCount.initialize(user);
+            userPickCount.restoreCount(2L);
             given(userReader.getById(userId)).willReturn(user);
-
+            given(userPickCountRepository.findByUserForUpdate(any())).willReturn(Optional.of(userPickCount));
             given(menuRepository.findById(any())).willReturn(Optional.empty());
 
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
