@@ -13,6 +13,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.user.User;
@@ -48,6 +49,7 @@ import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
+import kongju.pickmeal.application.diet.data.DietGenerationRequestedEvent;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 
@@ -68,6 +70,7 @@ public class DietService {
     private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
 
     private final AiDietService aiDietService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 메뉴 선택
@@ -82,20 +85,25 @@ public class DietService {
 
         User user = userReader.getById(userId);
 
-        List<Long> menuIds = request.menuIds();
+        List<Long> menuIds = request.menuIds().stream()
+                .distinct()
+                .toList();
+
         Long count = (long) menuIds.size();
 
         YearMonth targetMonth = request.targetMonth();
 
         validateSelectableMonth(targetMonth);
+
+        debitPickCount(user, count);
+
+        UUID uuid = UUID.randomUUID();
+        debitHistory(user, count, uuid);
+
         // 유저가 선택한 메뉴들을 유저 픽 연결 테이블에 넣기
         List<UserMenuPick> userMenuPickList = menuIds.stream()
                 .map(menuId -> {
                     Menu menu = getMenu(menuId);
-
-                    UUID uuid = UUID.randomUUID();
-                    debitPickCount(user, count);
-                    debitHistory(user, count, uuid);
 
                     return UserMenuPick.create(user, menu, targetMonth.atDay(1), uuid);
                 })
@@ -289,7 +297,17 @@ public class DietService {
         );
 
         DietGeneration saveGeneration = dietGenerationRepository.save(generation);
-        aiDietService.generateDietAsync(userId, saveGeneration.getId(), request, startDate, endDate, userMenuPickIds);
+
+        applicationEventPublisher.publishEvent(DietGenerationRequestedEvent.builder()
+                .userId(userId)
+                .generationId(saveGeneration.getId())
+                .request(request)
+                .startDate(startDate)
+                .endDate(endDate)
+                .userMenuPickIds(userMenuPickIds)
+                .build());
+
+//        aiDietService.generateDietAsync(userId, saveGeneration.getId(), request, startDate, endDate, userMenuPickIds);
 
         return DietGenerationDto.GenerateResponse.builder()
                 .generationId(generation.getId())
