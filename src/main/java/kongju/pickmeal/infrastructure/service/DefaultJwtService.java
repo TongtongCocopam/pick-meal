@@ -28,12 +28,12 @@ public class DefaultJwtService implements JwtService {
     @Autowired
     public DefaultJwtService(
             @Value("${jwt.access-secret}") String access_secret,
-            @Value("${jwt.refresh-secret}") String represh_secret,
+            @Value("${jwt.refresh-secret}") String refresh_secret,
             @Value("${jwt.access-expiration}") long accessExpiration,
             @Value("${jwt.refresh-expiration}") long refreshExpiration) {
         // 비밀 키 생성
         this.accessKey = Keys.hmacShaKeyFor(access_secret.getBytes(StandardCharsets.UTF_8));
-        this.refreshKey = Keys.hmacShaKeyFor(represh_secret.getBytes(StandardCharsets.UTF_8));
+        this.refreshKey = Keys.hmacShaKeyFor(refresh_secret.getBytes(StandardCharsets.UTF_8));
         this.accessExpiration = accessExpiration;
         this.refreshExpiration = refreshExpiration;
     }
