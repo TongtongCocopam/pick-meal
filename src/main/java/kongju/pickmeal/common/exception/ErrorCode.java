@@ -34,6 +34,7 @@ public enum ErrorCode {
     FAMILY_MEMBER_EXISTS(HttpStatus.BAD_REQUEST, "구성원을 모두 방출한 후에 삭제할 수 있습니다."),
     FAMILY_LEADER_MUST_DISBAND(HttpStatus.CONFLICT, "가족 리더는 가족을 해체한 후 회원탈퇴할 수 있습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
+    LEADER_CANNOT_KICK_SELF(HttpStatus.BAD_REQUEST, "리더는 자기 자신을 방출할 수 없습니다."),
 
     EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
     EXTERNAL_API_EMPTY_RESPONSE(HttpStatus.BAD_GATEWAY, "외부 API 응답이 비어 있습니다."),

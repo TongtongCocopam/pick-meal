@@ -1,14 +1,15 @@
 package kongju.pickmeal.application.diet;
 
 import java.util.*;
-import java.time.LocalDate;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
-import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
+import kongju.pickmeal.application.diet.data.DietGenerationRequestedEvent;
 
 
 @Slf4j
@@ -21,27 +22,26 @@ public class AiDietService {
     /**
      * 비동기 식단 생성 실행
      *
-     * @param userId  유저 id
-     * @param request 요청 날짜, 끼니 정보
+     * @param event ai식단 관련 데이터
      */
     @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void generateDietAsync(
-            Long userId,
-            UUID generationId,
-            DietGenerationDto.GenerateRequest request,
-            LocalDate startDate,
-            LocalDate endDate,
-            List<Long> userMenuPickIds
+            DietGenerationRequestedEvent event
     ) {
         try {
-            aiDietWorker.generate(userId, generationId, request, startDate, endDate, userMenuPickIds);
+            log.info(
+                    "generateDietAsync thread={}",
+                    Thread.currentThread().getName()
+            );
+            aiDietWorker.generate(event.userId(), event.generationId(), event.request(), event.startDate(), event.endDate(), event.userMenuPickIds());
         } catch (Exception e) {
             try {
-                dietGenerationFailureHandler.handleFailure(generationId, userMenuPickIds);
+                dietGenerationFailureHandler.handleFailure(event.generationId(), event.userMenuPickIds());
             } catch (Exception failureException) {
-                log.error("식단 생성 실패 처리 중 오류");
+                log.error("식단 생성 실패 처리 중 오류", failureException);
             }
-            log.error("AI 식단 생성 실패");
+            log.error("AI 식단 생성 실패", e);
         }
     }
 }

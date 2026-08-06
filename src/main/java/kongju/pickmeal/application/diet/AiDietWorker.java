@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import java.time.temporal.ChronoUnit;
 
 import lombok.Builder;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
-
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -78,19 +79,26 @@ public class AiDietWorker {
             List<Long> userMenuPickIds
     ) {
         DietGeneration generation = dietGenerationRepository.findById(generationId)
-                .orElseThrow();
-
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        log.info("생성 정보 조회 시작: generationId={}", generationId);
         generation.processing();
+        log.info("생성 정보 조회 완료: generationId={}", generationId);
+        log.info("데이터 전처리 시작: generationId={}", generationId);
         // 전처리
         AiDietGenerateDto.Command command = prepareAiDietGeneration(userId, request, startDate, endDate, userMenuPickIds);
+        log.info("GPT API 호출 시작: generationId={}", generationId);
         // ai호출
         AiDietGenerateDto.Result result = dietAiGenerator.generate(command);
+        log.info("GPT API 응답 수신: generationId={}", generationId);
+        log.info("GPT 응답 파싱 시작: generationId={}", generationId);
         // 검증
         validateAiDietResult(result, command);
+        log.info("식단 DB 저장 시작: generationId={}", generationId);
         // 저장
         saveAiDietResult(generation, result, command);
         // 상태변경
         generation.completed();
+        log.info("AI 식단 생성 최종 완료: generationId={}", generationId);
     }
 
     /**
@@ -106,14 +114,17 @@ public class AiDietWorker {
         User user = userReader.getById(userId);
         Family family = user.getFamily();
 
+        log.info("1. 사용자 조회 시작");
         List<User> users = userRepository.findAllFamily(family);
-
+        log.info("2. 질병 정보 조회 시작");
         List<AiDietGenerateDto.Disease> diseases = getFamilyDiseases(users);
+        log.info("3. 건강 정보 조회 시작");
         List<AiDietGenerateDto.HealthCondition> healthConditions = getFamilyHealthConditions(users);
+        log.info("4. 사용자 선택 메뉴 정보 조회 시작");
         UserMenuPickPreparation userMenuPickPreparation = getUserMenus(userMenuPickIds);
-
+        log.info("5. 사용자 선호 재료 정보 조회 시작");
         IngredientPreferenceSummary preferenceSummary = getIngredientPreferenceSummary(users);
-
+        log.info("6. 사용자 메뉴 후보 추출 시작");
         List<AiDietGenerateDto.MenuCandidate> menuCandidates = getMenuCandidates(
                 request.dailyMealCount(),
                 startDate,
@@ -586,10 +597,12 @@ public class AiDietWorker {
         // 날짜가 일치하는지
         if (!result.startDate().equals(command.startDate())
                 || !result.endDate().equals(command.endDate())) {
+            log.info("날짜 데이터 오류 : {}", result);
             throw new BusinessException(ErrorCode.AI_DATA_ERROR);
         }
         // mealPlans가 null인지
         if (result.mealPlans() == null || result.mealPlans().isEmpty()) {
+            log.info("식단 데이터 오류 : {}", result);
             throw new BusinessException(ErrorCode.AI_DATA_ERROR);
         }
 
@@ -647,25 +660,31 @@ public class AiDietWorker {
             AiDietGenerateDto.Command command,
             Map<Long, DishType> dishTypeMap
     ) {
+
         for (AiDietGenerateDto.MealPlan mealPlan : result.mealPlans()) {
             //null체크
             if (mealPlan.date() == null
                     || mealPlan.mealType() == null
                     || mealPlan.menuId() == null) {
+                log.error("AI 식단 필수값 누락: date={}, mealType={}, menuId={}", mealPlan.date(), mealPlan.mealType(), mealPlan.menuId());
                 throw new BusinessException(ErrorCode.AI_DATA_ERROR);
             }
 
             if (mealPlan.date().isBefore(command.startDate())
                     || mealPlan.date().isAfter(command.endDate())) {
+                log.error("AI 식단 날짜 범위 오류: date={}, allowedRange={} ~ {}", mealPlan.date(), command.startDate(), command.endDate());
                 throw new BusinessException(ErrorCode.AI_DATA_ERROR);
             }
 
             // 포함되지 않은 메뉴 아이디
             if (!dishTypeMap.containsKey(mealPlan.menuId())) {
+                log.error("AI가 후보에 없는 메뉴를 반환함: menuId={}, date={}, mealType={}", mealPlan.menuId(), mealPlan.date(), mealPlan.mealType());
+                log.error("사용 가능한 menuId 목록: {}", dishTypeMap.keySet());
                 throw new BusinessException(ErrorCode.AI_DATA_ERROR);
             }
 
             if (dishTypeMap.get(mealPlan.menuId()) == null) {
+                log.error("메뉴의 dishType이 null임: menuId={}, date={}, mealType={}", mealPlan.menuId(), mealPlan.date(), mealPlan.mealType());
                 throw new BusinessException(ErrorCode.AI_DATA_ERROR);
             }
         }

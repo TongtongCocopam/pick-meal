@@ -1,0 +1,20 @@
+package kongju.pickmeal.application.diet.data;
+
+import java.util.UUID;
+import java.util.List;
+import java.time.LocalDate;
+
+import lombok.Builder;
+
+import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
+
+@Builder
+public record DietGenerationRequestedEvent(
+        Long userId,
+        UUID generationId,
+        DietGenerationDto.GenerateRequest request,
+        LocalDate startDate,
+        LocalDate endDate,
+        List<Long> userMenuPickIds
+) {
+}

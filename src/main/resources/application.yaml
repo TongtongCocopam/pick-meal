@@ -39,7 +39,7 @@ spring:
       api-key: ${OPENAI_API_KEY}
       chat:
         model: gpt-5-nano
-        temperature: 0.3
+        temperature: 0.1
 
 feign:
   client:
