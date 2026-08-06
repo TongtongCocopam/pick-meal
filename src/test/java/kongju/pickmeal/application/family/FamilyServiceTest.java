@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.mockito.Mockito.times;
@@ -18,7 +19,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static kongju.pickmeal.support.fixture.MenuFixture.menu;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -41,6 +41,7 @@ import kongju.pickmeal.core.user.repository.UserPickCountRepository;
 import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 
+import static kongju.pickmeal.support.fixture.MenuFixture.menu;
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 import static kongju.pickmeal.support.fixture.FamilyFixture.family;
 
@@ -572,16 +573,19 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("가족 멤버가 아닌 경우")
         public void should_fail_kick_member_not_my_family() {
-            User member = user();
-            given(userReader.getById(1L)).willReturn(member);
-
-            User leader = user();
-            given(userReader.getById(2L)).willReturn(leader);
+            User member = user("member", "memberId", "member@gmail.com", "paassword1234");
+            Long memberId = 1L;
+            ReflectionTestUtils.setField(member, "id", memberId);
+            given(userReader.getById(memberId)).willReturn(member);
+            Long leaderId = 2L;
+            User leader = user("leader", "leaderId", "leader@gmail.com", "paassword1234");
+            ReflectionTestUtils.setField(member, "id", leaderId);
+            given(userReader.getById(leaderId)).willReturn(leader);
             given(userRepository.existsByIdAndFamily(any(), any())).willReturn(false);
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> familyService.kickMember(1L, 2L)
+                    () -> familyService.kickMember(memberId, leaderId)
             );
 
             assertEquals(ErrorCode.ACCESS_DENIED, exception.getErrorCode());
@@ -592,8 +596,12 @@ public class FamilyServiceTest {
         public void should_success_kick_member() {
             User member = user("testNickname", "test", "test1234@gmail.com", "password1234");
             User leader = user("testNickname1", "test1", "test12222@gmail.com", "password1234");
-            given(userReader.getById(1L)).willReturn(member);
-            given(userReader.getById(2L)).willReturn(leader);
+            Long memberId = 1L;
+            Long leaderId = 2L;
+            given(userReader.getById(memberId)).willReturn(member);
+            given(userReader.getById(leaderId)).willReturn(leader);
+            ReflectionTestUtils.setField(member, "id", memberId);
+            ReflectionTestUtils.setField(member, "id", leaderId);
 
             given(userRepository.existsByIdAndFamily(any(), any())).willReturn(true);
 

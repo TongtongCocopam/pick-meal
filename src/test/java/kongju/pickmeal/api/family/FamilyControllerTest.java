@@ -238,7 +238,7 @@ public class FamilyControllerTest {
         @DisplayName("리더가 아닌 경우")
         @WithMockUser(roles = "MEMBER")
         public void should_fail_reissue_invitation_not_reader() throws Exception {
-            mockMvc.perform(patch("/api/v1/families/me/invitation-code"))
+            mockMvc.perform(post("/api/v1/families/me/invitation-code"))
                     .andDo(print())
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.success").value(false))
@@ -255,7 +255,7 @@ public class FamilyControllerTest {
 
             given(familyService.createInvitationCode(any())).willReturn(response);
 
-            mockMvc.perform(patch("/api/v1/families/me/invitation-code")
+            mockMvc.perform(post("/api/v1/families/me/invitation-code")
                             .with(user(mockLeader())))
                     .andDo(print())
                     .andExpect(status().isOk())

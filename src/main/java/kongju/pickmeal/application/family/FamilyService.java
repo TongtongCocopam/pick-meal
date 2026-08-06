@@ -360,8 +360,12 @@ public class FamilyService {
     public FamilyMemberDto.KickResponse kickMember(Long userId, Long leaderId) {
         // 아이디 확인
         User member = userReader.getById(userId);
-
         User leader = userReader.getById(leaderId);
+
+        // 리더 자신을 방출 하지 못하도록 설정
+        if(Objects.equals(member.getId(), leader.getId())) {
+            throw new BusinessException(ErrorCode.LEADER_CANNOT_KICK_SELF);
+        }
 
         // 패밀리 멤버가 맞는지 확인
         if (!userRepository.existsByIdAndFamily(userId, leader.getFamily())) {

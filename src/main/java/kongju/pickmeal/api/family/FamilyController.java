@@ -70,7 +70,7 @@ public class FamilyController {
                 .body(ApiResponse.success(response));
     }
 
-    @PatchMapping("/me/invitation-code")
+    @PostMapping("/me/invitation-code")
     @PreAuthorize("hasRole('LEADER')")
     public ResponseEntity<ApiResponse<FamilyInvitationDto.CodeResponse>> updateInvitationCode(
             @AuthenticationPrincipal CustomUserDetails userDetails
