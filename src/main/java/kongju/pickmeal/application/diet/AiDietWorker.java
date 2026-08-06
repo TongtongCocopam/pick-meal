@@ -22,6 +22,7 @@ import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.user.UserDisease;
 import kongju.pickmeal.core.diet.UserMenuPick;
 import kongju.pickmeal.core.ai.DietAiGenerator;
+import kongju.pickmeal.core.diet.type.MealType;
 import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.menu.MenuIngredient;
 import kongju.pickmeal.core.diet.DietGeneration;
@@ -43,6 +44,7 @@ import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
+
 
 @Slf4j
 @Service
@@ -90,12 +92,14 @@ public class AiDietWorker {
         // ai호출
         AiDietGenerateDto.Result result = dietAiGenerator.generate(command);
         log.info("GPT API 응답 수신: generationId={}", generationId);
-        log.info("GPT 응답 파싱 시작: generationId={}", generationId);
         // 검증
-        validateAiDietResult(result, command);
+        validateResult(result, command);
+        log.info("GPT 응답 파싱 시작: generationId={}", generationId);
+        // 식단 생성하기
+        List<AiDietGenerateDto.MealPlan> mealPlans = createMealPlans(result, command);
         log.info("식단 DB 저장 시작: generationId={}", generationId);
         // 저장
-        saveAiDietResult(generation, result, command);
+        saveAiDietResult(generation, mealPlans, command);
         // 상태변경
         generation.completed();
         log.info("AI 식단 생성 최종 완료: generationId={}", generationId);
@@ -138,6 +142,7 @@ public class AiDietWorker {
                 userId,
                 startDate,
                 endDate,
+                request.dailyMealCount(),
                 menuCandidates,
                 userMenuPickPreparation.userMenus,
                 userMenuPickPreparation.userMenuPicks,
@@ -226,26 +231,23 @@ public class AiDietWorker {
         List<Menu> menusForIngredientFetch = mergeMenus(preferredMenus, fallbackMenus);
 
 //        메뉴별 재료 Map
-        Map<Long, List<MenuIngredient>> menuIngredientMap =
-                getMenuIngredientMap(menusForIngredientFetch);
+        Map<Long, List<MenuIngredient>> menuIngredientMap = getMenuIngredientMap(menusForIngredientFetch);
 
 //        선호 후보: 선호 재료 기반 메뉴 + 알레르기 메뉴 제거
-        List<AiDietGenerateDto.MenuCandidate> preferredCandidates =
-                toMenuCandidates(preferredMenus, menuIngredientMap, allergyIngredientIds);
+        List<AiDietGenerateDto.MenuCandidate> preferredCandidates = toMenuCandidates(preferredMenus, menuIngredientMap, allergyIngredientIds);
 
 //        fallback 후보: 전체 메뉴 + 알레르기, 싫어하는 메뉴 제거
-        List<AiDietGenerateDto.MenuCandidate> fallbackCandidates =
-                toMenuCandidates(fallbackMenus, menuIngredientMap, fallbackExcludedIngredientIds);
+        List<AiDietGenerateDto.MenuCandidate> fallbackCandidates = toMenuCandidates(fallbackMenus, menuIngredientMap, fallbackExcludedIngredientIds);
 
 //        dishType별 개수 제한 + 부족분 보충
         List<AiDietGenerateDto.MenuCandidate> menuCandidates = new ArrayList<>();
 
-        menuCandidates.addAll(selectByDishTypeWithFallback(
-                preferredCandidates,
-                fallbackCandidates,
-                DishType.MAIN_DISH,
-                limit.mainLimit()
-        ));
+//        menuCandidates.addAll(selectByDishTypeWithFallback(
+//                preferredCandidates,
+//                fallbackCandidates,
+//                DishType.MAIN_DISH,
+//                limit.mainLimit()
+//        ));
 
         menuCandidates.addAll(selectByDishTypeWithFallback(
                 preferredCandidates,
@@ -260,6 +262,7 @@ public class AiDietWorker {
                 DishType.SIDE_DISH,
                 limit.sideDishLimit()
         ));
+
         return menuCandidates;
     }
 
@@ -438,13 +441,13 @@ public class AiDietWorker {
         long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         int totalMealCount = Math.toIntExact(days * dailyMealCount);
 
-        int mainLimit = Math.min(totalMealCount, 50);
-        int soupLimit = Math.clamp(totalMealCount / 2, 5, 30);
-        int sideDishLimit = Math.min(totalMealCount * 3, 120);
+//        int mainLimit = Math.min(totalMealCount, 50);
+        int soupLimit = Math.min(totalMealCount, 60);
+        int sideDishLimit = Math.min(totalMealCount * 2, 120);
 
         return DishTypeCandidateLimit.builder()
                 .totalMealCount(totalMealCount)
-                .mainLimit(mainLimit)
+//                .mainLimit(mainLimit)
                 .soupLimit(soupLimit)
                 .sideDishLimit(sideDishLimit)
                 .build();
@@ -593,36 +596,64 @@ public class AiDietWorker {
      * @param result  생성 데이터
      * @param command 전처리 데이터
      */
-    private void validateAiDietResult(AiDietGenerateDto.Result result, AiDietGenerateDto.Command command) {
-        // 날짜가 일치하는지
-        if (!result.startDate().equals(command.startDate())
-                || !result.endDate().equals(command.endDate())) {
-            log.info("날짜 데이터 오류 : {}", result);
-            throw new BusinessException(ErrorCode.AI_DATA_ERROR);
-        }
-        // mealPlans가 null인지
-        if (result.mealPlans() == null || result.mealPlans().isEmpty()) {
-            log.info("식단 데이터 오류 : {}", result);
-            throw new BusinessException(ErrorCode.AI_DATA_ERROR);
-        }
-
-        //menuId가 제공한 후보 목록 안에 있는지
+    private void validateResult(AiDietGenerateDto.Result result, AiDietGenerateDto.Command command) {
         Map<Long, DishType> dishTypeMap = buildDishTypeMap(command);
+//
+//        validateRankedIds(
+//                result.mainDishMenuIds(),
+//                DishType.MAIN_DISH,
+//                dishTypeMap
+//        );
 
-        // 기본 필드 검사
-        validateMealPlanBasicFields(result, command, dishTypeMap);
-        // 날짜 다 차있는지 검사
-        validateDateCoverage(result, command);
+        validateRankedIds(
+                result.soupMenuIds(),
+                DishType.SOUP,
+                dishTypeMap
+        );
 
-        Map<String, List<AiDietGenerateDto.MealPlan>> grouped =
-                result.mealPlans().stream()
-                        .collect(Collectors.groupingBy(
-                                mealPlan -> mealPlan.date() + ":" + mealPlan.mealType()
-                        ));
+        validateRankedIds(
+                result.sideDishMenuIds(),
+                DishType.SIDE_DISH,
+                dishTypeMap
+        );
+    }
 
-        for (List<AiDietGenerateDto.MealPlan> mealGroup : grouped.values()) {
-            // 개수 확인
-            validateMealGroup(mealGroup, dishTypeMap);
+    private void validateRankedIds(
+            List<Long> menuIds,
+            DishType expectedDishType,
+            Map<Long, DishType> dishTypeMap
+    ) {
+        if (menuIds == null || menuIds.isEmpty()) {
+            log.error("AI 추천 메뉴 목록이 비어 있음: dishType={}", expectedDishType);
+            throw new BusinessException(ErrorCode.AI_DATA_ERROR);
+        }
+
+        Set<Long> uniqueMenuIds = new HashSet<>();
+
+        for (Long menuId : menuIds) {
+            if (menuId == null) {
+                log.error("AI 추천 menuId가 null임: dishType={}", expectedDishType);
+                throw new BusinessException(ErrorCode.AI_DATA_ERROR);
+            }
+
+            if (!uniqueMenuIds.add(menuId)) {
+                log.error("AI 추천 menuId 중복: dishType={}, menuId={}", expectedDishType, menuId
+                );
+                throw new BusinessException(ErrorCode.AI_DATA_ERROR);
+            }
+
+            DishType actualDishType = dishTypeMap.get(menuId);
+
+            if (actualDishType == null) {
+                log.error("AI가 후보에 없는 menuId를 반환함: expectedDishType={}, menuId={}", expectedDishType, menuId);
+                throw new BusinessException(ErrorCode.AI_DATA_ERROR);
+            }
+
+            if (actualDishType != expectedDishType) {
+                log.error("AI 추천 메뉴 타입 불일치: menuId={}, expected={}, actual={}", menuId, expectedDishType, actualDishType
+                );
+                throw new BusinessException(ErrorCode.INVALID_MENU_DATA);
+            }
         }
     }
 
@@ -649,138 +680,88 @@ public class AiDietWorker {
     }
 
     /**
-     * 기본 필드 검사
-     *
-     * @param result      결과
-     * @param command     전처리 데이터
-     * @param dishTypeMap menuId, dishType
+     * 식단 날짜에 넣기
+     * @param result ai 식단 재배치
+     * @param command 전처리 데이터
+     * @return 식단 계획표
      */
-    private void validateMealPlanBasicFields(
-            AiDietGenerateDto.Result result,
-            AiDietGenerateDto.Command command,
-            Map<Long, DishType> dishTypeMap
-    ) {
+    List<AiDietGenerateDto.MealPlan> createMealPlans(AiDietGenerateDto.Result result, AiDietGenerateDto.Command command) {
+        List<AiDietGenerateDto.MealPlan> mealPlans = new ArrayList<>();
 
-        for (AiDietGenerateDto.MealPlan mealPlan : result.mealPlans()) {
-            //null체크
-            if (mealPlan.date() == null
-                    || mealPlan.mealType() == null
-                    || mealPlan.menuId() == null) {
-                log.error("AI 식단 필수값 누락: date={}, mealType={}, menuId={}", mealPlan.date(), mealPlan.mealType(), mealPlan.menuId());
-                throw new BusinessException(ErrorCode.AI_DATA_ERROR);
-            }
+//        Iterator<Long> mainDishIterator = result.mainDishMenuIds().iterator();
+        Iterator<Long> soupIterator = result.soupMenuIds().iterator();
+        Iterator<Long> sideDishIterator = result.sideDishMenuIds().iterator();
+        List<MealType> mealTypes = determineMealTypes(command.dailyMealCount());
 
-            if (mealPlan.date().isBefore(command.startDate())
-                    || mealPlan.date().isAfter(command.endDate())) {
-                log.error("AI 식단 날짜 범위 오류: date={}, allowedRange={} ~ {}", mealPlan.date(), command.startDate(), command.endDate());
-                throw new BusinessException(ErrorCode.AI_DATA_ERROR);
-            }
+        for (LocalDate date = command.startDate(); !date.isAfter(command.endDate()); date = date.plusDays(1)) {
+            for (MealType mealType : mealTypes) {
+                Long soupMenuId = getNextMenuId(soupIterator, DishType.SOUP, date, mealType);
+                Long firstSideDishMenuId = getNextMenuId(sideDishIterator, DishType.SIDE_DISH, date, mealType);
+                Long secondSideDishMenuId = getNextMenuId(sideDishIterator, DishType.SIDE_DISH, date, mealType);
 
-            // 포함되지 않은 메뉴 아이디
-            if (!dishTypeMap.containsKey(mealPlan.menuId())) {
-                log.error("AI가 후보에 없는 메뉴를 반환함: menuId={}, date={}, mealType={}", mealPlan.menuId(), mealPlan.date(), mealPlan.mealType());
-                log.error("사용 가능한 menuId 목록: {}", dishTypeMap.keySet());
-                throw new BusinessException(ErrorCode.AI_DATA_ERROR);
-            }
+                mealPlans.add(AiDietGenerateDto.MealPlan.builder()
+                        .date(date).mealType(mealType).menuId(soupMenuId)
+                        .build());
 
-            if (dishTypeMap.get(mealPlan.menuId()) == null) {
-                log.error("메뉴의 dishType이 null임: menuId={}, date={}, mealType={}", mealPlan.menuId(), mealPlan.date(), mealPlan.mealType());
-                throw new BusinessException(ErrorCode.AI_DATA_ERROR);
+                mealPlans.add(AiDietGenerateDto.MealPlan.builder()
+                        .date(date).mealType(mealType).menuId(firstSideDishMenuId)
+                        .build());
+
+                mealPlans.add(AiDietGenerateDto.MealPlan.builder()
+                        .date(date).mealType(mealType).menuId(secondSideDishMenuId)
+                        .build());
             }
         }
+
+        return mealPlans;
+
     }
 
     /**
-     * 날짜 사이에 빈 데이터가 없는지 확인
-     *
-     * @param result  결과
-     * @param command 요청 날짜
+     * 식단 타입
+     * @param dailyMealCount 하루 끼니
+     * @return 아,점,저 선택
      */
-    private void validateDateCoverage(
-            AiDietGenerateDto.Result result,
-            AiDietGenerateDto.Command command
-    ) {
-        Set<LocalDate> resultDates = result.mealPlans().stream()
-                .map(AiDietGenerateDto.MealPlan::date)
-                .collect(Collectors.toSet());
+    private List<MealType> determineMealTypes(int dailyMealCount) {
+        return switch (dailyMealCount) {
+            case 1 -> List.of(MealType.DINNER);
+            case 2 -> List.of(MealType.LUNCH, MealType.DINNER);
+            case 3 -> List.of(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER);
 
-        LocalDate current = command.startDate();
+            default -> {
+                log.error("지원하지 않는 하루 식사 횟수: dailyMealCount={}", dailyMealCount);
 
-        while (!current.isAfter(command.endDate())) {
-            if (!resultDates.contains(current)) {
                 throw new BusinessException(ErrorCode.AI_DATA_ERROR);
             }
-
-            current = current.plusDays(1);
-        }
+        };
     }
 
     /**
-     * 한끼에 dishType수가 맞는지와 중복 체크
-     *
-     * @param mealGroup   한끼 반찬, 메뉴
-     * @param dishTypeMap menuId, dishType
+     * 메뉴 아이디 꺼내기
+     * @param iterator 메뉴 배열
+     * @param dishType 메인, 사이드, 국 타입
+     * @param date 날짜
+     * @param mealType 아,점,저
+     * @return 다음 메뉴 반환
      */
-    private void validateMealGroup(
-            List<AiDietGenerateDto.MealPlan> mealGroup,
-            Map<Long, DishType> dishTypeMap
-    ) {
-        Set<Long> menuIdsInMeal = new HashSet<>();
-
-        int mainCount = 0;
-        int soupCount = 0;
-        int sideDishCount = 0;
-
-        for (AiDietGenerateDto.MealPlan mealPlan : mealGroup) {
-            Long menuId = mealPlan.menuId();
-
-            if (!menuIdsInMeal.add(menuId)) {
-                throw new BusinessException(ErrorCode.AI_DATA_ERROR);
-            }
-
-            DishType dishType = dishTypeMap.get(menuId);
-
-            if (dishType == DishType.MAIN_DISH) {
-                mainCount++;
-            } else if (dishType == DishType.SOUP) {
-                soupCount++;
-            } else if (dishType == DishType.SIDE_DISH) {
-                sideDishCount++;
-            }
+    private Long getNextMenuId(Iterator<Long> iterator, DishType dishType, LocalDate date, MealType mealType) {
+        if (!iterator.hasNext()) {
+            log.error("AI 추천 메뉴 수 부족: dishType={}, date={}, mealType={}", dishType, date, mealType);
+            throw new BusinessException(ErrorCode.AI_DATA_ERROR);
         }
 
-        validateDishCombination(mainCount, soupCount, sideDishCount);
-    }
-
-    /**
-     * 개수 확인
-     *
-     * @param mainCount     메인 메뉴
-     * @param soupCount     국
-     * @param sideDishCount 반찬
-     */
-    private void validateDishCombination(
-            int mainCount,
-            int soupCount,
-            int sideDishCount
-    ) {
-        if (mainCount == 0 && soupCount == 0 && sideDishCount > 0) {
-            throw new BusinessException(ErrorCode.INVALID_MENU_DATA);
-        }
-
-        if (soupCount > 0 && sideDishCount < 2) {
-            throw new BusinessException(ErrorCode.INVALID_MENU_DATA);
-        }
+        return iterator.next();
     }
 
     /**
      * DB에 데이터 저장
      *
      * @param generation DietGeneration
-     * @param result     ai 생성 결과
+     * @param mealPlans  ai 생성 결과
      * @param command    전처리 데이터
      */
-    void saveAiDietResult(DietGeneration generation, AiDietGenerateDto.Result result, AiDietGenerateDto.Command command) {
+    void saveAiDietResult(DietGeneration generation, List<AiDietGenerateDto.MealPlan> mealPlans,
+                          AiDietGenerateDto.Command command) {
         User user = userReader.getById(command.userId());
         Family family = user.getFamily();
 
@@ -788,7 +769,7 @@ public class AiDietWorker {
                 .map(AiDietGenerateDto.UserMenu::menuId)
                 .collect(Collectors.toSet());
 
-        List<Diet> diets = result.mealPlans().stream()
+        List<Diet> diets = mealPlans.stream()
                 .map(mealPlan -> {
                     Menu menu = menuRepository.findById(mealPlan.menuId())
                             .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
@@ -801,8 +782,36 @@ public class AiDietWorker {
                 .toList();
 
         dietRepository.saveAll(diets);
+        // 사용한 식단만 제거 - 아직까진 별 쓸모 없음 한번만 생성 가능하기 때문
+        markUsedUserMenuPicks(mealPlans, command);
+    }
 
-        command.userMenuPicks().forEach(UserMenuPick::used);
+    /**
+     * 식단 생성에 사용된 메뉴 사용 처리
+     *
+     * @param mealPlans 생성 식단
+     * @param command   전처리 데이터
+     */
+    private void markUsedUserMenuPicks(
+            List<AiDietGenerateDto.MealPlan> mealPlans,
+            AiDietGenerateDto.Command command
+    ) {
+        Set<Long> assignedMenuIds = mealPlans.stream()
+                .map(AiDietGenerateDto.MealPlan::menuId)
+                .collect(Collectors.toSet());
+
+        Set<Long> usedUserMenuPickIds = command.userMenus().stream()
+                .filter(userMenu ->
+                        assignedMenuIds.contains(userMenu.menuId())
+                )
+                .map(AiDietGenerateDto.UserMenu::userMenuPickId)
+                .collect(Collectors.toSet());
+
+        command.userMenuPicks().stream()
+                .filter(userMenuPick ->
+                        usedUserMenuPickIds.contains(userMenuPick.getId())
+                )
+                .forEach(UserMenuPick::used);
     }
 
     /**
@@ -811,6 +820,7 @@ public class AiDietWorker {
      * @param userId            유저 id
      * @param startDate         시작 날짜
      * @param endDate           마지막 날짜
+     * @param dailyMealCount    하루 식단 개수
      * @param menuCandidates    메뉴 후보
      * @param userMenus         선택한 메뉴 후보
      * @param healthConditions  건강 정보
@@ -822,6 +832,7 @@ public class AiDietWorker {
             Long userId,
             LocalDate startDate,
             LocalDate endDate,
+            int dailyMealCount,
             List<AiDietGenerateDto.MenuCandidate> menuCandidates,
             List<AiDietGenerateDto.UserMenu> userMenus,
             List<UserMenuPick> userMenuPicks,
@@ -833,6 +844,7 @@ public class AiDietWorker {
                 .userId(userId)
                 .startDate(startDate)
                 .endDate(endDate)
+                .dailyMealCount(dailyMealCount)
                 .menuCandidates(menuCandidates)
                 .userMenus(userMenus)
                 .userMenuPicks(userMenuPicks)
@@ -847,7 +859,7 @@ public class AiDietWorker {
     @Builder
     private record DishTypeCandidateLimit(
             int totalMealCount,
-            int mainLimit,
+//            int mainLimit,
             int soupLimit,
             int sideDishLimit
     ) {
