@@ -3,10 +3,12 @@ package kongju.pickmeal.application.auth;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.auth.RefreshToken;
@@ -16,9 +18,8 @@ import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
-
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -45,7 +46,7 @@ public class AuthService {
         String refreshToken = jwtService.createRefreshToken(user);
 
         // 리프레시 토큰 레디스에 저장
-        saveRefreshToken(user.getLoginId(), refreshToken);
+        saveRefreshToken(user.getId(), refreshToken);
 
         return AuthDto.TokenPair.builder()
                 .accessToken(String.valueOf(accessToken))
@@ -85,12 +86,12 @@ public class AuthService {
     /**
      * 리프레시 토큰 레디스에 저장
      *
-     * @param loginId 사용자 아이디
+     * @param userId 사용자 기본키
      * @param token   리프레시 토큰
      */
-    private void saveRefreshToken(String loginId, String token) {
+    private void saveRefreshToken(Long userId, String token) {
         long expiration = Duration.ofDays(14).toSeconds();
-        RefreshToken refreshToken = new RefreshToken(loginId, token, expiration);
+        RefreshToken refreshToken = new RefreshToken(userId, token, expiration);
         refreshTokenRepository.save(refreshToken);
     }
 
@@ -103,10 +104,10 @@ public class AuthService {
     public void logout(String authorizationHeader, String refreshToken) {
         String accessToken = extractAccessToken(authorizationHeader);
 
-        String loginId = checkRefreshTokenExpired(refreshToken);
+        Long userId = checkRefreshTokenExpired(refreshToken);
 
         // 레디스 리프레쉬 토큰 삭제
-        refreshTokenRepository.deleteById(loginId);
+        refreshTokenRepository.deleteByUserId(userId);
 
         if (jwtService.isValidAccessToken(accessToken)) {
             // 액세스 토큰 블랙 리스트 추가
@@ -140,11 +141,11 @@ public class AuthService {
     }
 
     /**
-     * 리프레시 토큰에서 loginId추출
+     * 리프레시 토큰에서 userId추출
      * @param refreshToken 리프레시 토큰
-     * @return loginId
+     * @return userId
      */
-    private String checkRefreshTokenExpired(String refreshToken) {
+    private Long checkRefreshTokenExpired(String refreshToken) {
         return jwtService.extractSubjectFromRefreshToken(refreshToken)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
     }
@@ -162,7 +163,7 @@ public class AuthService {
         String refreshToken = jwtService.createRefreshToken(user);
 
         // 토큰 저장
-        saveRefreshToken(user.getLoginId(), refreshToken);
+        saveRefreshToken(user.getId(), refreshToken);
 
         return AuthDto.TokenPair
                 .builder()
@@ -178,21 +179,24 @@ public class AuthService {
      */
     private User verifyToken(String oldRefreshToken) {
         // 리프레시 토큰 확인
-        if (oldRefreshToken == null || !jwtService.isValidRefreshToken(oldRefreshToken)) {
+        if (oldRefreshToken == null || oldRefreshToken.isBlank() || !jwtService.isValidRefreshToken(oldRefreshToken)) {
+//            log.info("토큰 멀쩡한지 확인");
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         // 유저와 토큰이 일치하는가
-        String userId = jwtService.extractSubjectFromRefreshToken(oldRefreshToken)
+        Long userId = jwtService.extractSubjectFromRefreshToken(oldRefreshToken)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 
-        String savedToken = redisTemplate.opsForValue().get("rt:" + userId);
-        if (savedToken == null || !savedToken.equals(oldRefreshToken)) {
+        RefreshToken savedRefreshToken = refreshTokenRepository.findByUserId(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "리프레시 토큰이 존재하지 않습니다."));
+
+        if(!oldRefreshToken.equals(savedRefreshToken.getToken())) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         // 유저반환
-        return userRepository.findByLoginId(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
     }
 
