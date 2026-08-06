@@ -84,19 +84,14 @@ public class DietService {
             MenuPickDto.CreateRequest request) {
 
         User user = userReader.getById(userId);
-
         List<Long> menuIds = request.menuIds().stream()
                 .distinct()
                 .toList();
 
         Long count = (long) menuIds.size();
-
         YearMonth targetMonth = request.targetMonth();
-
         validateSelectableMonth(targetMonth);
-
         debitPickCount(user, count);
-
         UUID uuid = UUID.randomUUID();
         debitHistory(user, count, uuid);
 
