@@ -1,5 +1,6 @@
 package kongju.pickmeal.application.auth;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.time.LocalDate;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.auth.RefreshToken;
 import kongju.pickmeal.core.service.JwtService;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.api.security.JwtTokenFilter;
@@ -146,7 +148,7 @@ public class AuthServiceTest {
             String accessToken = "mock_access_token";
             String refreshToken = "mock_refresh_token";
 
-            User user = user();
+            Long userId = 1L;
 
             given(jwtService.extractAccessToken(authorizationHeader))
                     .willReturn(Optional.of(accessToken));
@@ -158,7 +160,7 @@ public class AuthServiceTest {
                     .willReturn(false);
 
             given(jwtService.extractSubjectFromRefreshToken(refreshToken))
-                    .willReturn(Optional.of(user.getLoginId()));
+                    .willReturn(Optional.of(userId));
 
             // 어떤 에러도 터지지 않아야 함
             assertDoesNotThrow(() -> {
@@ -210,6 +212,7 @@ public class AuthServiceTest {
             String refreshToken = "mock_refresh_token";
 
             User user = user();
+            Long  userId = 1L;
 
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
@@ -223,7 +226,7 @@ public class AuthServiceTest {
                     .willReturn(true);
 
             given(jwtService.extractSubjectFromRefreshToken(refreshToken))
-                    .willReturn(Optional.of(user.getLoginId()));
+                    .willReturn(Optional.of(userId));
 
             given(jwtService.getAccessTokenExpiration(accessToken))
                     .willReturn(3600000L);
@@ -231,7 +234,7 @@ public class AuthServiceTest {
             authService.logout(authorizationHeader, refreshToken);
 
             // 리프레시 토큰 삭제 확인
-            verify(refreshTokenRepository, times(1)).deleteById(anyString());
+            verify(refreshTokenRepository, times(1)).deleteByUserId(any());
 
             // 블랙리스트 만료 시간 확인
             verify(valueOperations, times(1)).set(
@@ -258,20 +261,22 @@ public class AuthServiceTest {
         @DisplayName("토큰 재발급 성공")
         public void should_success_refresh() {
             User user = user();
+            Long userId = 1L;
             // 리프레시 토큰 시간, 액세스 토큰이 발급 시간 확인
             String oldRefreshToken = "oldRefreshToken";
+            long expiration = Duration.ofDays(14).toSeconds();
+            RefreshToken savedRefreshToken = new RefreshToken(userId, oldRefreshToken, expiration);
 
             // 액세스 토큰 만료 안됨
             given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
             // 리프레시 토큰 만료
             given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
             // 만료된 액세스 토큰에서 유저 아이디 반환
-            given(jwtService.extractSubjectFromRefreshToken(anyString())).willReturn(Optional.of("test1234"));
-            // 아이디로 토큰꺼내기
-            given(redisTemplate.opsForValue()).willReturn(valueOperations);
-            given(valueOperations.get("rt:test1234")).willReturn("oldRefreshToken");
+            given(jwtService.extractSubjectFromRefreshToken(anyString())).willReturn(Optional.of(userId));
+
+            given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(savedRefreshToken));
             // 유저 객체 반환
-            given(userRepository.findByLoginId(anyString())).willReturn(Optional.of(user));
+            given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
             given(jwtService.createAccessToken(user)).willReturn("newAccessToken");
             given(jwtService.createRefreshToken(user)).willReturn("newRefreshToken");
@@ -282,7 +287,7 @@ public class AuthServiceTest {
             assertThat(response.refreshToken()).isEqualTo("newRefreshToken");
 
             verify(refreshTokenRepository, times(1)).save(any());
-            verify(userRepository, times(1)).findByLoginId("test1234");
+            verify(userRepository, times(1)).findById(userId);
 
         }
 
@@ -304,16 +309,16 @@ public class AuthServiceTest {
         @DisplayName("유저와 토큰 정보가 맞지 않을때")
         public void should_fail_refresh_user_token_not_match() {
             String oldRefreshToken = "kk";
-
+            Long userId = 1L;
             // 리프레시 토큰 만료
             given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
             // 만료된 리프레시 토큰에서 유저 아이디 반환
-            given(jwtService.extractSubjectFromRefreshToken(anyString())).willReturn(Optional.of("test1234"));
+            given(jwtService.extractSubjectFromRefreshToken(anyString())).willReturn(Optional.of(userId));
             // 아이디로 토큰꺼내기
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
-            given(valueOperations.get("rt:test1234")).willReturn("oldRefreshToken");
+            given(valueOperations.get("rt:"+userId)).willReturn("oldRefreshToken");
             // 유저 객체 반환
-            given(userRepository.findByLoginId(anyString())).willReturn(Optional.empty());
+            given(userRepository.findById(any())).willReturn(Optional.empty());
 
             BusinessException exception = assertThrows(BusinessException.class, () -> {
                 authService.refresh(oldRefreshToken);

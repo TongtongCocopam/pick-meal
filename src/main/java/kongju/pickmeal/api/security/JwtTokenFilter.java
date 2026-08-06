@@ -2,6 +2,7 @@ package kongju.pickmeal.api.security;
 
 import java.io.IOException;
 
+import lombok.extern.slf4j.Slf4j;
 import jakarta.servlet.FilterChain;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -18,7 +19,7 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.repository.UserRepository;
 
-
+@Slf4j
 @RequiredArgsConstructor // final이 붙은 필드를 모아서 생성자를 자동으로 만들어줌
 public class JwtTokenFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
@@ -29,7 +30,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
-
+        log.info("JwtTokenFilter 실행 : {}", request.getRequestURI());
         // 토큰 꺼내기
         String header = request.getHeader("Authorization");
 
@@ -66,5 +67,18 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         // 필터 처리 완료
         filterChain.doFilter(request, response);
 
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+
+        return path.equals("/api/v1/auth/login")
+                || path.equals("/api/v1/auth/refresh")
+                || path.equals("/api/v1/users/signup")
+                || path.equals("/api-docs")
+                || path.startsWith("/api-docs/")
+                || path.equals("/swagger-ui.html")
+                || path.startsWith("/swagger-ui/");
     }
 }
