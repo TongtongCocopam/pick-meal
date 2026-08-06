@@ -20,7 +20,7 @@ public interface UserPickCountJpaRepository extends JpaRepository<UserPickCount,
     @Query("""
                 select upc
                 from UserPickCount upc
-                where upc.user.id = :userId
+                where upc.user = :user
             """)
     Optional<UserPickCount> findByUserForUpdate(@Param("user") User user);
 

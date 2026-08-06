@@ -1,11 +1,11 @@
 package kongju.pickmeal.api.user;
 
 import jakarta.validation.Valid;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import kongju.pickmeal.application.user.data.*;
@@ -21,6 +21,7 @@ import kongju.pickmeal.application.user.data.UserDto.WithdrawRequest;
 public class UserController {
     private final UserService userService;
 
+    @SecurityRequirements
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<UserDto.SignupResponse>> signup(@RequestBody @Valid UserDto.SignupRequest request) {
         UserDto.SignupResponse response = userService.signup(request);

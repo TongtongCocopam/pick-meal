@@ -61,6 +61,9 @@ public class UserService {
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE, request.email());
         }
+        if (userRepository.existsByNickname(request.nickname())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE, request.nickname());
+        }
         validateResisterRequest(request);
         // 비밀번호 해시 저장
         String password = passwordEncoder.encode(request.password());
@@ -346,7 +349,7 @@ public class UserService {
      */
     private void deleteUserRelatedData(User user) {
         // 토큰 삭제
-        refreshTokenRepository.deleteById(user.getLoginId());
+        refreshTokenRepository.deleteByUserId(user.getId());
         // 유저 건강 정보 삭제
         userHealthRepository.deleteByUser(user);
         // 유저 질병 정보 삭제

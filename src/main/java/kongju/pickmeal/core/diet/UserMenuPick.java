@@ -35,7 +35,7 @@ public class UserMenuPick extends BaseTimeEntity {
     @Column(nullable = false)
     private LocalDate targetMonth;
 
-    @Column(name = "transaction_id", nullable = false, unique = true)
+    @Column(name = "transaction_id", nullable = false)
     private UUID transactionId;
 
     @Builder(access = AccessLevel.PRIVATE)
