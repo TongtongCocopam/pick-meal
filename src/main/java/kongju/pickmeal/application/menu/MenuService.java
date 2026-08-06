@@ -116,9 +116,9 @@ public class MenuService {
      */
     private String normalizeKeyword(String keyword) {
         if (keyword == null || keyword.isBlank()) {
-            return null;
+            return "";
         }
-        return keyword.trim();
+        return keyword.strip();
     }
 
     /**
@@ -265,6 +265,7 @@ public class MenuService {
 
         // 기존 재료, 메뉴 연결 테이블 삭제
         menuIngredientRepository.deleteAllByMenu(menu);
+        menuIngredientRepository.flush();
 
         // 새로 추가
         List<IngredientRequest> ingredientRequests = request.ingredients();

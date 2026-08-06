@@ -17,7 +17,7 @@ public interface MenuIngredientJpaRepository extends JpaRepository<MenuIngredien
                     select mi
                     from MenuIngredient mi
                     Join fetch mi.ingredient
-                    where mi.menu = : menu
+                    where mi.menu = :menu
             """)
     List<MenuIngredient> findAllByMenuWithIngredient(@Param("menu") Menu menu);
 
