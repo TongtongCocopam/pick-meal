@@ -1,0 +1,25 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+jwt:
+  access-secret: ${JWT_ACCESS_SECRET:local-test-access-secret-must-be-at-least-32-bytes-long}
+  refresh-secret: ${JWT_REFRESH_SECRET:local-test-refresh-secret-must-be-at-least-32-bytes-long}
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+debug: true
