@@ -37,7 +37,8 @@ public interface MenuJpaRepository extends JpaRepository<Menu, Long> {
                     where(:category is null or m.category = :category)
                     and (:dishType is null or m.dishType = :dishType)
                     and m.id <> :menuId
-                    and (:keyword is null or lower(m.menuName) like lower(concat('%', :keyword, '%') ) )
+                    and lower(m.menuName)
+                    like lower(concat('%', :keyword, '%'))
             """)
     Page<Menu> searchReplacementMenus(
             @Param("category") MenuCategory category,
