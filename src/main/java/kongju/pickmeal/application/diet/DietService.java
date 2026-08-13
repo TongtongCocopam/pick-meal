@@ -735,6 +735,10 @@ public class DietService {
 
         Diet diet = getDiet(dietId);
 
+        if(diet.getSource() == DietMenuSource.USER_PICKED){
+            throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
+        }
+
         // 내 가족 식단이 아닐 경우
         checkFamilyLeader(user, diet);
 
