@@ -524,7 +524,7 @@ public class DietServiceTest {
             user.joinFamilyLeader(family);
             Menu menu = MenuFixture.menu();
             DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
-            Diet diet = Diet.create(family, menu, LocalDate.now(), MealType.BREAKFAST, dietGeneration, DietMenuSource.USER_PICKED);
+            Diet diet = Diet.create(family, menu, LocalDate.now(), MealType.BREAKFAST, dietGeneration, DietMenuSource.AI_RECOMMENDED);
 
             DietMenuDto.ReplaceRequest request = DietMenuDto.ReplaceRequest.builder()
                     .menuId(3L)
@@ -550,7 +550,7 @@ public class DietServiceTest {
             user.joinFamilyLeader(family);
             Menu menu = MenuFixture.menu();
             DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
-            Diet diet = Diet.create(family, menu, LocalDate.now(), MealType.BREAKFAST, dietGeneration, DietMenuSource.USER_PICKED);
+            Diet diet = Diet.create(family, menu, LocalDate.now(), MealType.BREAKFAST, dietGeneration, DietMenuSource.AI_RECOMMENDED);
             Menu menu2 = MenuFixture.menu("계란말이");
 
             DietMenuDto.ReplaceRequest request = DietMenuDto.ReplaceRequest.builder()
