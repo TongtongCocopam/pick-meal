@@ -179,25 +179,45 @@ public class AuthService {
      */
     private User verifyToken(String oldRefreshToken) {
         // 리프레시 토큰 확인
+//        if (oldRefreshToken == null || oldRefreshToken.isBlank() || !jwtService.isValidRefreshToken(oldRefreshToken)) {
+////            log.info("토큰 멀쩡한지 확인");
+//            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+//        }
         if (oldRefreshToken == null || oldRefreshToken.isBlank() || !jwtService.isValidRefreshToken(oldRefreshToken)) {
+            log.warn("[REFRESH] 1. 쿠키 없음");
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        if (!jwtService.isValidRefreshToken(oldRefreshToken)) {
 //            log.info("토큰 멀쩡한지 확인");
+            log.warn("[REFRESH] 2. JWT 검증 실패");
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         // 유저와 토큰이 일치하는가
         Long userId = jwtService.extractSubjectFromRefreshToken(oldRefreshToken)
-                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+                .orElseThrow(() -> {
+                    log.warn("[REFRESH] 3. subject 추출 실패");
+                    return new BusinessException(ErrorCode.UNAUTHORIZED);
+                }
+        );
 
         RefreshToken savedRefreshToken = refreshTokenRepository.findByUserId(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED, "리프레시 토큰이 존재하지 않습니다."));
+                .orElseThrow(() -> {
+                    log.warn("[REFRESH] 4. Redis 조회 실패 userId={}", userId);
+                    return new BusinessException(ErrorCode.UNAUTHORIZED, "리프레시 토큰이 존재하지 않습니다.");
+                });
 
         if(!oldRefreshToken.equals(savedRefreshToken.getToken())) {
+            log.warn("[REFRESH] 5. Redis 토큰 불일치 userId={}", userId);
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
 
         // 유저반환
         return userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+                .orElseThrow(() -> {
+                    log.warn("[REFRESH] 6. DB 사용자 없음 userId={}", userId);
+                    return new BusinessException(ErrorCode.UNAUTHORIZED);
+                });
     }
 
 }

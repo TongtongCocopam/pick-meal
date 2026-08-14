@@ -70,7 +70,6 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/error",
                                 "/actuator/**"
-
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
