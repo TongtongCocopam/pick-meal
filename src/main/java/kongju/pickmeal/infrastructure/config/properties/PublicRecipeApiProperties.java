@@ -1,5 +1,4 @@
-package kongju.pickmeal.infrastructure.config;
-
+package kongju.pickmeal.infrastructure.config.properties;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -11,14 +10,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Getter
 @Setter
 @Validated
-@ConfigurationProperties(prefix = "external.recipe.food-safety")
-public class FoodSafetyRecipeApiProperties {
+@ConfigurationProperties(prefix = "external.recipe.public-data")
+public class PublicRecipeApiProperties {
     @NotEmpty
     private String baseUrl;
     @NotEmpty
     private String apiKey;
     @NotEmpty
-    private String serviceId;
-    @NotEmpty
     private String type;
+    @NotEmpty
+    private String recipeInfoApiUrl;
+    @NotEmpty
+    private String recipeIngredientApiUrl;
 }

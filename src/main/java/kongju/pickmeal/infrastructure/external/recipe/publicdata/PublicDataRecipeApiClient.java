@@ -8,7 +8,7 @@ import org.springframework.web.client.ResourceAccessException;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.common.exception.BusinessException;
 import org.springframework.web.client.RestClientResponseException;
-import kongju.pickmeal.infrastructure.config.PublicRecipeApiProperties;
+import kongju.pickmeal.infrastructure.config.properties.PublicRecipeApiProperties;
 import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.info.RecipeInfoApiResponse;
 import kongju.pickmeal.infrastructure.external.recipe.publicdata.data.ingredient.RecipeIngredientApiResponse;
 

@@ -1,5 +1,7 @@
 package kongju.pickmeal.api.auth;
 
+import java.time.Duration;
+
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +17,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import kongju.pickmeal.application.auth.AuthService;
 import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
+import kongju.pickmeal.infrastructure.config.properties.CookieProperties;
 
-import java.time.Duration;
 
 @Slf4j
 @RestController
@@ -24,13 +26,14 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final CookieProperties cookieProperties;
 
     private static final long REFRESH_TOKEN_MAX_AGE = Duration.ofDays(14).toSeconds();
 
     private void saveCookie(HttpServletResponse hResponse, String refreshToken, Long expiresIn) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookieProperties.secure())
                 .path("/")
                 .maxAge(expiresIn)
                 .sameSite("Strict")
