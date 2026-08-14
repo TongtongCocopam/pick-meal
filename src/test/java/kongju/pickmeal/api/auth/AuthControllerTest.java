@@ -26,6 +26,7 @@ import kongju.pickmeal.application.auth.AuthService;
 import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.user.repository.UserRepository;
+import kongju.pickmeal.infrastructure.config.properties.CookieProperties;
 
 
 @WebMvcTest(AuthController.class)
@@ -43,6 +44,8 @@ public class AuthControllerTest {
     private UserRepository userRepository;
     @MockitoBean
     private RedisTemplate<String, String> restTemplate;
+    @MockitoBean
+    private CookieProperties cookieProperties;
 
     @Nested
     @DisplayName("로그인 테스트")
@@ -125,6 +128,7 @@ public class AuthControllerTest {
         @Test
         @DisplayName("파라미터 누락")
         public void should_fail_refresh_params_missing() throws Exception {
+
             willThrow(new BusinessException(ErrorCode.UNAUTHORIZED))
                     .given(authService)
                     .refresh(null);
