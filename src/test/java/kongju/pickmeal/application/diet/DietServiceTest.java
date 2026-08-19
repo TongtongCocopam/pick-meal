@@ -19,8 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -43,7 +45,6 @@ import kongju.pickmeal.support.fixture.UserFixture;
 import kongju.pickmeal.support.fixture.MenuFixture;
 import kongju.pickmeal.core.diet.type.DietMenuSource;
 import kongju.pickmeal.core.menu.type.IngredientType;
-import kongju.pickmeal.support.fixture.FamilyFixture;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
@@ -54,11 +55,19 @@ import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.diet.repository.DietRepository;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
+import kongju.pickmeal.core.diet.type.DietGenerationStatus;
+import org.springframework.context.ApplicationEventPublisher;
+import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
+import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
+import kongju.pickmeal.application.diet.data.DietGenerationRequestedEvent;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
+
+import static kongju.pickmeal.support.fixture.FamilyFixture.family;
 
 
 @ExtendWith(SpringExtension.class)
@@ -81,6 +90,12 @@ public class DietServiceTest {
     private UserIngredientPreferenceRepository userIngredientPreferenceRepository;
     @Mock
     private DietRepository dietRepository;
+    @Mock
+    private FamilyRepository familyRepository;
+    @Mock
+    private DietGenerationRepository dietGenerationRepository;
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
     @InjectMocks
     private DietService dietService;
 
@@ -157,6 +172,60 @@ public class DietServiceTest {
 
             assertEquals(ErrorCode.TOO_MANY_SELECTIONS, exception.getErrorCode());
 
+        }
+
+        @Test
+        @DisplayName("식단 선택 불가능한 달")
+        public void should_fail_menu_pick_when_unvalidated_month() {
+            Long userId = 1L;
+
+            MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
+                    .menuIds(List.of(1L, 2L))
+                    .targetMonth(YearMonth.of(2027, 8))
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+
+            Menu menu = MenuFixture.menu();
+            given(menuRepository.findById(any())).willReturn(Optional.of(menu));
+
+            UserPickCount userPickCount = UserPickCount.initialize(user);
+            given(userPickCountRepository.findByUserForUpdate(any())).willReturn(Optional.of(userPickCount));
+
+            given(pickCountHistoryRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> dietService.menuPick(userId, request));
+
+            assertEquals(ErrorCode.INVALID_TARGET_MONTH, exception.getErrorCode());
+
+        }
+
+        @Test
+        @DisplayName("선택권 차감 시 정보를 찾을 수 없을때")
+        public void should_fail_menu_pick_when_not_found_user_menu_pick() {
+            Long userId = 1L;
+
+            MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
+                    .menuIds(List.of(1L, 2L))
+                    .targetMonth(YearMonth.of(2026, 8))
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+
+            Menu menu = MenuFixture.menu();
+            given(menuRepository.findById(any())).willReturn(Optional.of(menu));
+
+            given(userPickCountRepository.findByUserForUpdate(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> dietService.menuPick(userId, request));
+
+            assertEquals(ErrorCode.NOT_FOUND, exception.getErrorCode());
         }
 
         @Test
@@ -266,6 +335,31 @@ public class DietServiceTest {
         }
 
         @Test
+        @DisplayName("이미 식단 확정된 메뉴")
+        public void should_fail_update_pick_menu_when_generation_menu() {
+            Long userId = 1L;
+            Long pickId = 1L;
+            LocalDate targetMonth = LocalDate.now();
+            MenuPickDto.UpdateRequest request = MenuPickDto.UpdateRequest.builder()
+                    .menuId(1L)
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+
+            Menu menu = MenuFixture.menu();
+            given(menuRepository.findById(pickId)).willReturn(Optional.of(menu));
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth, UUID.randomUUID());
+            userMenuPick.used();
+            given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.updatePickMenu(userId, pickId, request));
+
+            assertEquals(ErrorCode.MENU_PICK_ALREADY_USED, exception.getErrorCode());
+        }
+
+        @Test
         @DisplayName("이전과 동일한 메뉴")
         public void should_fail_update_pick_menu_when_not_change_menu() {
             Long userId = 1L;
@@ -352,6 +446,31 @@ public class DietServiceTest {
         }
 
         @Test
+        @DisplayName("유저 선택권 정보를 찾을 수 없을때")
+        public void should_success_delete_pick_mene_when_pick_count_not_found() {
+            Long userId = 1L;
+            Long pickId = 1L;
+            LocalDate targetMonth = LocalDate.now();
+
+            // 유저
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+
+            Menu menu = MenuFixture.menu();
+            UUID transactionId = UUID.randomUUID();
+            UserMenuPick userMenuPick = UserMenuPick.create(user, menu, targetMonth, transactionId);
+
+            given(userMenuPickRepository.findByMenuIdAndUser(pickId, user)).willReturn(Optional.of(userMenuPick));
+
+            given(userPickCountRepository.findByUser(user)).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.deletePickMenu(userId, pickId));
+
+            assertEquals(ErrorCode.NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
         @DisplayName("성공 케이스")
         public void should_success_delete_pick_menu() {
             Long userId = 1L;
@@ -377,6 +496,134 @@ public class DietServiceTest {
             MenuPickDto.DeleteResponse response = dietService.deletePickMenu(userId, pickId);
 
             assertEquals(menu.getId(), response.menuId());
+        }
+    }
+
+    @Nested
+    @DisplayName("ai 식단 생성")
+    class RequestGeneration {
+        @Test
+        @DisplayName("가족을 찾을 수 없는 경우")
+        public void should_fail_generation_view_when_family_not_found() {
+            Long userId = 1L;
+            DietGenerationDto.GenerateRequest request = DietGenerationDto.GenerateRequest.builder()
+                    .targetMonth(YearMonth.now())
+                    .dailyMealCount(2)
+                    .build();
+
+            User user = UserFixture.user();
+            Family family = family();
+            user.joinFamilyLeader(family);
+            given(userReader.getById(any())).willReturn(user);
+            given(familyRepository.findByIdForUpdate(any())).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.requestGeneration(userId, request));
+
+            assertEquals(ErrorCode.FAMILY_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("유효한 달이 아닌 경우")
+        public void should_fail_generation_view_when_invalid_month() {
+            Long userId = 1L;
+            DietGenerationDto.GenerateRequest request = DietGenerationDto.GenerateRequest.builder()
+                    .targetMonth(YearMonth.parse("2025-08"))
+                    .dailyMealCount(2)
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+            Family family = family();
+            user.joinFamilyLeader(family);
+            given(familyRepository.findByIdForUpdate(any())).willReturn(Optional.of(family));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.requestGeneration(userId, request));
+
+            assertEquals(ErrorCode.INVALID_TARGET_MONTH, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("유효한 식단이 아닌 경우 - 기한 동안 식단이 생성되지 않은 경우")
+        public void should_fail_generation_view_when_not_full_month_diet() {
+            Long userId = 1L;
+            DietGenerationDto.GenerateRequest request = DietGenerationDto.GenerateRequest.builder()
+                    .targetMonth(YearMonth.now())
+                    .dailyMealCount(2)
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+            Family family = family();
+            user.joinFamilyLeader(family);
+            given(familyRepository.findByIdForUpdate(any())).willReturn(Optional.of(family));
+            given(dietGenerationRepository.existsOverlappingGeneration(eq(family), any(), any(), any())).willReturn(true);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.requestGeneration(userId, request));
+
+            assertEquals(ErrorCode.DIET_ALREADY_GENERATED, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("유효한 식단이 아닌 경우 - 2번 이상 생성한 경우")
+        public void should_fail_generation_view_when_daily_meal_count_not_match() {
+            Long userId = 1L;
+            DietGenerationDto.GenerateRequest request = DietGenerationDto.GenerateRequest.builder()
+                    .targetMonth(YearMonth.now())
+                    .dailyMealCount(2)
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+            Family family = family();
+            user.joinFamilyLeader(family);
+            given(familyRepository.findByIdForUpdate(any())).willReturn(Optional.of(family));
+            given(dietGenerationRepository.existsOverlappingGeneration(eq(family), any(), any(), any())).willReturn(false);
+            given(dietGenerationRepository.countByFamilyAndTargetMonthAndStatusIn(eq(family), any(), any())).willReturn(2L);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> dietService.requestGeneration(userId, request));
+
+            assertEquals(ErrorCode.DIET_GENERATION_MONTHLY_LIMIT_EXCEEDED, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_generation() {
+            Long userId = 1L;
+
+            DietGenerationDto.GenerateRequest request = DietGenerationDto.GenerateRequest.builder()
+                    .targetMonth(YearMonth.now())
+                    .dailyMealCount(2)
+                    .build();
+
+            User user = UserFixture.user();
+            given(userReader.getById(any())).willReturn(user);
+            Family family = family();
+            user.joinFamilyLeader(family);
+            given(familyRepository.findByIdForUpdate(any())).willReturn(Optional.of(family));
+            given(dietGenerationRepository.existsOverlappingGeneration(eq(family), any(), any(), any())).willReturn(false);
+            given(dietGenerationRepository.countByFamilyAndTargetMonthAndStatusIn(eq(family), any(), any())).willReturn(1L);
+
+            UserMenuPick pick1 = mock(UserMenuPick.class);
+            UserMenuPick pick2 = mock(UserMenuPick.class);
+
+            given(pick1.getId()).willReturn(10L);
+            given(pick2.getId()).willReturn(20L);
+
+            given(userMenuPickRepository.findAllPendingForUpdate(eq(family), any(), any())).willReturn(List.of(pick1, pick2));
+            DietGeneration generation = mock(DietGeneration.class);
+            given(dietGenerationRepository.save(any())).willReturn(generation);
+
+            DietGenerationDto.GenerateResponse response = dietService.requestGeneration(userId, request);
+            assertEquals(DietGenerationStatus.PENDING, response.status());
+            verify(pick1).used();
+            verify(pick2).used();
+
+            verify(dietGenerationRepository).save(any(DietGeneration.class));
+            verify(applicationEventPublisher).publishEvent(any(DietGenerationRequestedEvent.class));
         }
     }
 
@@ -412,7 +659,7 @@ public class DietServiceTest {
             User user = UserFixture.user();
             given(userReader.getById(any())).willReturn(user);
 
-            Family family = FamilyFixture.family();
+            Family family = family();
             Menu menu = MenuFixture.menu();
 
             DietGeneration dg = DietGeneration.createPending(
@@ -458,13 +705,47 @@ public class DietServiceTest {
         }
 
         @Test
+        @DisplayName("성공케이스 - 유저가 선택한 메뉴가 아닌 경우")
+        public void should_success_daily_meal_when_not_user_choose_menu() {
+            Long userId = 1L;
+            LocalDate date = LocalDate.now();
+
+            User user = UserFixture.user();
+            Family family = family();
+            user.joinFamilyMember(family);
+
+            given(userReader.getById(any())).willReturn(user);
+
+            Menu menu1 = MenuFixture.menu();
+            Menu menu2 = MenuFixture.menu("계란말이");
+
+            DietGeneration dietGeneration = DietGeneration.createPending(family, date, date, 1, LocalDate.now());
+
+            Diet breakfastSoup = Diet.create(family, menu1, date, MealType.BREAKFAST, dietGeneration, DietMenuSource.AI_RECOMMENDED);
+            Diet breakfastSide = Diet.create(family, menu2, date, MealType.BREAKFAST, dietGeneration, DietMenuSource.AI_RECOMMENDED);
+            given(dietRepository.findAllFamilyAndMealDate(any(), any())).willReturn(List.of(breakfastSoup, breakfastSide));
+
+            Ingredient kimchi = Ingredient.create("김치");
+            Ingredient egg = Ingredient.create("계란");
+            given(menuIngredientRepository.findAllByMenuWithIngredient(menu1))
+                    .willReturn(List.of(MenuIngredient.create(menu1, kimchi, "100.0", BigDecimal.valueOf(100.0), IngredientUnit.G, IngredientType.MAIN)));
+
+            given(menuIngredientRepository.findAllByMenuWithIngredient(menu2))
+                    .willReturn(List.of(MenuIngredient.create(menu2, egg, "2.0", BigDecimal.valueOf(2.0), IngredientUnit.PIECE, IngredientType.SUB)));
+
+            DietDto.DailyDetailResponse response = dietService.getDailyMeals(userId, date);
+
+            assertThat(response.date()).isEqualTo(date);
+        }
+
+        @Test
         @DisplayName("성공케이스")
         public void should_success_daily_meal() {
             Long userId = 1L;
             LocalDate date = LocalDate.now();
 
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyMember(family);
 
             given(userReader.getById(any())).willReturn(user);
@@ -520,7 +801,7 @@ public class DietServiceTest {
             Long userId = 1L;
             Long dietId = 2L;
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
             Menu menu = MenuFixture.menu();
             DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
@@ -546,7 +827,7 @@ public class DietServiceTest {
             Long userId = 1L;
             Long dietId = 2L;
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
             Menu menu = MenuFixture.menu();
             DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
@@ -578,7 +859,7 @@ public class DietServiceTest {
             Long dietId = 2L;
             String keyword = "김치";
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
 
 
@@ -599,8 +880,8 @@ public class DietServiceTest {
             Long dietId = 2L;
             String keyword = "김치";
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
-            Family family2 = FamilyFixture.family();
+            Family family = family();
+            Family family2 = family();
             user.joinFamilyLeader(family);
             Menu menu = MenuFixture.menu();
             DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
@@ -623,7 +904,7 @@ public class DietServiceTest {
             Long dietId = 2L;
             String keyword = "김치";
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
             Menu menu = MenuFixture.menu();
             DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
@@ -645,7 +926,7 @@ public class DietServiceTest {
             Long dietId = 2L;
             String keyword = "김치";
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
             Menu menu = MenuFixture.menu();
             DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
@@ -669,7 +950,7 @@ public class DietServiceTest {
             Long dietId = 2L;
             String keyword = "김치";
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
             Menu menu = MenuFixture.menu();
             DietGeneration dietGeneration = DietGeneration.createPending(family, LocalDate.now(), LocalDate.now(), 1, LocalDate.now());
@@ -703,8 +984,8 @@ public class DietServiceTest {
             Long menuId = 3L;
 
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
-            Family family2 = FamilyFixture.family();
+            Family family = family();
+            Family family2 = family();
             user.joinFamilyLeader(family);
 
             Menu menu = MenuFixture.menu();
@@ -729,7 +1010,7 @@ public class DietServiceTest {
             Long menuId = 3L;
 
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
 
             Menu menu = MenuFixture.menu();
@@ -754,7 +1035,7 @@ public class DietServiceTest {
             Long menuId = 3L;
 
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
 
             Menu menu = MenuFixture.menu();
@@ -778,7 +1059,7 @@ public class DietServiceTest {
             Long menuId = 3L;
 
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
 
             Menu menu = MenuFixture.menu();
@@ -822,7 +1103,7 @@ public class DietServiceTest {
             Long dietId = 2L;
 
             User user = UserFixture.user();
-            Family family = FamilyFixture.family();
+            Family family = family();
             user.joinFamilyLeader(family);
 
             given(userReader.getById(userId)).willReturn(user);

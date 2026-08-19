@@ -69,7 +69,6 @@ public class DietService {
     private final PickCountHistoryRepository pickCountHistoryRepository;
     private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
 
-    private final AiDietService aiDietService;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
@@ -239,7 +238,7 @@ public class DietService {
         PickCountHistory pickCountHistory = PickCountHistory.refund(user, count, userMenuPick.getTransactionId());
 
         UserPickCount userPickCount = userPickCountRepository.findByUser(user)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         pickCountHistoryRepository.save(pickCountHistory);
         userPickCount.restoreCount(count);
@@ -301,8 +300,6 @@ public class DietService {
                 .endDate(endDate)
                 .userMenuPickIds(userMenuPickIds)
                 .build());
-
-//        aiDietService.generateDietAsync(userId, saveGeneration.getId(), request, startDate, endDate, userMenuPickIds);
 
         return DietGenerationDto.GenerateResponse.builder()
                 .generationId(generation.getId())
