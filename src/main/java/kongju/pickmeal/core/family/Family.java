@@ -48,8 +48,10 @@ public class Family extends BaseTimeEntity {
      * @param invitationCode 초대코드
      */
     public void reissueInvitationCode(String invitationCode) {
+        LocalDateTime now = LocalDateTime.now();
+
         if (this.invitationCodeUpdatedAt != null &&
-                this.invitationCodeUpdatedAt.isAfter(LocalDateTime.now().minusMinutes(10))) {
+                this.invitationCodeUpdatedAt.isAfter(now.minusMinutes(10))) {
             throw new BusinessException(ErrorCode.INVITATION_CODE_REISSUE_TOO_FAST);
         }
         this.invitationCode = invitationCode;
