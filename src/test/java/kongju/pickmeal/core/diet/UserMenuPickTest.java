@@ -43,6 +43,22 @@ public class UserMenuPickTest {
                 LocalDate.now(),
                 UUID.randomUUID()
         );
+        userMenuPick.used();
+        userMenuPick.rollbackUse();
+        assertThat(userMenuPick.getStatus()).isEqualTo(UserMenuPickStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("유저 선택한 메뉴 롤백 시 사용된 경우가 아닌 경우")
+    public void menu_rollback_used_not_use(){
+        User user = user();
+        Menu menu = menu();
+        UserMenuPick userMenuPick = UserMenuPick.create(
+                user,
+                menu,
+                LocalDate.now(),
+                UUID.randomUUID()
+        );
 
         userMenuPick.rollbackUse();
         assertThat(userMenuPick.getStatus()).isEqualTo(UserMenuPickStatus.PENDING);
