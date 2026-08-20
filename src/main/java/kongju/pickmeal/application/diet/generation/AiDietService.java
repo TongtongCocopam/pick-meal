@@ -1,7 +1,6 @@
-package kongju.pickmeal.application.diet;
+package kongju.pickmeal.application.diet.generation;
 
-import java.util.*;
-
+import kongju.pickmeal.application.diet.DietGenerationFailureHandler;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -9,7 +8,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import kongju.pickmeal.application.diet.data.DietGenerationRequestedEvent;
+import kongju.pickmeal.application.diet.event.DietGenerationRequestedEvent;
 
 
 @Slf4j
