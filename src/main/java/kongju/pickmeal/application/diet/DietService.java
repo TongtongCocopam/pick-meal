@@ -49,7 +49,7 @@ import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
-import kongju.pickmeal.application.diet.data.DietGenerationRequestedEvent;
+import kongju.pickmeal.application.diet.event.DietGenerationRequestedEvent;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 
