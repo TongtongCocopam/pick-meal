@@ -22,6 +22,12 @@ public class AiDietResultValidator {
      * @param command 전처리 데이터
      */
     public void validate(AiDietGenerateDto.Result result, AiDietGenerateDto.Command command) {
+        if (result == null
+                || result.soupMenuIds() == null
+                || result.sideDishMenuIds() == null) {
+            throw new BusinessException(ErrorCode.AI_DATA_ERROR);
+        }
+
         validateRequiredCount(result, command);
         Map<Long, DishType> dishTypeMap = buildDishTypeMap(command);
 
