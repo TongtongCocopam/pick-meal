@@ -1,12 +1,10 @@
-package kongju.pickmeal.application.diet;
+package kongju.pickmeal.application.diet.generation;
 
 import java.util.List;
 import java.util.UUID;
 import java.time.LocalDate;
 import java.time.YearMonth;
 
-import kongju.pickmeal.application.diet.generation.AiDietService;
-import kongju.pickmeal.application.diet.generation.AiDietWorker;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -18,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import kongju.pickmeal.application.diet.DietGenerationFailureHandler;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 

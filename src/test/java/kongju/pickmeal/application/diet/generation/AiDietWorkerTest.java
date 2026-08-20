@@ -1,11 +1,10 @@
-package kongju.pickmeal.application.diet;
+package kongju.pickmeal.application.diet.generation;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.Optional;
 import java.time.LocalDate;
 
-import kongju.pickmeal.application.diet.generation.*;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -13,26 +12,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import kongju.pickmeal.core.user.User;
-import kongju.pickmeal.core.family.Family;
-import kongju.pickmeal.core.diet.type.MealType;
 import kongju.pickmeal.core.ai.DietAiGenerator;
-import kongju.pickmeal.core.diet.DietGeneration;
-import kongju.pickmeal.core.ai.AiDietGenerateDto;
 import kongju.pickmeal.common.exception.ErrorCode;
-import kongju.pickmeal.support.fixture.UserFixture;
-import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
-import kongju.pickmeal.core.diet.repository.DietRepository;
-import kongju.pickmeal.core.menu.repository.MenuRepository;
-import kongju.pickmeal.core.user.repository.UserRepository;
-import kongju.pickmeal.core.user.repository.UserHealthRepository;
-import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
-import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
-import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
-import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 import static org.mockito.Mockito.*;
 import static org.mockito.BDDMockito.given;
