@@ -1,4 +1,4 @@
-package kongju.pickmeal.application.diet.data;
+package kongju.pickmeal.application.diet.event;
 
 import java.util.UUID;
 import java.util.List;
