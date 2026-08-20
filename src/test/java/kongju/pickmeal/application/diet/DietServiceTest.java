@@ -64,7 +64,7 @@ import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
-import kongju.pickmeal.application.diet.event.DietGenerationRequestedEvent;
+import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 import static kongju.pickmeal.support.fixture.FamilyFixture.family;
@@ -623,7 +623,7 @@ public class DietServiceTest {
             verify(pick2).used();
 
             verify(dietGenerationRepository).save(any(DietGeneration.class));
-            verify(applicationEventPublisher).publishEvent(any(DietGenerationRequestedEvent.class));
+            verify(applicationEventPublisher).publishEvent(any(DietGenerationRequestedEventDto.class));
         }
     }
 

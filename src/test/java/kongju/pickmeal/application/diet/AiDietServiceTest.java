@@ -19,7 +19,7 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
-import kongju.pickmeal.application.diet.event.DietGenerationRequestedEvent;
+import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -31,11 +31,11 @@ public class AiDietServiceTest {
     @InjectMocks
     private AiDietService aiDietService;
 
-    private DietGenerationRequestedEvent event;
+    private DietGenerationRequestedEventDto event;
 
     @BeforeEach
     void setUp() {
-        event = DietGenerationRequestedEvent.builder()
+        event = DietGenerationRequestedEventDto.builder()
                 .userId(1L)
                 .generationId(UUID.randomUUID())
                 .request(

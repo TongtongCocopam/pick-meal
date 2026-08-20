@@ -10,7 +10,7 @@ import kongju.pickmeal.core.ai.AiDietGenerateDto;
 
 
 @Builder
-public record FamilyDietData(
+public record FamilyDietDataDto(
         List<AiDietGenerateDto.Disease> diseases,
         List<AiDietGenerateDto.HealthCondition> healthConditions,
 

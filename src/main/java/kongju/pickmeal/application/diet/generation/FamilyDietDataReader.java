@@ -19,7 +19,7 @@ import kongju.pickmeal.core.ai.AiDietGenerateDto;
 import kongju.pickmeal.core.user.UserHealthProfile;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.core.user.UserIngredientPreference;
-import kongju.pickmeal.application.diet.data.FamilyDietData;
+import kongju.pickmeal.application.diet.data.FamilyDietDataDto;
 import kongju.pickmeal.core.user.repository.UserHealthRepository;
 import kongju.pickmeal.core.user.repository.UserDiseaseRepository;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
@@ -32,7 +32,7 @@ public class FamilyDietDataReader {
     private final UserDiseaseRepository userDiseaseRepository;
     private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
 
-    public FamilyDietData read(List<User> users) {
+    public FamilyDietDataDto read(List<User> users) {
         // 질병
         List<AiDietGenerateDto.Disease> diseases = getFamilyDiseases(users);
         // 건강
@@ -40,7 +40,7 @@ public class FamilyDietDataReader {
         // 재료
         IngredientPreferenceSummary preferences = getIngredientPreferenceSummary(users);
 
-        return FamilyDietData.builder()
+        return FamilyDietDataDto.builder()
                 .diseases(diseases)
                 .healthConditions(healthConditions)
                 .preferredIngredients(preferences.preferredIngredients())

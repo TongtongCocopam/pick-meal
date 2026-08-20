@@ -17,7 +17,7 @@ import kongju.pickmeal.core.menu.MenuIngredient;
 import kongju.pickmeal.core.ai.AiDietGenerateDto;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.user.repository.UserRepository;
-import kongju.pickmeal.application.diet.data.FamilyDietData;
+import kongju.pickmeal.application.diet.data.FamilyDietDataDto;
 import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 
@@ -51,7 +51,7 @@ public class AiDietPreparationService {
         log.info("1. 가족 구성원");
         List<User> users = userRepository.findAllFamily(family);
         log.info("2. 가족 건강/질병/선호 데이터");
-        FamilyDietData familyData = familyDietDataReader.read(users);
+        FamilyDietDataDto familyData = familyDietDataReader.read(users);
         log.info("3. 사용자 직접 선택 메뉴");
         UserMenuPickPreparation pickPreparation = getUserMenus(userMenuPickIds);
         log.info("4. AI 후보 메뉴");

@@ -9,7 +9,7 @@ import lombok.Builder;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 
 @Builder
-public record DietGenerationRequestedEvent(
+public record DietGenerationRequestedEventDto(
         Long userId,
         UUID generationId,
         DietGenerationDto.GenerateRequest request,
