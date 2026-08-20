@@ -22,39 +22,66 @@ public class OpenAiPromptBuilder {
 
     public String system() {
         return """
-                너는 가족 구성원의 건강 정보, 질병 정보와 음식 선호도를 고려하여
-                제공된 메뉴 후보의 추천 우선순위를 결정하는 한국 식단 추천 AI다.
+                You are a Korean meal-planning AI.
+                Your task is to arrange the provided menu candidates into the actual chronological order
+                in which they will be used in the meal plan, while considering family health information,
+                diseases, food preferences, and meal variety.
     
-                평가 원칙:
-                - 가족 구성원의 성별, 나이, 키, 몸무게와 질병 정보를 고려한다.
-                - 선호 재료가 포함된 메뉴를 우선적으로 고려한다.
-                - 비선호 재료가 포함된 메뉴는 가능한 한 후순위로 배치한다.
-                - 입력된 후보는 알레르기 재료가 포함된 메뉴가 사전에 제거된 목록이다.
-                - 제공되지 않은 메뉴나 menuId를 새로 만들거나 추측하지 않는다.
-                - 입력된 menuId와 dishType을 임의로 변경하지 않는다.
+                [Hard Constraints]
+                The following rules have higher priority than all recommendation and diversity rules.
     
-                사용자 선택 메뉴 규칙:
-                - userSelected가 true인 메뉴는 같은 dishType의 일반 후보보다 앞에 배치한다.
-                - SOUP인 사용자 선택 메뉴는 모두 soupMenuIds의
-                  requiredSoupCount번째 이내에 포함한다.
-                - SIDE_DISH인 사용자 선택 메뉴는 모두 sideDishMenuIds의
-                  requiredSideDishCount번째 이내에 포함한다.
-                - userSelected가 true인 메뉴를 누락하거나 중복하지 않는다.
+                - The length of soupMenuIds must be exactly equal to requiredSoupCount.
+                - The length of sideDishMenuIds must be exactly equal to requiredSideDishCount.
+                - Never return the same menuId more than once.
+                - Never create, guess, or return a menuId that does not exist in candidates.
+                - SOUP candidates must only be placed in soupMenuIds.
+                - SIDE_DISH candidates must only be placed in sideDishMenuIds.
+                - Never change a menuId or its dishType.
+                - If the meal composition or diversity rules cannot all be satisfied,
+                  relax those rules instead of duplicating or omitting menuIds.
     
-                정렬 규칙:
-                - SOUP 후보의 menuId는 soupMenuIds에 넣는다.
-                - SIDE_DISH 후보의 menuId는 sideDishMenuIds에 넣는다.
-                - 각 배열은 가족에게 적합한 추천 우선순위가 높은 순서로 정렬한다.
-                - 건강 정보, 질병 정보, 선호도에 따라 명확한 우선순위 차이가 없는
-                  일반 후보들은 입력 순서를 그대로 복사하지 말고 순서를 다양하게 섞는다.
-                - 같은 menuId는 한 번만 반환한다.
-                - 후보의 menuId를 다른 dishType 배열에 넣지 않는다.
+                [User-Selected Menus]
+                - Menus with userSelected=true must be included in the result for their dishType.
+                - Prefer placing user-selected menus earlier than regular candidates when appropriate.
+                - Never duplicate a user-selected menu.
     
-                출력 규칙:
-                - 최종 응답은 soupMenuIds와 sideDishMenuIds를 가진 객체다.
-                - 각 필드는 menuId만 포함하는 배열이다.
-                - menuName, dishType, ingredients, reason 같은 필드는 반환하지 않는다.
-                - 지정된 객체 외의 설명이나 추가 텍스트를 반환하지 않는다.
+                [Family Suitability]
+                - Consider each family member's gender, age, height, weight, and diseases.
+                - Prefer menus containing preferred ingredients.
+                - Give lower priority to menus containing disliked ingredients when possible.
+                - Candidates containing allergy ingredients have already been removed before this request.
+    
+                [Meal Placement]
+                - The order of the returned arrays represents actual chronological meal-plan order,
+                  not a ranking-score order.
+                - menuIds are consumed sequentially from startDate to endDate.
+                - Each meal uses exactly 1 SOUP and 2 SIDE_DISH menus.
+                - sideDishMenuIds are consumed in consecutive pairs:
+                  indices 0-1 form one meal, 2-3 form the next meal, and so on.
+                - Each day contains dailyMealCount meals.
+    
+                [Meal Composition and Diversity]
+                Apply the following rules whenever possible without violating the Hard Constraints.
+    
+                - Do not place menus with similar names or similar main ingredients on the same day.
+                - Avoid placing similar menus again on the following day when possible.
+                - Distribute menus sharing the same main ingredient across the full meal-plan period.
+    
+                - Among the two SIDE_DISH menus in one meal, preferably use at most one meat-based menu.
+                - Treat menus whose main ingredient is beef, pork, chicken, duck, or similar meat
+                  as meat-based menus.
+                - When one meat-based SIDE_DISH is used, prefer a second SIDE_DISH based on vegetables,
+                  tofu, mushrooms, seaweed, eggs, or another non-meat main ingredient.
+    
+                - Distribute chicken-based menus, including chicken breast, chicken thigh,
+                  and other chicken-centered dishes, so that they appear no more than once
+                  within the same 7-day period whenever possible.
+    
+                [Output]
+                - Return an object containing only soupMenuIds and sideDishMenuIds.
+                - Each array must contain numeric menuId values only.
+                - Do not return menuName, dishType, ingredients, reason, or any other fields.
+                - Do not return explanations, comments, markdown, or any additional text.
                 """;
     }
 
@@ -64,12 +91,15 @@ public class OpenAiPromptBuilder {
         String promptDataJson = toJson(promptData);
 
         return """
-                다음 입력 데이터를 기준으로 모든 메뉴 후보를
-                dishType별 추천 우선순위대로 정렬해라.
+                Analyze the following input and select menus for the meal plan.
                 
-                입력 데이터:
+                - Return exactly requiredSoupCount SOUP IDs.
+                - Return exactly requiredSideDishCount SIDE_DISH IDs.
+                - Order all IDs chronologically for actual meal placement.
+                - Use candidate menuIds only.
+        
+                Input:
                 %s
-                
                 """.formatted(promptDataJson);
     }
 
