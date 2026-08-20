@@ -1,4 +1,4 @@
-package kongju.pickmeal.application.diet.data;
+package kongju.pickmeal.application.diet.event;
 
 import java.util.UUID;
 import java.util.List;
@@ -9,7 +9,7 @@ import lombok.Builder;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 
 @Builder
-public record DietGenerationRequestedEvent(
+public record DietGenerationRequestedEventDto(
         Long userId,
         UUID generationId,
         DietGenerationDto.GenerateRequest request,

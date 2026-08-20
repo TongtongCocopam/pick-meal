@@ -49,7 +49,7 @@ import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
-import kongju.pickmeal.application.diet.data.DietGenerationRequestedEvent;
+import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 
@@ -69,7 +69,6 @@ public class DietService {
     private final PickCountHistoryRepository pickCountHistoryRepository;
     private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
 
-    private final AiDietService aiDietService;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
@@ -239,7 +238,7 @@ public class DietService {
         PickCountHistory pickCountHistory = PickCountHistory.refund(user, count, userMenuPick.getTransactionId());
 
         UserPickCount userPickCount = userPickCountRepository.findByUser(user)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
         pickCountHistoryRepository.save(pickCountHistory);
         userPickCount.restoreCount(count);
@@ -293,7 +292,7 @@ public class DietService {
 
         DietGeneration saveGeneration = dietGenerationRepository.save(generation);
 
-        applicationEventPublisher.publishEvent(DietGenerationRequestedEvent.builder()
+        applicationEventPublisher.publishEvent(DietGenerationRequestedEventDto.builder()
                 .userId(userId)
                 .generationId(saveGeneration.getId())
                 .request(request)
@@ -301,8 +300,6 @@ public class DietService {
                 .endDate(endDate)
                 .userMenuPickIds(userMenuPickIds)
                 .build());
-
-//        aiDietService.generateDietAsync(userId, saveGeneration.getId(), request, startDate, endDate, userMenuPickIds);
 
         return DietGenerationDto.GenerateResponse.builder()
                 .generationId(generation.getId())

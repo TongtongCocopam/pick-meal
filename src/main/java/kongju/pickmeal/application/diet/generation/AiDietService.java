@@ -1,6 +1,4 @@
-package kongju.pickmeal.application.diet;
-
-import java.util.*;
+package kongju.pickmeal.application.diet.generation;
 
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +7,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import kongju.pickmeal.application.diet.data.DietGenerationRequestedEvent;
+import kongju.pickmeal.application.diet.DietGenerationFailureHandler;
+import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 
 
 @Slf4j
@@ -27,7 +26,7 @@ public class AiDietService {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void generateDietAsync(
-            DietGenerationRequestedEvent event
+            DietGenerationRequestedEventDto event
     ) {
         try {
             log.info(
