@@ -105,13 +105,15 @@ public class MenuServiceTest {
             Long menuId = 1L;
             Menu menu = menu();
 
+
             given(menuRepository.findById(menuId)).willReturn(Optional.of(menu));
-            given(menuIngredientRepository.findAllByMenuWithIngredient(menu)).willReturn(List.of());
+            List<MenuIngredient> menuIngredients = menuIngredientsCreate();
+            given(menuIngredientRepository.findAllByMenuWithIngredient(menu)).willReturn(menuIngredients);
 
             MenuDto.DetailResponse response = menuService.detailMenu(menuId);
 
             assertEquals(menu.getMenuName(), response.menuName());
-            assertEquals(List.of(), response.ingredients());
+            assertThat(menuIngredients).hasSize(2);
 
         }
     }
@@ -395,21 +397,6 @@ public class MenuServiceTest {
             assertThat(response.ingredients()).hasSize(2);
             assertThat(response.ingredients().getFirst().ingredientName()).isEqualTo("계란");
 
-        }
-
-        List<MenuIngredient> menuIngredientsCreate() {
-            MenuIngredient menuIngredient1 = mock(MenuIngredient.class);
-            MenuIngredient menuIngredient2 = mock(MenuIngredient.class);
-            Ingredient ingredient1 = mock(Ingredient.class);
-            Ingredient ingredient2 = mock(Ingredient.class);
-            given(ingredient1.getName()).willReturn("계란");
-            given(ingredient2.getName()).willReturn("설탕");
-            given(menuIngredient1.getIngredient()).willReturn(ingredient1);
-            given(menuIngredient1.getQuantityText()).willReturn("1개");
-            given(menuIngredient2.getIngredient()).willReturn(ingredient2);
-            given(menuIngredient2.getQuantityText()).willReturn("30g");
-
-            return List.of(menuIngredient1, menuIngredient2);
         }
     }
 
@@ -902,5 +889,20 @@ public class MenuServiceTest {
         then(menuIngredientRepository).should().deleteAllByMenu(menu);
         then(menuIngredientRepository).should().flush();
         then(menuIngredientRepository).should().saveAll(anyList());
+    }
+
+    List<MenuIngredient> menuIngredientsCreate() {
+        MenuIngredient menuIngredient1 = mock(MenuIngredient.class);
+        MenuIngredient menuIngredient2 = mock(MenuIngredient.class);
+        Ingredient ingredient1 = mock(Ingredient.class);
+        Ingredient ingredient2 = mock(Ingredient.class);
+        given(ingredient1.getName()).willReturn("계란");
+        given(ingredient2.getName()).willReturn("설탕");
+        given(menuIngredient1.getIngredient()).willReturn(ingredient1);
+        given(menuIngredient1.getQuantityText()).willReturn("1개");
+        given(menuIngredient2.getIngredient()).willReturn(ingredient2);
+        given(menuIngredient2.getQuantityText()).willReturn("30g");
+
+        return List.of(menuIngredient1, menuIngredient2);
     }
 }
