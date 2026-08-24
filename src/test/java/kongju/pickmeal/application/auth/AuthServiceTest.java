@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -212,7 +213,7 @@ public class AuthServiceTest {
             String refreshToken = "mock_refresh_token";
 
             User user = user();
-            Long  userId = 1L;
+            Long userId = 1L;
 
             given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
@@ -250,45 +251,26 @@ public class AuthServiceTest {
     @Nested
     @DisplayName("토큰 재발급 테스트")
     class Refresh {
-        private AuthDto.TokenPair createRefreshTokenRequest() {
-            return AuthDto.TokenPair
-                    .builder()
-                    .accessToken("accessToken")
-                    .build();
+        @Test
+        @DisplayName("리프레시 토큰이 null이면 재발급 실패")
+        void should_fail_refresh_when_token_is_null() {
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.refresh(null)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
         }
 
         @Test
-        @DisplayName("토큰 재발급 성공")
-        public void should_success_refresh() {
-            User user = user();
-            Long userId = 1L;
-            // 리프레시 토큰 시간, 액세스 토큰이 발급 시간 확인
-            String oldRefreshToken = "oldRefreshToken";
-            long expiration = Duration.ofDays(14).toSeconds();
-            RefreshToken savedRefreshToken = new RefreshToken(userId, oldRefreshToken, expiration);
+        @DisplayName("리프레시 토큰이 공백이면 재발급 실패")
+        void should_fail_refresh_when_token_is_blank() {
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.refresh("   ")
+            );
 
-            // 액세스 토큰 만료 안됨
-            given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
-            // 리프레시 토큰 만료
-            given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
-            // 만료된 액세스 토큰에서 유저 아이디 반환
-            given(jwtService.extractSubjectFromRefreshToken(anyString())).willReturn(Optional.of(userId));
-
-            given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(savedRefreshToken));
-            // 유저 객체 반환
-            given(userRepository.findById(userId)).willReturn(Optional.of(user));
-
-            given(jwtService.createAccessToken(user)).willReturn("newAccessToken");
-            given(jwtService.createRefreshToken(user)).willReturn("newRefreshToken");
-
-            AuthDto.TokenPair response = authService.refresh(oldRefreshToken);
-
-            assertThat(response.accessToken()).isEqualTo("newAccessToken");
-            assertThat(response.refreshToken()).isEqualTo("newRefreshToken");
-
-            verify(refreshTokenRepository, times(1)).save(any());
-            verify(userRepository, times(1)).findById(userId);
-
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
         }
 
 
@@ -308,22 +290,124 @@ public class AuthServiceTest {
         @Test
         @DisplayName("유저와 토큰 정보가 맞지 않을때")
         public void should_fail_refresh_user_token_not_match() {
-            String oldRefreshToken = "kk";
+            String oldRefreshToken = "requestToken";
             Long userId = 1L;
+
+            RefreshToken savedRefreshToken =
+                    new RefreshToken(
+                            userId,
+                            "differentToken",
+                            Duration.ofDays(14).toSeconds()
+                    );
+
+            given(jwtService.isValidRefreshToken(oldRefreshToken)).willReturn(true);
+            given(jwtService.extractSubjectFromRefreshToken(oldRefreshToken)).willReturn(Optional.of(userId));
+            given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(savedRefreshToken));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.refresh(oldRefreshToken)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+            then(userRepository).shouldHaveNoInteractions();
+            ;
+        }
+
+        @Test
+        @DisplayName("리프레시 토큰에서 사용자 ID를 추출하지 못하면 실패")
+        void should_fail_refresh_when_subject_not_found() {
+            String oldRefreshToken = "oldRefreshToken";
+
+            given(jwtService.isValidRefreshToken(oldRefreshToken))
+                    .willReturn(true);
+            given(jwtService.extractSubjectFromRefreshToken(oldRefreshToken))
+                    .willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.refresh(oldRefreshToken)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+            then(refreshTokenRepository).shouldHaveNoInteractions();
+        }
+
+        @Test
+        @DisplayName("저장된 리프레시 토큰이 없으면 재발급 실패")
+        void should_fail_refresh_when_saved_refresh_token_not_found() {
+            String oldRefreshToken = "oldRefreshToken";
+            Long userId = 1L;
+
+            given(jwtService.isValidRefreshToken(oldRefreshToken)).willReturn(true);
+            given(jwtService.extractSubjectFromRefreshToken(oldRefreshToken)).willReturn(Optional.of(userId));
+            given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.refresh(oldRefreshToken)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+            assertThat(exception.getDetailMessage()).isEqualTo("리프레시 토큰이 존재하지 않습니다.");
+        }
+
+        @Test
+        @DisplayName("토큰의 사용자 ID에 해당하는 사용자가 없으면 실패")
+        void should_fail_refresh_when_user_not_found() {
+            String oldRefreshToken = "oldRefreshToken";
+            Long userId = 1L;
+
+            RefreshToken savedRefreshToken =
+                    new RefreshToken(
+                            userId,
+                            oldRefreshToken,
+                            Duration.ofDays(14).toSeconds()
+                    );
+
+            given(jwtService.isValidRefreshToken(oldRefreshToken)).willReturn(true);
+            given(jwtService.extractSubjectFromRefreshToken(oldRefreshToken)).willReturn(Optional.of(userId));
+            given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(savedRefreshToken));
+            given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> authService.refresh(oldRefreshToken)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+        }
+
+        @Test
+        @DisplayName("토큰 재발급 성공")
+        public void should_success_refresh() {
+            User user = user();
+            Long userId = 1L;
+            // 리프레시 토큰 시간, 액세스 토큰이 발급 시간 확인
+            String oldRefreshToken = "oldRefreshToken";
+            long expiration = Duration.ofDays(14).toSeconds();
+            RefreshToken savedRefreshToken = new RefreshToken(userId, oldRefreshToken, expiration);
+
             // 리프레시 토큰 만료
             given(jwtService.isValidRefreshToken(anyString())).willReturn(true);
-            // 만료된 리프레시 토큰에서 유저 아이디 반환
+            // 만료된 액세스 토큰에서 유저 아이디 반환
             given(jwtService.extractSubjectFromRefreshToken(anyString())).willReturn(Optional.of(userId));
-            // 아이디로 토큰꺼내기
-            given(redisTemplate.opsForValue()).willReturn(valueOperations);
-            given(valueOperations.get("rt:"+userId)).willReturn("oldRefreshToken");
-            // 유저 객체 반환
-            given(userRepository.findById(any())).willReturn(Optional.empty());
 
-            BusinessException exception = assertThrows(BusinessException.class, () -> {
-                authService.refresh(oldRefreshToken);
-            });
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED);
+            given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(savedRefreshToken));
+            // 유저 객체 반환
+            given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+            given(jwtService.createAccessToken(user)).willReturn("newAccessToken");
+            given(jwtService.createRefreshToken(user)).willReturn("newRefreshToken");
+
+            AuthDto.TokenPair response = authService.refresh(oldRefreshToken);
+
+            assertThat(response.accessToken()).isEqualTo("newAccessToken");
+            assertThat(response.refreshToken()).isEqualTo("newRefreshToken");
+
+            then(jwtService).should().createAccessToken(user);
+            then(jwtService).should().createRefreshToken(user);
+            then(refreshTokenRepository).should().save(any(RefreshToken.class));
         }
 
     }
