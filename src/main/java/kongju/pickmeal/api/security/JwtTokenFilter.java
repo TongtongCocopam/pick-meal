@@ -50,7 +50,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         // 토큰 유효확인, 안에 담긴 User id가져옴
         // DB 유저 찾기
         jwtService.extractSubjectFromAccessToken(token)
-                .flatMap(id -> userRepository.findById(Long.valueOf(id)))
+                .flatMap(userRepository::findById)
                 // 데이터가 있을 때만 실행
                 .ifPresent(user -> {
                     CustomUserDetails principal = CustomUserDetails.builder()

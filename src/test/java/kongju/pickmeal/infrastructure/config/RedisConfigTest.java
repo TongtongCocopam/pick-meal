@@ -16,7 +16,7 @@ public class RedisConfigTest {
         RedisConfig redisConfig = new RedisConfig();
 
         RedisTemplate<String, String> redisTemplate = redisConfig.redisTemplate(connectionFactory);
-
+        
         assertThat(redisTemplate.getConnectionFactory()).isSameAs(connectionFactory);
 
         assertThat(redisTemplate.getKeySerializer()).isInstanceOf(StringRedisSerializer.class);
