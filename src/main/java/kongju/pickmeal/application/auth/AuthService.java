@@ -178,12 +178,7 @@ public class AuthService {
      * @return loginId
      */
     private User verifyToken(String oldRefreshToken) {
-        // 리프레시 토큰 확인
-//        if (oldRefreshToken == null || oldRefreshToken.isBlank() || !jwtService.isValidRefreshToken(oldRefreshToken)) {
-////            log.info("토큰 멀쩡한지 확인");
-//            throw new BusinessException(ErrorCode.UNAUTHORIZED);
-//        }
-        if (oldRefreshToken == null || oldRefreshToken.isBlank() || !jwtService.isValidRefreshToken(oldRefreshToken)) {
+        if (oldRefreshToken == null || oldRefreshToken.isBlank()) {
             log.warn("[REFRESH] 1. 쿠키 없음");
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
