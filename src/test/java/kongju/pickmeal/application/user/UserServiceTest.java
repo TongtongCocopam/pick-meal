@@ -81,6 +81,57 @@ public class UserServiceTest {
     @DisplayName("회원가입 테스트")
     class Signup {
         @Test
+        @DisplayName("아이디가 6자 미만이면 회원가입 실패")
+        void should_fail_when_login_id_is_too_short() {
+            UserDto.SignupRequest request = createRequest(
+                    "abc",
+                    "test1234",
+                    "test1234",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.of(2000, 1, 1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+        }
+
+        @Test
+        @DisplayName("아이디가 15자를 초과하면 회원가입 실패")
+        void should_fail_when_login_id_is_too_long() {
+            UserDto.SignupRequest request = createRequest(
+                    "abcdefghijklmnop",
+                    "test1234",
+                    "test1234",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.of(2000, 1, 1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+        }
+
+        @Test
+        @DisplayName("닉네임이 중복되면 회원가입 실패")
+        void should_fail_when_nickname_is_duplicate() {
+            UserDto.SignupRequest request = createRequest();
+
+            given(userRepository.existsByLoginId(request.loginId()))
+                    .willReturn(false);
+            given(userRepository.existsByEmail(request.email()))
+                    .willReturn(false);
+            given(userRepository.existsByNickname(request.nickname()))
+                    .willReturn(true);
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_RESOURCE);
+        }
+
+        @Test
         @DisplayName("회원가입 시 중복된 아이디가 있으면 BusinessException을 던진다")
         public void should_fail_signup_when_id_is_duplicate() {
             UserDto.SignupRequest request = createRequest();
@@ -91,6 +142,23 @@ public class UserServiceTest {
             assertThatThrownBy(() -> userService.signup(request))
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_RESOURCE);
+        }
+
+        @Test
+        @DisplayName("이메일 형식이 올바르지 않으면 회원가입 실패")
+        void should_fail_when_email_is_invalid() {
+            UserDto.SignupRequest request = createRequest(
+                    "test1234",
+                    "test1234",
+                    "test1234",
+                    "invalid-email",
+                    "tester",
+                    LocalDate.of(2000, 1, 1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
         }
 
         @Test
@@ -105,6 +173,23 @@ public class UserServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_RESOURCE);
 
+        }
+
+        @Test
+        @DisplayName("비밀번호 형식이 올바르지 않으면 회원가입 실패")
+        void should_fail_when_password_pattern_is_invalid() {
+            UserDto.SignupRequest request = createRequest(
+                    "test1234",
+                    "abcdefgh",   // 숫자 없음
+                    "abcdefgh",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.of(2000, 1, 1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
         }
 
         @Test
@@ -125,6 +210,23 @@ public class UserServiceTest {
         }
 
         @Test
+        @DisplayName("생년월일이 미래이면 회원가입 실패")
+        void should_fail_when_birth_date_is_future() {
+            UserDto.SignupRequest request = createRequest(
+                    "test1234",
+                    "test1234",
+                    "test1234",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.now().plusDays(1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+        }
+
+        @Test
         @DisplayName("회원가입 성공")
         public void should_success_signup() {
             UserDto.SignupRequest request = createRequest();
@@ -132,7 +234,7 @@ public class UserServiceTest {
             // 중복 확인 통과
             given(userRepository.existsByLoginId(any())).willReturn(false);
             given(userRepository.existsByEmail(any())).willReturn(false);
-
+            given(userRepository.existsByNickname(any())).willReturn(false);
             String hashPassword = "hash_pw";
             // 비밀번호 암호화
             given(passwordEncoder.encode(anyString())).willReturn(hashPassword);
