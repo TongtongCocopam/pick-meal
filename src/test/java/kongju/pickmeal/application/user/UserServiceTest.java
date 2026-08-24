@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import kongju.pickmeal.core.user.*;
+import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.user.type.Gender;
 import kongju.pickmeal.core.user.repository.*;
@@ -37,6 +39,7 @@ import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.IngredientRepository;
+import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
@@ -48,34 +51,26 @@ import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
 public class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
-
     @Mock
     private UserRepository userRepository;
-
     @Mock
     private UserDiseaseRepository userDiseaseRepository;
-
     @Mock
     private UserHealthRepository userHealthRepository;
-
     @Mock
     private UserIngredientPreferenceRepository userIngredientPreferenceRepository;
-
     @Mock
     private IngredientRepository ingredientRepository;
-
     @Mock
     private UserPickCountRepository userPickCountRepository;
-
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
-
     @Mock
-    private FamilyJoinRepository  familyJoinRepository;
-
+    private FamilyJoinRepository familyJoinRepository;
     @Mock
     private PickCountHistoryRepository pickCountHistoryRepository;
-
+    @Mock
+    private UserMenuPickRepository userMenuPickRepository;
     @Mock
     private UserReader userReader;
 
@@ -234,6 +229,47 @@ public class UserServiceTest {
                     .preference(FoodPreferenceType.PREFERRED)
                     .ingredientId(id)
                     .build();
+        }
+
+        @Test
+        @DisplayName("변경 요청이 null이면 실패")
+        void should_fail_when_request_is_null() {
+            Long userId = 1L;
+            User user = user();
+
+            given(userReader.getById(userId)).willReturn(user);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> userService.updateIngredientPreference(null, userId)
+            );
+
+            assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
+            assertEquals(
+                    "변경할 데이터가 존재하지 않습니다.",
+                    exception.getDetailMessage()
+            );
+
+            then(userIngredientPreferenceRepository).shouldHaveNoInteractions();
+        }
+
+        @Test
+        @DisplayName("빈 선호도 목록으로 수정 성공")
+        void should_success_when_preferences_is_empty() {
+            Long userId = 1L;
+            User user = user();
+
+            UserDietProfileDto.UpdateIngredientPreferenceRequest request =
+                    UserDietProfileDto.UpdateIngredientPreferenceRequest.builder()
+                            .preferences(List.of())
+                            .build();
+
+            given(userReader.getById(userId)).willReturn(user);
+
+            userService.updateIngredientPreference(request, userId);
+
+            then(userIngredientPreferenceRepository).should().deleteAllByUser(user);
+            then(userIngredientPreferenceRepository).should().saveAll(List.of());
         }
 
         @Test
@@ -466,7 +502,7 @@ public class UserServiceTest {
 
     @Nested
     @DisplayName("회원탈퇴")
-    class UserDelete{
+    class UserDelete {
         @Test
         @DisplayName("유저를 찾지 못함")
         public void should_fail_delete_user_when_user_not_found() {
@@ -497,6 +533,32 @@ public class UserServiceTest {
                     () -> userService.deleteUser(userId, request));
 
             assertEquals(ErrorCode.PASSWORD_MISMATCH, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("가족 멤버인 경우 가족 관련 데이터를 삭제하고 탈퇴")
+        void should_success_delete_user_when_family_member() {
+            Long userId = 1L;
+            String password = "password1234";
+
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password(password)
+                    .build();
+
+            Family family = family();
+
+            User user = user();
+            user.joinFamilyMember(family);
+
+            given(userReader.getById(userId)).willReturn(user);
+            given(passwordEncoder.matches(password, user.getPassword())).willReturn(true);
+
+            userService.deleteUser(userId, request);
+
+            then(userMenuPickRepository).should().deleteAllByUser(user);
+            assertThat(user.getFamily()).isNull();
+
+            then(userRepository).should().delete(user);
         }
 
         @Test
