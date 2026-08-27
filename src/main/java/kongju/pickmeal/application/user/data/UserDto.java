@@ -30,6 +30,7 @@ public class UserDto {
             String nickname,
             @NotNull
             @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+            @Past(message = "생년월일은 미래일 수 없습니다.")
             LocalDate birthDate
             ){}
 
@@ -37,5 +38,15 @@ public class UserDto {
     public record SignupResponse(
             Long userId,
             String nickname
+    ){}
+
+    @Builder
+    public record WithdrawRequest(
+            @NotBlank
+            @Pattern(
+                    regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d\\W]{8,16}$",
+                    message = "비밀번호는 영문과 숫자를 포함하여 8자 이상 16자 이하이어야 합니다."
+            )
+            String password
     ){}
 }

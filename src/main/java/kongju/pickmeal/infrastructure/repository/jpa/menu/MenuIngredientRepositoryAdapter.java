@@ -50,4 +50,9 @@ public class MenuIngredientRepositoryAdapter implements MenuIngredientRepository
     public void deleteAllByMenu(Menu menu) {
         menuIngredientJpaRepository.deleteAllByMenu(menu);
     }
+
+    @Override
+    public void flush() {
+        menuIngredientJpaRepository.flush();
+    }
 }

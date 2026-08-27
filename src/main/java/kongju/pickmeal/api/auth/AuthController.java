@@ -1,32 +1,39 @@
 package kongju.pickmeal.api.auth;
 
+import java.time.Duration;
+
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 
 import kongju.pickmeal.application.auth.AuthService;
 import kongju.pickmeal.application.auth.data.AuthDto;
 import kongju.pickmeal.common.ApiResponse.ApiResponse;
+import kongju.pickmeal.infrastructure.config.properties.CookieProperties;
 
-import java.time.Duration;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final CookieProperties cookieProperties;
 
     private static final long REFRESH_TOKEN_MAX_AGE = Duration.ofDays(14).toSeconds();
 
     private void saveCookie(HttpServletResponse hResponse, String refreshToken, Long expiresIn) {
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(true)
+                .secure(cookieProperties.secure())
                 .path("/")
                 .maxAge(expiresIn)
                 .sameSite("Strict")
@@ -35,6 +42,7 @@ public class AuthController {
         hResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
+    @SecurityRequirements
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthDto.AccessTokenResponse>> login(
             @RequestBody @Valid AuthDto.LoginRequest request,
@@ -71,14 +79,18 @@ public class AuthController {
                 .body(ApiResponse.success(null));
     }
 
-    public void deleteRefreshTokenCookie(HttpServletResponse response) {
+    private void deleteRefreshTokenCookie(HttpServletResponse response) {
         saveCookie(response, "", 0L);
     }
 
+    @SecurityRequirements
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthDto.AccessTokenResponse>> refresh(
-            @CookieValue(name = "refreshToken", required = false) String oldRefreshToken,
+            @Parameter(hidden = true)
+            @CookieValue(name = "refreshToken", required = false)
+            String oldRefreshToken,
             HttpServletResponse hResponse) {
+
         AuthDto.TokenPair tokenSet = authService.refresh(oldRefreshToken);
 
         // 새 토큰으로 쿠키 덮어쓰기

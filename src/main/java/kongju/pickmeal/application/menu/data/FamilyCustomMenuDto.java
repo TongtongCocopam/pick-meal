@@ -37,7 +37,7 @@ public class FamilyCustomMenuDto {
             @NotBlank
             String ingredientName,
             @NotNull
-            Double quantity,
+            BigDecimal quantity,
             @NotNull
             IngredientUnit unit,
             @NotNull

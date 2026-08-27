@@ -23,8 +23,8 @@ public class MemberFixture {
                 .password("test0000!!")
                 .passwordCheck("test0000!!")
                 .email("test@test.com")
-                .nickname("tester")
-                .birthDate(LocalDate.now())
+                .nickname("testUser")
+                .birthDate(LocalDate.parse("2003-06-12"))
                 .build();
     }
 }

@@ -35,10 +35,10 @@ import kongju.pickmeal.application.menu.data.FamilyCustomMenuDto.IngredientReque
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class MenuService {
+    private final UserReader userReader;
     private final MenuRepository menuRepository;
     private final IngredientRepository ingredientRepository;
     private final MenuIngredientRepository menuIngredientRepository;
-    private final UserReader userReader;
 
     /**
      * 필터링 카테고리 목록 가저오기
@@ -116,9 +116,9 @@ public class MenuService {
      */
     private String normalizeKeyword(String keyword) {
         if (keyword == null || keyword.isBlank()) {
-            return null;
+            return "";
         }
-        return keyword.trim();
+        return keyword.strip();
     }
 
     /**
@@ -134,6 +134,9 @@ public class MenuService {
 
         List<MenuIngredient> menuIngredients = menuIngredientRepository.findAllByMenuWithIngredient(menu);
 
+        if(menuIngredients.isEmpty()){
+            throw new BusinessException(ErrorCode.INGREDIENT_NOT_FOUND);
+        }
         // 메뉴 재료 정보 제공
         List<IngredientResponse> ingredients = menuIngredients.stream()
                 .map(menuIngredient -> IngredientResponse.builder()
@@ -171,7 +174,6 @@ public class MenuService {
         checkFamily(user);
 
         Menu menu = Menu.createFamilyMenu(
-                null,
                 request.menuName(),
                 request.category(),
                 request.dishType(),
@@ -266,6 +268,7 @@ public class MenuService {
 
         // 기존 재료, 메뉴 연결 테이블 삭제
         menuIngredientRepository.deleteAllByMenu(menu);
+        menuIngredientRepository.flush();
 
         // 새로 추가
         List<IngredientRequest> ingredientRequests = request.ingredients();

@@ -30,4 +30,9 @@ public class UserHealthRepositoryAdapter implements UserHealthRepository {
     public List<UserHealthProfile> findAllByUserInFetchUser(List<User> users) {
         return userHealthJpaRepository.findAllByUserInFetchUser(users);
     }
+
+    @Override
+    public void deleteByUser(User user) {
+        userHealthJpaRepository.deleteByUser(user);
+    }
 }

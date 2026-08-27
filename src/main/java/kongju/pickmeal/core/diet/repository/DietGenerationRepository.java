@@ -18,4 +18,6 @@ public interface DietGenerationRepository {
     boolean existsOverlappingGeneration(Family family, LocalDate startDate, LocalDate endDate, List<DietGenerationStatus> statuses);
 
     long countByFamilyAndTargetMonthAndStatusIn(Family family, LocalDate targetMonth, List<DietGenerationStatus> statuses);
+
+    void deleteAllByFamily(Family family);
 }

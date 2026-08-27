@@ -5,10 +5,11 @@ import java.util.Optional;
 import java.nio.charset.StandardCharsets;
 
 import io.jsonwebtoken.Jwts;
-import javax.crypto.SecretKey;
 import io.jsonwebtoken.Claims;
+import javax.crypto.SecretKey;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.security.Keys;
-
+import io.jsonwebtoken.ExpiredJwtException;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,21 +28,22 @@ public class DefaultJwtService implements JwtService {
     @Autowired
     public DefaultJwtService(
             @Value("${jwt.access-secret}") String access_secret,
-            @Value("${jwt.refresh-secret}") String represh_secret,
+            @Value("${jwt.refresh-secret}") String refresh_secret,
             @Value("${jwt.access-expiration}") long accessExpiration,
             @Value("${jwt.refresh-expiration}") long refreshExpiration) {
         // 비밀 키 생성
         this.accessKey = Keys.hmacShaKeyFor(access_secret.getBytes(StandardCharsets.UTF_8));
-        this.refreshKey = Keys.hmacShaKeyFor(represh_secret.getBytes(StandardCharsets.UTF_8));
+        this.refreshKey = Keys.hmacShaKeyFor(refresh_secret.getBytes(StandardCharsets.UTF_8));
         this.accessExpiration = accessExpiration;
         this.refreshExpiration = refreshExpiration;
     }
 
     /**
      * 토큰 생성
-     * @param user 사용자
+     *
+     * @param user           사용자
      * @param expirationTime 만료 시간
-     * @param signingKey 비밀키
+     * @param signingKey     비밀키
      * @return 토큰 반환
      */
     private String createToken(User user, long expirationTime, SecretKey signingKey) {
@@ -73,6 +75,7 @@ public class DefaultJwtService implements JwtService {
 
     /**
      * 액세스 토큰 추출
+     *
      * @param authorizationHeader 헤더
      * @return 액세스 토큰
      */
@@ -97,6 +100,7 @@ public class DefaultJwtService implements JwtService {
 
     /**
      * 액세스 토큰의 남은 만료 시간 계산
+     *
      * @param accessToken 액세스 토큰
      * @return 남은 만료 시간
      */
@@ -122,6 +126,7 @@ public class DefaultJwtService implements JwtService {
 
     /**
      * 액세스 토큰 유효성 검증
+     *
      * @param accessToken 액세스 토큰
      * @return 유효한지 boolean
      */
@@ -132,6 +137,7 @@ public class DefaultJwtService implements JwtService {
 
     /**
      * 리프레시 토큰 유효성 검증
+     *
      * @param refreshToken 리프레시 토큰
      * @return 유효한지 boolean
      */
@@ -142,6 +148,7 @@ public class DefaultJwtService implements JwtService {
 
     /**
      * accessToken 만료 여부 확인
+     *
      * @param accessToken 액세스 토큰
      * @return 만료 여부
      */
@@ -149,7 +156,7 @@ public class DefaultJwtService implements JwtService {
     public boolean isExpiredAccessToken(String accessToken) {
         try {
             // 정상적으로 파싱되면 만료되지 않음
-            getClaimsFromToken(accessToken,accessKey);
+            getClaimsFromToken(accessToken, accessKey);
             return false;
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
             // 유효기간이 지남
@@ -161,49 +168,70 @@ public class DefaultJwtService implements JwtService {
     }
 
     /**
-     * accessToken에서 loginId 추출
+     * accessToken에서 userId 추출
+     *
      * @param accessToken 액세스 토큰
      * @return 로그인 아이디
      */
     @Override
-    public Optional<String> extractSubjectFromAccessToken(String accessToken) {
+    public Optional<Long> extractSubjectFromAccessToken(String accessToken) {
         return extractSubject(accessToken, accessKey);
     }
 
     /**
-     * refreshToken에서 loginId 추출
+     * refreshToken에서 userId 추출
+     *
      * @param refreshToken 리프레시 토큰
      * @return 로그인 아이디
      */
     @Override
-    public Optional<String> extractSubjectFromRefreshToken(String refreshToken) {
+    public Optional<Long> extractSubjectFromRefreshToken(String refreshToken) {
         return extractSubject(refreshToken, refreshKey);
     }
 
     /**
-     * 만료된 accessToken에서 loginId 추출
+     * 만료된 accessToken에서 userId 추출
+     *
      * @param accessToken 액세스 토큰
      * @return 로그인 아이디
      */
     @Override
-    public Optional<String> extractSubjectFromExpiredAccessToken(String accessToken) {
-        try{
+    public Optional<Long> extractSubjectFromExpiredAccessToken(String accessToken) {
+        try {
             // 정상 토큰인지 확인
-            return extractSubject(accessToken, accessKey);
-        }catch (Exception e){
-            // 만료 예외 발생 확인
-            if(e instanceof io.jsonwebtoken.ExpiredJwtException){
-                // 만료 에러 객체는 파싱된 데이터가 보관되어 있으므로 id추출
-                return Optional.ofNullable(((io.jsonwebtoken.ExpiredJwtException) e).getClaims().getSubject());
-            }
+            Claims claims = getClaimsFromToken(accessToken, accessKey);
+            return parseUserId(claims.getSubject());
+        } catch (ExpiredJwtException e) {
+            // 만료 에러 객체는 파싱된 데이터가 보관되어 있으므로 id추출
+            return parseUserId(e.getClaims().getSubject());
+        } catch (JwtException | IllegalArgumentException e) {
             // 위조된 토큰일 경우
             return Optional.empty();
         }
     }
 
     /**
+     * subject에서 userId꺼내기
+     *
+     * @param subject 유저 아이디를 담은 데이터
+     * @return userId
+     */
+    private Optional<Long> parseUserId(String subject) {
+        if (subject == null || subject.isBlank()) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(Long.valueOf(subject));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
      * 토큰 검증 및 claims반환
-     * @param token 토큰
+     *
+     * @param token      토큰
      * @param signingKey 키
      * @return claims객체
      */
@@ -216,16 +244,17 @@ public class DefaultJwtService implements JwtService {
     }
 
     /**
-     * 리프레시 토큰 확인 및 loginId반환
+     * 리프레시 토큰 확인 및 userId반환
+     *
      * @param token 리프레시 토큰
-     * @return loginId
+     * @return userId
      */
-    public Optional<String> extractSubject(String token, SecretKey signingKey) {
+    public Optional<Long> extractSubject(String token, SecretKey signingKey) {
         try {
             // jjwt를 사용하여 토큰 내부의 claims을 가져옴
             Claims claims = getClaimsFromToken(token, signingKey);
 
-            return Optional.ofNullable(claims.getSubject());
+            return parseUserId(claims.getSubject());
         } catch (Exception e) {
             return Optional.empty();
         }
@@ -233,15 +262,16 @@ public class DefaultJwtService implements JwtService {
 
     /**
      * 토큰과 키를 이용해 유요한 토큰인지 확인
-     * @param token 토큰
+     *
+     * @param token      토큰
      * @param signingKey 키
      * @return boolean
      */
-    public boolean isValid(String token, SecretKey signingKey){
-        try{
-            getClaimsFromToken(token,signingKey);
+    public boolean isValid(String token, SecretKey signingKey) {
+        try {
+            getClaimsFromToken(token, signingKey);
             return true;
-        }catch (Exception e){
+        } catch (Exception e) {
             return false;
         }
     }

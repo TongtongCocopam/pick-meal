@@ -19,8 +19,8 @@ import kongju.pickmeal.common.exception.BusinessException;
 @Table(name = "pick_count_histories")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PickCountHistory extends BaseTimeEntity {
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Enumerated(EnumType.STRING)

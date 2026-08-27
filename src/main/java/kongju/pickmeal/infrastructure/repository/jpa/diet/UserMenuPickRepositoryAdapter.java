@@ -1,15 +1,16 @@
 package kongju.pickmeal.infrastructure.repository.jpa.diet;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
-import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import kongju.pickmeal.core.user.User;
+import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.diet.UserMenuPick;
+import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
 
 
@@ -34,7 +35,23 @@ public class UserMenuPickRepositoryAdapter implements UserMenuPickRepository {
     }
 
     @Override
-    public List<UserMenuPick> findAllByUserInAndTargetMonthAndStatusFetchMenu(List<User> users, LocalDate targetMonth, UserMenuPickStatus status) {
-        return userMenuPickJpaRepository.findAllByUserInAndTargetMonthAndStatusFetchMenu(users, targetMonth, status);
+    public List<UserMenuPick> findAllByIdInFetchMenu(List<Long> ids) {
+        return userMenuPickJpaRepository.findAllByIdInFetchMenu(ids);
     }
+
+    @Override
+    public List<UserMenuPick> findAllPendingForUpdate(Family family, LocalDate targetMonthDate, UserMenuPickStatus status) {
+        return userMenuPickJpaRepository.findAllPendingForUpdate(family, targetMonthDate, status);
+    }
+
+    @Override
+    public List<UserMenuPick> findAllByIdInForUpdate(List<Long> ids){
+        return userMenuPickJpaRepository.findAllByIdInForUpdate(ids);
+    }
+
+    @Override
+    public void deleteAllByUser(User user) {
+        userMenuPickJpaRepository.deleteAllByUser(user);
+    }
+
 }

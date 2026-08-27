@@ -18,43 +18,53 @@ import kongju.pickmeal.common.exception.BusinessException;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserPickCount extends BaseTimeEntity {
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
     @Column(nullable = false)
-    private Long totalPickCount;
+    private Long remainingPickCount;
 
     @LastModifiedDate
-    private LocalDateTime updateAt;
+    private LocalDateTime updatedAt;
 
     @Builder(access = AccessLevel.PRIVATE)
-    public UserPickCount(User user, Long totalPickCount) {
+    private UserPickCount(User user, Long remainingPickCount) {
         this.user = user;
-        this.totalPickCount = totalPickCount;
+        this.remainingPickCount = remainingPickCount;
     }
 
     public static UserPickCount initialize(User user){
         return UserPickCount.builder()
                 .user(user)
-                .totalPickCount(0L)
+                .remainingPickCount(0L)
                 .build();
     }
 
     public void useCount(Long count){
-        if(this.totalPickCount < count){
+        validateCount(count);
+        if(this.remainingPickCount < count){
             throw new BusinessException(ErrorCode.TOO_MANY_SELECTIONS);
         }
-        this.totalPickCount -= count;
+        this.remainingPickCount -= count;
 
+    }
+
+    private static void validateCount(Long count) {
+        if (count == null || count <= 0L) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT,
+                    "선택권 수량은 1 이상이어야 합니다."
+            );
+        }
     }
 
     public void restoreCount(Long count){
-        this.totalPickCount += count;
+        this.remainingPickCount += count;
     }
 
     public void resetCount(){
-        this.totalPickCount = 0L;
+        this.remainingPickCount = 0L;
     }
 
 }

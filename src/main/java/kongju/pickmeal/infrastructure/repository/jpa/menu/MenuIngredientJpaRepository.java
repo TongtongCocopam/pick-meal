@@ -5,8 +5,9 @@ import java.util.List;
 import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.menu.MenuIngredient;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 
 public interface MenuIngredientJpaRepository extends JpaRepository<MenuIngredient, Long> {
@@ -16,9 +17,9 @@ public interface MenuIngredientJpaRepository extends JpaRepository<MenuIngredien
                     select mi
                     from MenuIngredient mi
                     Join fetch mi.ingredient
-                    where mi.menu = : menu
+                    where mi.menu = :menu
             """)
-    List<MenuIngredient> findAllByMenuWithIngredient(Menu menu);
+    List<MenuIngredient> findAllByMenuWithIngredient(@Param("menu") Menu menu);
 
     @Query("""
                     select mi
@@ -26,7 +27,7 @@ public interface MenuIngredientJpaRepository extends JpaRepository<MenuIngredien
                     Join fetch mi.menu
                     where mi.ingredient = : ingredient
             """)
-    List<MenuIngredient> findAllByIngredientWithMenu(Ingredient ingredient);
+    List<MenuIngredient> findAllByIngredientWithMenu(@Param("ingredient") Ingredient ingredient);
 
     @Query("""
     select mi
@@ -35,7 +36,7 @@ public interface MenuIngredientJpaRepository extends JpaRepository<MenuIngredien
     join fetch mi.ingredient
     where mi.menu in :menus
 """)
-    List<MenuIngredient> findAllByMenuInFetchIngredient(List<Menu> menus);
+    List<MenuIngredient> findAllByMenuInFetchIngredient(@Param("menus") List<Menu> menus);
 
     void deleteAllByMenu(Menu menu);
 }

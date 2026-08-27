@@ -2,12 +2,14 @@ name: CI/CD Build
 
 on:
   push:
-    branches: [ "develop" ]
+    branches:
+      - develop
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    # 테스트에 필요한 외부 인프라
     services:
       postgres:
         image: postgres:16-alpine
@@ -34,40 +36,93 @@ jobs:
           --health-retries=5
 
     steps:
-      - uses: actions/checkout@v4
-
+      # GitHub 소스 코드 가져오기
+      - name: Checkout source code
+        uses: actions/checkout@v6
+      # Java 설치
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'corretto'
           cache: gradle
-
+      # Linux 환경에서 Gradle Wrapper 실행 권한 부여
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-
+      # PostgreSQL / Redis를 이용한 테스트 실행
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew test --no-daemon
         env:
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/pickmeal_db
-          SPRING_DATASOURCE_USERNAME: pickmeal
-          SPRING_DATASOURCE_PASSWORD: pickmeal
-          SPRING_DATA_REDIS_HOST: localhost
-          SPRING_DATA_REDIS_PORT: 6379
+          SPRING_PROFILES_ACTIVE: test
 
-      - name: Build with Gradle
-        run: ./gradlew build -x test
+          DB_URL: jdbc:postgresql://localhost:5432/pickmeal_db
+          DB_USERNAME: pickmeal
+          DB_PASSWORD: pickmeal
 
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+      # 테스트 성공 시 Spring Boot JAR 생성
+      - name: Build application
+        run: ./gradlew bootJar --no-daemon
+      # Docker Hub 인증
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       # Docker 이미지 빌드 및 푸시
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/pickmeal:latest
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: Deploy to EC2 with SSM
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy PickMeal" \
+            --parameters 'commands=[
+              "sudo -u ec2-user -H docker compose -f /home/ec2-user/pickmeal/compose.prod.yml pull app",
+              "sudo -u ec2-user -H docker compose -f /home/ec2-user/pickmeal/compose.prod.yml up -d --force-recreate app",
+              "sudo -u ec2-user -H docker compose -f /home/ec2-user/pickmeal/compose.prod.yml ps"
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          set +e
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
+
+          WAIT_EXIT_CODE=$?
+
+          echo "===== SSM EXECUTION RESULT ====="
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
+            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
+
+          exit $WAIT_EXIT_CODE

@@ -30,11 +30,6 @@ public class FamilyJoinRepositoryAdapter implements FamilyJoinRepository {
     }
 
     @Override
-    public Optional<FamilyJoinRequest> findByIdAndFamily(Long id, Long family) {
-        return familyJoinJpaRepository.findByIdAndFamily(id, family);
-    }
-
-    @Override
     public FamilyJoinRequest save(FamilyJoinRequest familyJoinRequest) {
         return familyJoinJpaRepository.save(familyJoinRequest);
     }
@@ -42,5 +37,15 @@ public class FamilyJoinRepositoryAdapter implements FamilyJoinRepository {
     @Override
     public Optional<FamilyJoinRequest> findById(Long id) {
         return familyJoinJpaRepository.findById(id);
+    }
+
+    @Override
+    public void deleteByUser(User user) {
+        familyJoinJpaRepository.deleteByUser(user);
+    }
+
+    @Override
+    public void deleteAllByFamily(Family family) {
+        familyJoinJpaRepository.deleteAllByFamily(family);
     }
 }

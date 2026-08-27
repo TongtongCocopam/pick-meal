@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.mockito.Mockito.times;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import kongju.pickmeal.core.family.*;
+import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserPickCount;
 import kongju.pickmeal.core.user.type.UserRole;
@@ -30,15 +32,18 @@ import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.diet.repository.DietRepository;
+import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 
+import static kongju.pickmeal.support.fixture.MenuFixture.menu;
 import static kongju.pickmeal.support.fixture.UserFixture.user;
 import static kongju.pickmeal.support.fixture.FamilyFixture.family;
-import static kongju.pickmeal.support.fixture.FamilyFixture.familyWithId;
 
 
 @ExtendWith(SpringExtension.class)
@@ -52,7 +57,13 @@ public class FamilyServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private DietRepository dietRepository;
+    @Mock
+    private DietGenerationRepository dietGenerationRepository;
+    @Mock
     private UserPickCountRepository userPickCountRepository;
+    @Mock
+    private MenuRepository menuRepository;
     @Mock
     private PickCountHistoryRepository pickCountHistoryRepository;
     @Mock
@@ -154,8 +165,7 @@ public class FamilyServiceTest {
 
             User user = user();
 
-            Family family = Family.builder()
-                    .build();
+            Family family = family();
             given(userReader.getById(any())).willReturn(user);
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
@@ -179,8 +189,8 @@ public class FamilyServiceTest {
 
             User user = user();
 
-            Family family = Family.builder()
-                    .build();
+            Family family = family();
+
             given(userReader.getById(any())).willReturn(user);
 
             given(familyRepository.findByInvitationCode(anyString())).willReturn(Optional.of(family));
@@ -221,11 +231,7 @@ public class FamilyServiceTest {
 
             given(userReader.getById(any())).willReturn(user);
 
-            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                    .family(family)
-                    .status(ApplyStatus.PENDING)
-                    .user(user)
-                    .build();
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user, family);
 
             List<FamilyJoinRequest> familyJoinRequestList = new ArrayList<>();
             familyJoinRequestList.add(familyJoinRequest);
@@ -292,12 +298,9 @@ public class FamilyServiceTest {
             Family family = family();
             user.joinFamilyLeader(family);
 
-            Family family1 = Family.builder().build();
+            Family family1 = family();
             User user2 = user("custom", "custom1234@gmail.com", "냠냠짬", "password1234");
-            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                    .family(family1)
-                    .user(user2)
-                    .build();
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user2, family1);
 
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
@@ -326,10 +329,8 @@ public class FamilyServiceTest {
             User user2 = user("custom", "custom1234@gmail.com", "배고파", "password1234");
             user2.joinFamilyLeader(family);
 
-            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                    .family(family)
-                    .user(user2)
-                    .build();
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user2, family);
+
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
             BusinessException exception = assertThrows(
@@ -355,10 +356,7 @@ public class FamilyServiceTest {
 
             User user2 = user("custom", "custom1234@gmail.com", "배불러", "password1234");
 
-            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                    .family(family)
-                    .user(user2)
-                    .build();
+            FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user2, family);
 
             given(familyJoinRepository.findById(any())).willReturn(Optional.ofNullable(familyJoinRequest));
 
@@ -468,9 +466,9 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("성공 케이스")
         public void should_success_get_members() {
-            User user = user("testUser1", "test1111@gmail.com", "유저1", "password1234");
-            User user2 = user("testUser2", "test2222@gmail.com", "유저2", "password1234");
-            User user3 = user("testUser3", "test3333@gmail.com", "유저3", "password1234");
+            User user = user("유저1", "testUser1", "test1111@gmail.com", "password1234");
+            User user2 = user("유저2", "testUser2", "test2222@gmail.com", "password1234");
+            User user3 = user("유저3", "testUser3", "test3333@gmail.com", "password1234");
 
             given(userReader.getById(any())).willReturn(user);
 
@@ -533,14 +531,18 @@ public class FamilyServiceTest {
         @DisplayName("성공 케이스")
         public void should_success_disband_family() {
             User user = user();
-            Family family = Family.builder()
-                    .build();
+            Family family = family();
+
             user.joinFamilyLeader(family);
 
             given(userReader.getById(any())).willReturn(user);
 
             given(familyRepository.findById(any())).willReturn(Optional.of(family));
             given(userRepository.findAllByFamily(any())).willReturn(List.of(user));
+            Menu menu1 = menu();
+            Menu menu2 = menu();
+
+            given(menuRepository.findAllByFamily(any())).willReturn(List.of(menu1, menu2));
 
             assertDoesNotThrow(() -> familyService.disbandFamily(1L));
 
@@ -571,16 +573,19 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("가족 멤버가 아닌 경우")
         public void should_fail_kick_member_not_my_family() {
-            User member = user();
-            given(userReader.getById(1L)).willReturn(member);
-
-            User leader = user();
-            given(userReader.getById(2L)).willReturn(leader);
+            User member = user("member", "memberId", "member@gmail.com", "paassword1234");
+            Long memberId = 1L;
+            ReflectionTestUtils.setField(member, "id", memberId);
+            given(userReader.getById(memberId)).willReturn(member);
+            Long leaderId = 2L;
+            User leader = user("leader", "leaderId", "leader@gmail.com", "paassword1234");
+            ReflectionTestUtils.setField(member, "id", leaderId);
+            given(userReader.getById(leaderId)).willReturn(leader);
             given(userRepository.existsByIdAndFamily(any(), any())).willReturn(false);
 
             BusinessException exception = assertThrows(
                     BusinessException.class,
-                    () -> familyService.kickMember(1L, 2L)
+                    () -> familyService.kickMember(memberId, leaderId)
             );
 
             assertEquals(ErrorCode.ACCESS_DENIED, exception.getErrorCode());
@@ -589,12 +594,19 @@ public class FamilyServiceTest {
         @Test
         @DisplayName("성공 케이스")
         public void should_success_kick_member() {
-            User member = user("test", "test1234@gmail.com", "testNickname", "password1234");
-            User leader = user("test1", "test12222@gmail.com", "testNickname1", "password1234");
-            given(userReader.getById(1L)).willReturn(member);
-            given(userReader.getById(2L)).willReturn(leader);
+            User member = user("testNickname", "test", "test1234@gmail.com", "password1234");
+            User leader = user("testNickname1", "test1", "test12222@gmail.com", "password1234");
+            Long memberId = 1L;
+            Long leaderId = 2L;
+            given(userReader.getById(memberId)).willReturn(member);
+            given(userReader.getById(leaderId)).willReturn(leader);
+            ReflectionTestUtils.setField(member, "id", memberId);
+            ReflectionTestUtils.setField(member, "id", leaderId);
 
             given(userRepository.existsByIdAndFamily(any(), any())).willReturn(true);
+
+            UserPickCount userPickCount = UserPickCount.initialize(member);
+            given(userPickCountRepository.findByUser(member)).willReturn(Optional.of(userPickCount));
 
             FamilyMemberDto.KickResponse response = familyService.kickMember(1L, 2L);
             assertThat(response.kickedNickname()).isEqualTo("testNickname");
@@ -632,6 +644,8 @@ public class FamilyServiceTest {
             given(userReader.getById(1L)).willReturn(user);
 
             given(familyRepository.findById(any())).willReturn(Optional.of(family));
+            UserPickCount userPickCount = UserPickCount.initialize(user);
+            given(userPickCountRepository.findByUser(user)).willReturn(Optional.of(userPickCount));
 
             assertDoesNotThrow(() -> familyService.leaveMember(1L));
             assertThat(user.getRole()).isEqualTo(UserRole.GUEST);
@@ -653,9 +667,8 @@ public class FamilyServiceTest {
 
             given(userReader.getById(leaderId)).willReturn(user);
 
-            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations =
-                    FamilyPickDto.UpdateConfigRequest
-                            .pickAllocations.builder()
+            FamilyPickDto.UpdateConfigRequest.PickAllocations pickAllocations =
+                    FamilyPickDto.UpdateConfigRequest.PickAllocations.builder()
                             .userId(userId)
                             .pickCount(null)
                             .build();
@@ -685,19 +698,19 @@ public class FamilyServiceTest {
             Long userId = 2L;
 
             User user = user();
-            Family family = familyWithId("family", 1L);
+            Family family = family("family");
             user.joinFamilyLeader(family);
 
             given(userReader.getById(leaderId)).willReturn(user);
 
             User user2 = user("test22", "test2222@gmail.com", "testNickname", "password1234");
-            Family family2 = familyWithId("family2", 2L);
+            Family family2 = family("family2");
             user2.joinFamilyLeader(family2);
 
             given(userReader.getById(userId)).willReturn(user2);
 
-            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations =
-                    FamilyPickDto.UpdateConfigRequest.pickAllocations.builder()
+            FamilyPickDto.UpdateConfigRequest.PickAllocations pickAllocations =
+                    FamilyPickDto.UpdateConfigRequest.PickAllocations.builder()
                             .userId(userId)
                             .pickCount(2L)
                             .build();
@@ -722,7 +735,7 @@ public class FamilyServiceTest {
             Long userId = 2L;
 
             User user = user();
-            Family family = familyWithId("family", 1L);
+            Family family = family("family");
             user.joinFamilyLeader(family);
 
             given(userReader.getById(leaderId)).willReturn(user);
@@ -731,8 +744,8 @@ public class FamilyServiceTest {
                     "testNickname", "password1234");
             user2.joinFamilyLeader(family);
 
-            FamilyPickDto.UpdateConfigRequest.pickAllocations pickAllocations =
-                    FamilyPickDto.UpdateConfigRequest.pickAllocations.builder()
+            FamilyPickDto.UpdateConfigRequest.PickAllocations pickAllocations =
+                    FamilyPickDto.UpdateConfigRequest.PickAllocations.builder()
                             .userId(userId)
                             .pickCount(2L)
                             .build();
@@ -792,7 +805,7 @@ public class FamilyServiceTest {
             Long leaderId = 1L;
 
             User leader = user();
-            Family family = familyWithId("family", 1L);
+            Family family = family("family");
             leader.joinFamilyLeader(family);
 
             given(userReader.getById(leaderId)).willReturn(leader);

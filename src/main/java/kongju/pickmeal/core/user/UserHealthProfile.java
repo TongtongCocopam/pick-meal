@@ -17,24 +17,28 @@ import kongju.pickmeal.core.common.BaseEntity;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserHealthProfile extends BaseEntity {
     @Enumerated(EnumType.STRING)
+    @Column(length = 20)
     private Gender gender;
     @Column(precision = 4, scale = 1)
     private BigDecimal height;
     @Column(precision = 4, scale = 1)
     private BigDecimal weight;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Builder
-    public UserHealthProfile(Gender gender, BigDecimal height, BigDecimal weight, User user) {
+    @Builder(access = AccessLevel.PRIVATE)
+    private UserHealthProfile(Gender gender, BigDecimal height, BigDecimal weight, User user) {
         this.gender = gender;
         this.height = height;
         this.weight = weight;
         this.user = user;
     }
 
+    public static UserHealthProfile create(Gender gender, BigDecimal height, BigDecimal weight, User user) {
+        return UserHealthProfile.builder().gender(gender).height(height).weight(weight).user(user).build();
+    }
     public void update(Gender gender, BigDecimal height, BigDecimal weight){
         this.gender = gender;
         this.height = height;

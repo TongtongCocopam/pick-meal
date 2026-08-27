@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.stream.LongStream;
 
-import kongju.pickmeal.core.user.repository.*;
 import org.mockito.Mock;
 import org.mockito.InjectMocks;
 import org.junit.jupiter.api.Test;
@@ -18,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.verify;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,17 +27,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import kongju.pickmeal.core.user.*;
+import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.menu.Ingredient;
 import kongju.pickmeal.core.user.type.Gender;
+import kongju.pickmeal.core.user.repository.*;
 import kongju.pickmeal.application.user.data.*;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.core.user.type.DiseaseName;
 import kongju.pickmeal.core.user.type.DiseaseCategory;
+import kongju.pickmeal.core.auth.RefreshTokenRepository;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.common.exception.BusinessException;
 import kongju.pickmeal.core.menu.repository.IngredientRepository;
+import kongju.pickmeal.core.diet.repository.UserMenuPickRepository;
+import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 
 import static kongju.pickmeal.support.fixture.UserFixture.user;
+import static kongju.pickmeal.support.fixture.FamilyFixture.family;
 import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
 
 
@@ -45,25 +51,26 @@ import static kongju.pickmeal.support.fixture.MemberFixture.createRequest;
 public class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
-
     @Mock
     private UserRepository userRepository;
-
     @Mock
     private UserDiseaseRepository userDiseaseRepository;
-
     @Mock
     private UserHealthRepository userHealthRepository;
-
     @Mock
     private UserIngredientPreferenceRepository userIngredientPreferenceRepository;
-
     @Mock
     private IngredientRepository ingredientRepository;
-
     @Mock
     private UserPickCountRepository userPickCountRepository;
-
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+    @Mock
+    private FamilyJoinRepository familyJoinRepository;
+    @Mock
+    private PickCountHistoryRepository pickCountHistoryRepository;
+    @Mock
+    private UserMenuPickRepository userMenuPickRepository;
     @Mock
     private UserReader userReader;
 
@@ -73,6 +80,57 @@ public class UserServiceTest {
     @Nested
     @DisplayName("회원가입 테스트")
     class Signup {
+        @Test
+        @DisplayName("아이디가 6자 미만이면 회원가입 실패")
+        void should_fail_when_login_id_is_too_short() {
+            UserDto.SignupRequest request = createRequest(
+                    "abc",
+                    "test1234",
+                    "test1234",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.of(2000, 1, 1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+        }
+
+        @Test
+        @DisplayName("아이디가 15자를 초과하면 회원가입 실패")
+        void should_fail_when_login_id_is_too_long() {
+            UserDto.SignupRequest request = createRequest(
+                    "abcdefghijklmnop",
+                    "test1234",
+                    "test1234",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.of(2000, 1, 1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+        }
+
+        @Test
+        @DisplayName("닉네임이 중복되면 회원가입 실패")
+        void should_fail_when_nickname_is_duplicate() {
+            UserDto.SignupRequest request = createRequest();
+
+            given(userRepository.existsByLoginId(request.loginId()))
+                    .willReturn(false);
+            given(userRepository.existsByEmail(request.email()))
+                    .willReturn(false);
+            given(userRepository.existsByNickname(request.nickname()))
+                    .willReturn(true);
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_RESOURCE);
+        }
+
         @Test
         @DisplayName("회원가입 시 중복된 아이디가 있으면 BusinessException을 던진다")
         public void should_fail_signup_when_id_is_duplicate() {
@@ -87,6 +145,23 @@ public class UserServiceTest {
         }
 
         @Test
+        @DisplayName("이메일 형식이 올바르지 않으면 회원가입 실패")
+        void should_fail_when_email_is_invalid() {
+            UserDto.SignupRequest request = createRequest(
+                    "test1234",
+                    "test1234",
+                    "test1234",
+                    "invalid-email",
+                    "tester",
+                    LocalDate.of(2000, 1, 1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+        }
+
+        @Test
         @DisplayName("회원가입 시 중복된 이메일이 있으면 BusinessException을 던진다")
         public void should_fail_signup_when_email_is_duplicate() {
             UserDto.SignupRequest request = createRequest();
@@ -98,6 +173,23 @@ public class UserServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .hasFieldOrPropertyWithValue("errorCode", ErrorCode.DUPLICATE_RESOURCE);
 
+        }
+
+        @Test
+        @DisplayName("비밀번호 형식이 올바르지 않으면 회원가입 실패")
+        void should_fail_when_password_pattern_is_invalid() {
+            UserDto.SignupRequest request = createRequest(
+                    "test1234",
+                    "abcdefgh",   // 숫자 없음
+                    "abcdefgh",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.of(2000, 1, 1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
         }
 
         @Test
@@ -118,6 +210,23 @@ public class UserServiceTest {
         }
 
         @Test
+        @DisplayName("생년월일이 미래이면 회원가입 실패")
+        void should_fail_when_birth_date_is_future() {
+            UserDto.SignupRequest request = createRequest(
+                    "test1234",
+                    "test1234",
+                    "test1234",
+                    "test@test.com",
+                    "tester",
+                    LocalDate.now().plusDays(1)
+            );
+
+            assertThatThrownBy(() -> userService.signup(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_INPUT);
+        }
+
+        @Test
         @DisplayName("회원가입 성공")
         public void should_success_signup() {
             UserDto.SignupRequest request = createRequest();
@@ -125,10 +234,10 @@ public class UserServiceTest {
             // 중복 확인 통과
             given(userRepository.existsByLoginId(any())).willReturn(false);
             given(userRepository.existsByEmail(any())).willReturn(false);
-
-
+            given(userRepository.existsByNickname(any())).willReturn(false);
+            String hashPassword = "hash_pw";
             // 비밀번호 암호화
-            given(passwordEncoder.encode(anyString())).willReturn("hash_pw");
+            given(passwordEncoder.encode(anyString())).willReturn(hashPassword);
 
             User mockUser = user();
             given(userRepository.save(any(User.class))).willReturn(mockUser);
@@ -141,7 +250,7 @@ public class UserServiceTest {
 
             // 가져온 객체 꺼내기
             User savedUser = user.getValue();
-            assertThat(savedUser.getPassword()).isEqualTo("hash_pw");
+            assertThat(savedUser.getPassword()).isEqualTo(hashPassword);
             assertThat(response.nickname()).isEqualTo(request.nickname());
         }
     }
@@ -222,6 +331,47 @@ public class UserServiceTest {
                     .preference(FoodPreferenceType.PREFERRED)
                     .ingredientId(id)
                     .build();
+        }
+
+        @Test
+        @DisplayName("변경 요청이 null이면 실패")
+        void should_fail_when_request_is_null() {
+            Long userId = 1L;
+            User user = user();
+
+            given(userReader.getById(userId)).willReturn(user);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> userService.updateIngredientPreference(null, userId)
+            );
+
+            assertEquals(ErrorCode.INVALID_INPUT, exception.getErrorCode());
+            assertEquals(
+                    "변경할 데이터가 존재하지 않습니다.",
+                    exception.getDetailMessage()
+            );
+
+            then(userIngredientPreferenceRepository).shouldHaveNoInteractions();
+        }
+
+        @Test
+        @DisplayName("빈 선호도 목록으로 수정 성공")
+        void should_success_when_preferences_is_empty() {
+            Long userId = 1L;
+            User user = user();
+
+            UserDietProfileDto.UpdateIngredientPreferenceRequest request =
+                    UserDietProfileDto.UpdateIngredientPreferenceRequest.builder()
+                            .preferences(List.of())
+                            .build();
+
+            given(userReader.getById(userId)).willReturn(user);
+
+            userService.updateIngredientPreference(request, userId);
+
+            then(userIngredientPreferenceRepository).should().deleteAllByUser(user);
+            then(userIngredientPreferenceRepository).should().saveAll(List.of());
         }
 
         @Test
@@ -449,6 +599,113 @@ public class UserServiceTest {
 
             assertDoesNotThrow(() -> userService.updatePassword(request, userId));
             verify(passwordEncoder).encode(request.newPassword());
+        }
+    }
+
+    @Nested
+    @DisplayName("회원탈퇴")
+    class UserDelete {
+        @Test
+        @DisplayName("유저를 찾지 못함")
+        public void should_fail_delete_user_when_user_not_found() {
+            Long userId = 1L;
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password("password1234")
+                    .build();
+            given(userReader.getById(userId)).willThrow(new BusinessException(ErrorCode.USER_NOT_FOUND));
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.deleteUser(userId, request));
+
+            assertEquals(ErrorCode.USER_NOT_FOUND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("비밀번호 불일치")
+        public void should_fail_delete_user_when_current_password_is_incorrect() {
+            Long userId = 1L;
+            String password = "dfdfdf1234";
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password(password)
+                    .build();
+            User user = user();
+            given(userReader.getById(userId)).willReturn(user);
+            given(passwordEncoder.matches(password, user.getPassword())).willReturn(false);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.deleteUser(userId, request));
+
+            assertEquals(ErrorCode.PASSWORD_MISMATCH, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("가족 멤버인 경우 가족 관련 데이터를 삭제하고 탈퇴")
+        void should_success_delete_user_when_family_member() {
+            Long userId = 1L;
+            String password = "password1234";
+
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password(password)
+                    .build();
+
+            Family family = family();
+
+            User user = user();
+            user.joinFamilyMember(family);
+
+            given(userReader.getById(userId)).willReturn(user);
+            given(passwordEncoder.matches(password, user.getPassword())).willReturn(true);
+
+            userService.deleteUser(userId, request);
+
+            then(userMenuPickRepository).should().deleteAllByUser(user);
+            assertThat(user.getFamily()).isNull();
+
+            then(userRepository).should().delete(user);
+        }
+
+        @Test
+        @DisplayName("리더일 경우")
+        public void should_fail_delete_user_when_family_leader() {
+            Long userId = 1L;
+            String password = "password1234";
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password(password)
+                    .build();
+            User user = user();
+            user.joinFamilyLeader(family());
+            given(userReader.getById(userId)).willReturn(user);
+            given(passwordEncoder.matches(password, user.getPassword())).willReturn(true);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> userService.deleteUser(userId, request));
+
+            assertEquals(ErrorCode.FAMILY_LEADER_MUST_DISBAND, exception.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_delete_user() {
+            Long userId = 1L;
+            String password = "password1234";
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder()
+                    .password(password)
+                    .build();
+            User user = user();
+            given(userReader.getById(userId)).willReturn(user);
+            given(passwordEncoder.matches(password, user.getPassword())).willReturn(true);
+
+            userService.deleteUser(userId, request);
+
+            verify(passwordEncoder).matches(password, user.getPassword());
+            verify(refreshTokenRepository).deleteByUserId(any());
+            verify(userHealthRepository).deleteByUser(any());
+            verify(userDiseaseRepository).deleteAllByUser(any());
+            verify(userIngredientPreferenceRepository).deleteAllByUser(any());
+            verify(userPickCountRepository).deleteByUser(any());
+            verify(familyJoinRepository).deleteByUser(any());
+            verify(pickCountHistoryRepository).deleteAllByUser(any());
+            verify(userRepository).delete(any());
+
         }
     }
 }

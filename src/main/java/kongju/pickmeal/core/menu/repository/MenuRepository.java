@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.menu.type.MenuCategory;
 
@@ -34,4 +35,8 @@ public interface MenuRepository {
     List<Menu> findRecommendationCandidatesWithoutAllergy(MenuCategory category, DishType dishType, Long currentMenuId, Set<Long> allergyIngredientIds);
 
     List<Menu> findRecommendationCandidates(MenuCategory category, DishType dishType, Long currentMenuId);
+
+    List<Menu> findAllByFamily(Family family);
+
+    void deleteAll(List<Menu> menus);
 }

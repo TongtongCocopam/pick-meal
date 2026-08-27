@@ -28,12 +28,12 @@ public interface JwtService {
     // accessToken 만료 여부 확인
     boolean isExpiredAccessToken(String accessToken);
 
-    // accessToken에서 loginId 추출
-    Optional<String> extractSubjectFromAccessToken(String accessToken);
+    // accessToken에서 userId 추출
+    Optional<Long> extractSubjectFromAccessToken(String accessToken);
 
-    // refreshToken에서 loginId 추출
-    Optional<String> extractSubjectFromRefreshToken(String refreshToken);
+    // refreshToken에서 userId 추출
+    Optional<Long> extractSubjectFromRefreshToken(String refreshToken);
 
-    // 만료된 accessToken에서 loginId 추출
-    Optional<String> extractSubjectFromExpiredAccessToken(String accessToken);
+    // 만료된 accessToken에서 userId 추출
+    Optional<Long> extractSubjectFromExpiredAccessToken(String accessToken);
 }

@@ -13,6 +13,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.user.User;
@@ -31,6 +32,7 @@ import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.core.menu.type.IngredientUnit;
 import kongju.pickmeal.application.diet.data.DietDto;
 import kongju.pickmeal.core.diet.type.DietMenuSource;
+import kongju.pickmeal.core.diet.type.UserMenuPickStatus;
 import kongju.pickmeal.application.diet.data.DietMenuDto;
 import kongju.pickmeal.core.user.type.FoodPreferenceType;
 import kongju.pickmeal.application.diet.data.MenuPickDto;
@@ -47,6 +49,7 @@ import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.menu.repository.MenuIngredientRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
+import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 import kongju.pickmeal.core.user.repository.UserIngredientPreferenceRepository;
 
 
@@ -66,7 +69,7 @@ public class DietService {
     private final PickCountHistoryRepository pickCountHistoryRepository;
     private final UserIngredientPreferenceRepository userIngredientPreferenceRepository;
 
-    private final AiDietService aiDietService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 메뉴 선택
@@ -80,22 +83,23 @@ public class DietService {
             MenuPickDto.CreateRequest request) {
 
         User user = userReader.getById(userId);
+        List<Long> menuIds = request.menuIds().stream()
+                .distinct()
+                .toList();
 
-        List<Long> menuIds = request.menuIds();
         Long count = (long) menuIds.size();
-
         YearMonth targetMonth = request.targetMonth();
-
         validateSelectableMonth(targetMonth);
+        debitPickCount(user, count);
+        UUID uuid = UUID.randomUUID();
+        debitHistory(user, count, uuid);
+
         // 유저가 선택한 메뉴들을 유저 픽 연결 테이블에 넣기
         List<UserMenuPick> userMenuPickList = menuIds.stream()
                 .map(menuId -> {
                     Menu menu = getMenu(menuId);
 
-                    debitPickCount(user, count);
-                    debitHistory(user, count, UUID.randomUUID());
-
-                    return UserMenuPick.create(user, menu, targetMonth.atDay(1));
+                    return UserMenuPick.create(user, menu, targetMonth.atDay(1), uuid);
                 })
                 .toList();
 
@@ -135,7 +139,7 @@ public class DietService {
      * @param count 개수
      */
     private void debitPickCount(User user, Long count) {
-        UserPickCount userPickCount = userPickCountRepository.findByUser(user)
+        UserPickCount userPickCount = userPickCountRepository.findByUserForUpdate(user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "유저 선택권 정보를 찾을 수 없습니다."));
 
         userPickCount.useCount(count);
@@ -203,8 +207,14 @@ public class DietService {
      * @return 메뉴 선택
      */
     private @NonNull UserMenuPick getUserMenuPick(Long pickId, User user) {
-        return userMenuPickRepository.findByMenuIdAndUser(pickId, user)
+        UserMenuPick userMenuPick = userMenuPickRepository.findByMenuIdAndUser(pickId, user)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "메뉴 선택 내역이 존재하지 않습니다."));
+
+        // 이미 확정 되었다면 변경 불가능
+        if (userMenuPick.getStatus() == UserMenuPickStatus.USED) {
+            throw new BusinessException(ErrorCode.MENU_PICK_ALREADY_USED);
+        }
+        return userMenuPick;
     }
 
     /**
@@ -223,6 +233,15 @@ public class DietService {
 
         Long menuId = userMenuPick.getMenu().getId();
         userMenuPickRepository.delete(userMenuPick);
+
+        Long count = 1L;
+        PickCountHistory pickCountHistory = PickCountHistory.refund(user, count, userMenuPick.getTransactionId());
+
+        UserPickCount userPickCount = userPickCountRepository.findByUser(user)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        pickCountHistoryRepository.save(pickCountHistory);
+        userPickCount.restoreCount(count);
 
         return MenuPickDto.DeleteResponse.builder()
                 .menuId(menuId)
@@ -254,6 +273,15 @@ public class DietService {
         LocalDate endDate = period.endDate();
         validateGenerationRequest(family, startDate, endDate, targetMonthDate);
 
+        // 유저 선택한 메뉴 전부 사용으로 변경
+        List<UserMenuPick> userMenuPicks = userMenuPickRepository.findAllPendingForUpdate(family, targetMonthDate, UserMenuPickStatus.PENDING);
+
+        List<Long> userMenuPickIds = userMenuPicks.stream()
+                .map(UserMenuPick::getId)
+                .toList();
+
+        userMenuPicks.forEach(UserMenuPick::used);
+
         DietGeneration generation = DietGeneration.createPending(
                 family,
                 startDate,
@@ -263,7 +291,15 @@ public class DietService {
         );
 
         DietGeneration saveGeneration = dietGenerationRepository.save(generation);
-        aiDietService.generateDietAsync(userId, saveGeneration.getId(), request, startDate, endDate);
+
+        applicationEventPublisher.publishEvent(DietGenerationRequestedEventDto.builder()
+                .userId(userId)
+                .generationId(saveGeneration.getId())
+                .request(request)
+                .startDate(startDate)
+                .endDate(endDate)
+                .userMenuPickIds(userMenuPickIds)
+                .build());
 
         return DietGenerationDto.GenerateResponse.builder()
                 .generationId(generation.getId())
@@ -598,7 +634,7 @@ public class DietService {
     private void addTotalIngredient(
             Map<String, DietDto.IngredientsResponse> totalIngredientMap,
             Ingredient ingredient,
-            Double quantity,
+            BigDecimal quantity,
             IngredientUnit unit
     ) {
         // 재료 아이디와 단위가 같은 경우
@@ -626,19 +662,24 @@ public class DietService {
     }
 
     /**
-     * Double 계산
+     * BigDecimal 계산
      *
      * @param a 숫자
      * @param b 숫자
      * @return null이 아니라면 더함
      */
-    private Double addNullable(Double a, Double b) {
+    private BigDecimal addNullable(BigDecimal a, BigDecimal b) {
         if (a == null && b == null) {
             return null;
         }
-        if (a == null) return b;
-        if (b == null) return a;
-        return a + b;
+        if (a == null) {
+            return b;
+        }
+        if (b == null) {
+            return a;
+        }
+
+        return a.add(b);
     }
 
     /**
@@ -690,6 +731,10 @@ public class DietService {
         User user = userReader.getById(userId);
 
         Diet diet = getDiet(dietId);
+
+        if(diet.getSource() == DietMenuSource.USER_PICKED){
+            throw new BusinessException(ErrorCode.DIET_MENU_LOCKED);
+        }
 
         // 내 가족 식단이 아닐 경우
         checkFamilyLeader(user, diet);

@@ -14,10 +14,10 @@ public class FamilyPickDto {
             Boolean isAutoAllocations,
             @PositiveOrZero
             Long defaultAllocations,
-            List<pickAllocations> pickAllocations
+            List<PickAllocations> pickAllocations
     ) {
         @Builder
-        public record pickAllocations(
+        public record PickAllocations(
                 Long userId,
                 @PositiveOrZero
                 Long pickCount

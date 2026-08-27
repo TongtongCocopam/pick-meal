@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import kongju.pickmeal.core.menu.Menu;
+import kongju.pickmeal.core.family.Family;
 import kongju.pickmeal.core.menu.type.DishType;
 import kongju.pickmeal.core.menu.type.MenuCategory;
 import kongju.pickmeal.core.menu.repository.MenuRepository;
@@ -73,5 +74,15 @@ public class MenuRepositoryAdapter implements MenuRepository {
     @Override
     public List<Menu> findRecommendationCandidates(MenuCategory category, DishType dishType, Long currentMenuId) {
         return menuJpaRepository.findRecommendationCandidates(category, dishType, currentMenuId);
+    }
+
+    @Override
+    public List<Menu> findAllByFamily(Family family) {
+        return menuJpaRepository.findAllByFamily(family);
+    }
+
+    @Override
+    public void deleteAll(List<Menu> menus) {
+        menuJpaRepository.deleteAll(menus);
     }
 }

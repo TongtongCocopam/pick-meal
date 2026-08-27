@@ -1,465 +1,691 @@
-# pick-meal - AI식단 백엔드 프로젝트
+# PickMeal
 
-### PickMeal은 가족 구성원의 음식 선호도와 알레르기 정보를 반영하여 월 단위 식단을 생성하고 함께 관리할 수 있는 가족 단위 식단 관리 서비스입니다.
-## 1. 프로젝트 개요
+> 가족 구성원의 선호와 건강 정보를 반영하여 맞춤형 식단을 생성하고 관리하는 서비스
 
-- 식품안전처 및 농식품 공공 API를 활용한 메뉴·재료·영양 정보 수집
-- 가족 생성, 초대 코드 가입, 가입 승인 및 가족 구성원 관리
-- 가족 리더와 일반 구성원을 구분한 권한 기반 기능 제공
-- 가족 구성원의 선호 음식 및 알레르기 재료 관리
-- 구성원이 원하는 메뉴를 사전에 선택하여 식단 생성에 반영
-- AI를 활용한 월 단위 식단 비동기 생성
-- 생성된 식단의 월별·일별 조회 및 관리
-- 카테고리, 요리 종류, 메뉴명, 영양 정보를 기반으로 한 메뉴 조회
-- 동일한 요리 종류의 대체 메뉴 검색 및 추천
-- 알레르기 재료를 제외한 대체 메뉴 추천과 확정 식단 메뉴 교체
-- 가족이 직접 등록한 커스텀 메뉴 생성·조회·수정·삭제
-- JWT와 Redis를 활용한 인증 및 토큰 관리
-- 현재 Spring Boot 기반 REST API를 구현했으며 React 프론트엔드 연동 예정
+PickMeal은 가족 구성원이 많아질수록 각자의 선호 메뉴, 기피 재료, 알레르기와 질환 정보를 함께 고려해 식단을 결정하기 어렵다는 문제에서 시작했습니다.
 
-## 2. 기술 스택
+사용자가 원하는 메뉴를 직접 선택할 수 있으며, 서버는 가족 구성원의 선호·기피·건강 정보와 사용 가능한 메뉴 후보를 취합해 OpenAI API에 전달합니다.
 
-| 구분           | 기술                                |
-|--------------|-----------------------------------|
-| Backend      | Spring Boot, Spring Security, JPA |
-| Database     | PostgreSQL                        |
-| Cache/Auth   | Redis, JWT                        |
-| Test         | JUnit5, Mockito, MockMvc          |
-| Infra        | Docker, GitHub Actions            |
-| External API | 공공데이터 레시피 API                     |
+초기에는 LLM이 날짜, 끼니, 메뉴 개수와 같은 식단 구성 규칙까지 결정하도록 구현했지만, 메뉴 누락이나 중복 등 반드시 지켜야 하는 규칙을 항상 보장하기 어렵다는 한계가 있었습니다.
 
-## 3. 주요 기능
+현재는 **LLM이 가족에게 적합한 메뉴의 우선순위와 배치를 판단하고, 날짜·끼니 구성, 메뉴 개수, 중복 제한, 알레르기 검증과 같은 결정적인 비즈니스 규칙은 서버가 관리**하도록 역할을 분리했습니다.
 
-### 회원 / 인증
+또한 외부 AI 호출이 포함된 식단 생성 작업은 HTTP 요청과 분리하여 비동기로 처리하고, `DietGeneration`의 상태를 통해 생성 진행 과정과 실패 여부를 관리합니다.
 
-- JWT 기반 로그인
-- Refresh Token Redis 저장
-- 로그아웃 시 Access Token blacklist 처리
+### 주요 기능
 
-## 주요 API 핵심 서비스 흐름
+- JWT 기반 인증·인가 및 Redis 기반 Token 상태 관리
+- 가족 생성·합류 요청·승인 및 가족 리더 권한 관리
+- 사용자 건강 정보, 질환, 선호·기피 재료 관리
+- 사용자별 메뉴 선택 및 선택권 관리
+- OpenAI API를 활용한 맞춤형 식단 생성
+- 비동기 식단 생성 및 `PENDING / PROCESSING / COMPLETED / FAILED` 상태 관리
+- 생성된 식단 조회 및 메뉴 교체
+- 공공데이터 API 기반 메뉴·레시피·재료 데이터 수집 및 정규화
 
-1. 사용자가 회원가입 및 로그인을 진행한다.
-2. 사용자는 가족 그룹을 생성하거나 초대 코드를 통해 기존 가족에 가입을 신청한다.
-3. 가족 리더는 가입 신청을 승인하거나 거절하고, 가족 구성원을 관리한다.
-4. 가족 구성원은 선호·비선호·알레르기 재료 정보를 등록한다.
-5. 서비스는 외부 공공 API에서 수집한 메뉴·재료·영양 정보를 데이터베이스에 저장하고 메뉴 조회에 활용한다.
-6. 사용자는 메뉴명, 카테고리, 요리 종류 등의 조건으로 메뉴를 검색하고 상세 정보를 확인한다.
-7. 메뉴 상세 화면에서 칼로리, 탄수화물, 단백질, 지방, 나트륨 등의 영양 정보와 구성 재료를 확인한다.
-8. 가족 구성원은 다음 식단에 포함되기를 원하는 메뉴를 사전에 선택한다.
-9. 가족 리더는 대상 월과 일일 식사 횟수를 지정하여 AI 식단 생성을 요청한다.
-10. 서비스는 가족 구성원의 메뉴 선택 및 알레르기 정보를 반영하여 월 단위 식단을 비동기로 생성한다.
-11. 사용자는 생성 상태를 확인하고, 생성이 완료된 식단을 월별·일별로 조회한다.
-12. 가족 리더는 확정된 식단의 메뉴를 검색하거나 알레르기 재료가 제외된 추천 메뉴 중 하나로 교체할 수 있다.
-13. 가족은 공공 데이터에 없는 메뉴를 커스텀 메뉴로 직접 등록하고 수정하거나 삭제할 수 있다.
+## 2. Tech Stack
 
-상세 API 명세는 Notion 문서에 정리되어 있습니다.
+### Backend
 
-## 4. 아키텍처 / 패키지 구조
+- **Java 21**
+- **Spring Boot**
+- **Spring Web MVC**
+- **Spring Data JPA**
+- **Spring Security**
+- **Spring Validation**
+- **Spring Async**
+- **Spring Transaction**
+- **Gradle**
 
-```
-src/main/java/kongju/pickmeal
-├─ api
-│  ├─ auth
-│  ├─ diet
-│  ├─ exception
-│  ├─ family
-│  ├─ menu
-│  ├─ security
-│  └─ user
+### Database & Cache
+
+- **PostgreSQL**
+  - 사용자, 가족, 메뉴, 식단 등 영속 데이터 관리
+  - 운영 환경에서는 AWS RDS 사용
+- **Redis**
+  - Refresh Token 저장
+  - Access Token Blacklist 관리
+  - TTL 기반 인증 상태 만료
+  - 운영 환경에서는 EC2의 Docker Compose로 실행
+
+### External API
+
+- **OpenAI API**
+  - 가족 구성원의 선호·건강 정보를 반영한 메뉴 적합성 판단 및 식단 배치
+- **공공 레시피 API**
+  - 메뉴·레시피 데이터 수집
+- **식품안전나라 Open API**
+  - 메뉴 및 재료 데이터 수집
+
+### Test
+
+- **JUnit 5**
+- **Mockito**
+- **JaCoCo**
+
+### Infrastructure & CI/CD
+
+- **Docker / Docker Compose**
+- **Docker Hub**
+- **AWS EC2**
+- **AWS RDS**
+- **AWS IAM**
+- **AWS Systems Manager (SSM)**
+- **GitHub Actions**
+- **GitHub OIDC**
+
+GitHub Actions에서 자동화 테스트와 Gradle Build를 수행한 뒤,
+테스트가 성공한 경우에만 Docker Image를 생성하여 Docker Hub에 Push합니다.
+
+배포 단계에서는 GitHub OIDC를 통해 AWS의 임시 권한을 획득하고,
+SSM Run Command를 이용해 EC2의 Docker Compose 환경에 새로운 애플리케이션 이미지를 배포합니다.
+
+## 3. System Architecture
+
+![PickMeal System Architecture](docs/images/architecture.png)
+
+PickMeal은 **Spring Boot API를 중심으로 PostgreSQL, Redis, OpenAI API 및 공공데이터 API를 연동**한 구조입니다.
+
+운영 환경에서는 Spring Boot 애플리케이션과 Redis를 **AWS EC2의 Docker Compose 환경**에서 실행하고, 영속 데이터는 **AWS RDS PostgreSQL**에 저장합니다.
+
+### Application
+
+애플리케이션 내부는 다음과 같이 계층별 책임을 분리했습니다.
+
+- **API**
+  - HTTP 요청·응답 처리
+  - Request Validation
+  - 인증 사용자 처리
+  - 예외 Handler
+
+- **Application**
+  - Service를 통한 유스케이스 실행
+  - DTO 구성
+  - 트랜잭션 경계 관리
+  - 여러 도메인 작업 조합
+
+- **Core**
+  - 핵심 Domain Model
+  - Business Rule
+  - Repository Port
+  - AI 식단 생성에 필요한 핵심 인터페이스 및 규칙
+
+- **Infrastructure**
+  - Spring Data JPA 기반 Repository 구현
+  - Redis 연동
+  - OpenAI API Client
+  - 공공 레시피·식품안전나라 API Client
+
+Core에서는 데이터 접근에 필요한 Repository Interface를 정의하고,
+Infrastructure에서 실제 JPA 기반 구현을 제공하도록 구성했습니다.
+
+이를 통해 핵심 비즈니스 로직이 PostgreSQL, Redis, OpenAI와 같은
+구체적인 외부 기술에 직접 의존하지 않도록 했습니다.
+
+### Data Storage
+
+- **PostgreSQL (AWS RDS)**
+  - 사용자·가족·메뉴·재료·식단 등 영속 데이터 저장
+
+- **Redis (EC2 / Docker Compose)**
+  - Refresh Token 저장
+  - Access Token Blacklist 관리
+  - TTL 기반 인증 상태 만료
+
+### External Services
+
+- **OpenAI API**
+  - 서버에서 선별한 메뉴 후보를 기반으로 가족 구성원의 선호와 건강 정보를 고려한 메뉴 적합성 및 식단 배치 판단
+
+- **Public Food APIs**
+  - 메뉴·레시피·재료 원본 데이터 수집
+
+### Async Diet Generation
+
+외부 AI 호출이 포함되는 식단 생성은 일반적인 HTTP 요청과 분리해 비동기로 처리합니다.
+
+`DietGeneration` 저장 트랜잭션이 완료된 이후
+`@TransactionalEventListener(AFTER_COMMIT)`가 이벤트를 수신하고,
+`@Async` 작업에서 OpenAI API 호출과 식단 생성을 수행합니다.
+
+이를 통해 아직 Commit되지 않은 데이터를 비동기 작업이 조회하는 문제를 방지하고,
+외부 API 호출이 요청 저장 트랜잭션을 장시간 점유하지 않도록 구성했습니다.
+
+> CI/CD 배포 흐름은 아래 `CI/CD` 섹션에서 별도로 설명합니다.
+
+## 4. Project Structure
+
+현재 애플리케이션은 `api`, `application`, `core`, `infrastructure`를 중심으로 계층을 분리하고,
+공통 응답과 예외 처리는 `common`에서 관리하도록 구성했습니다.
+
+```text
+src/main/java/kongju.pickmeal
+├── api
+│   ├── auth
+│   ├── diet
+│   ├── exception
+│   ├── family
+│   ├── menu
+│   ├── security
+│   └── user
 │
-├─ application
-│  ├─ auth
-│  ├─ diet
-│  ├─ family
-│  ├─ menu
-│  └─ user
+├── application
+│   ├── auth
+│   ├── diet
+│   ├── family
+│   ├── menu
+│   └── user
 │
-├─ common
-│  ├─ ApiResponse
-│  ├─ config
-│  └─ exception
+├── common
+│   ├── ApiResponse
+│   └── exception
 │
-├─ core
-│  ├─ ai
-│  ├─ auth
-│  ├─ common
-│  ├─ diet
-│  ├─ family
-│  ├─ menu
-│  ├─ service
-│  └─ user
+├── core
+│   ├── ai
+│   ├── auth
+│   ├── common
+│   ├── diet
+│   ├── family
+│   ├── menu
+│   ├── service
+│   └── user
 │
-├─ infrastructure
-│  ├─ config
-│  ├─ external
-│  ├─ repository
-│  └─ service
+├── infrastructure
+│   ├── config
+│   ├── external
+│   │   ├── ai
+│   │   └── recipe
+│   ├── repository
+│   └── service
 │
-└─ PickMealApplication
-```
-
-### 설계 의도
-
-PickMeal은 기능별 도메인을 구분하면서도 각 계층의 책임이 섞이지 않도록  
-`api`, `application`, `core`, `infrastructure`, `common` 계층으로 구성했습니다.
-
-- `api`
-  - Controller, 인증·인가 처리, 전역 예외 처리 코드를 배치합니다.
-  - HTTP 요청을 받아 application 계층에 전달하고, 처리 결과를 공통 응답 형식으로 반환합니다.
-  - 비즈니스 로직은 직접 처리하지 않고 application 계층에 위임합니다.
-
-- `application`
-  - 회원, 가족, 메뉴, 식단 관련 유스케이스와 요청·응답 DTO를 관리합니다.
-  - Controller로부터 전달받은 요청을 처리하고, 응답 DTO로 변환합니다.
-  - 여러 도메인과 repository를 조합하며 트랜잭션 경계를 관리합니다.
-
-- `core`
-  - 엔티티, 열거형, 도메인 규칙과 repository interface를 정의합니다.
-  - 데이터베이스나 외부 API의 세부 구현에 의존하지 않는 핵심 비즈니스 로직을 관리합니다.
-  - AI 식단 생성 기능도 interface로 추상화하여 특정 AI 구현체와 분리했습니다.
-
-- `infrastructure`
-  - Spring Data JPA, Redis, 공공데이터 API 및 AI API 연동을 구현합니다.
-  - core 계층에 정의된 repository와 외부 서비스 interface의 실제 구현체를 제공합니다.
-  - 외부 데이터를 조회하고 내부 도메인 모델로 변환하는 역할을 담당합니다.
-
-- `common`
-  - 공통 API 응답 형식, 예외 처리, 오류 코드와 공통 설정을 관리합니다.
-
-repository는 `core` 계층에 interface로 정의하고, `infrastructure` 계층에서  
-Spring Data JPA 기반 adapter로 구현했습니다. 이를 통해 application 계층이  
-Spring Data JPA 구현체에 직접 의존하지 않고 도메인 관점의 interface를 통해 데이터에 접근하도록 구성했습니다.
-
-공공데이터와 AI 연동 역시 interface와 구현체를 분리하여 외부 서비스가 변경되더라도  
-application 및 core 계층의 변경을 최소화할 수 있도록 설계했습니다.
-
-## 5. ERD / 핵심 도메인 구조
-
-![ERD](./docs/erd.png)
-
-### 핵심 도메인
-
-- `User`: 서비스 사용자이며, 소속 가족과 가족 내 역할 정보를 관리
-- `Family`: 가족 그룹과 초대 코드 등의 가족 관리 정보
-- `FamilyJoinRequest`: 초대 코드를 통한 가족 가입 신청과 처리 상태
-- `UserIngredientPreference`: 사용자의 선호·비선호·알레르기 재료 정보
-
-- `Menu`: 공공 API 또는 가족이 직접 등록한 메뉴 정보
-- `Ingredient`: 메뉴 구성에 사용되는 재료 마스터 정보
-- `MenuIngredient`: 메뉴와 재료의 연결 정보 및 사용량·단위·재료 구분 정보
-
-- `DietGeneration`: 월 단위 식단 생성 요청과 비동기 처리 상태 관리
-- `Diet`: 특정 날짜와 식사 구분에 배정된 확정 메뉴 정보
-- `UserMenuPick`: 가족 구성원이 특정 월의 식단에 반영하기 위해 사전에 선택한 메뉴 정보
-
-### 주요 관계
-
-- 하나의 가족에는 여러 사용자가 소속될 수 있으며, 사용자는 최대 하나의 가족에 소속됩니다.
-- 사용자는 가족 내에서 `LEADER` 또는 `MEMBER` 역할을 가집니다.
-- 가족 생성자는 리더가 되며, 가족 리더는 가입 신청 승인·거절, 구성원 방출, 가족 해체 등의 관리 권한을 가집니다.
-- 가족 가입 신청은 신청 사용자와 대상 가족을 연결하며, 처리 상태를 관리합니다.
-
-- 사용자는 건강 프로필과 질병 정보를 등록할 수 있습니다.
-- 사용자는 여러 재료에 대해 선호, 비선호, 알레르기 정보를 등록할 수 있습니다.
-- `UserIngredientPreference`는 사용자와 재료를 연결하고 해당 재료에 대한 선호 유형을 관리합니다.
-
-- 하나의 메뉴는 여러 재료로 구성되며, 하나의 재료는 여러 메뉴에 사용될 수 있습니다.
-- `MenuIngredient`는 메뉴와 재료를 연결하고 사용량, 단위, 주재료·부재료 구분 등의 정보를 관리합니다.
-- 메뉴는 외부 공공 API를 통해 수집하거나 가족이 직접 커스텀 메뉴로 등록할 수 있습니다.
-- 가족 커스텀 메뉴는 해당 가족 구성원만 조회·수정·삭제할 수 있습니다.
-
-- 가족 구성원은 특정 대상 월에 식단에 포함되기를 원하는 메뉴를 사전에 선택할 수 있습니다.
-- `UserMenuPick`은 사용자, 메뉴, 대상 월을 연결하고 식단 생성 반영 여부를 상태로 관리합니다.
-
-- 하나의 가족은 여러 식단 생성 요청을 가질 수 있습니다.
-- `DietGeneration`은 가족, 대상 월, 생성 기간, 일일 식사 횟수와 비동기 생성 상태를 관리합니다.
-- 하나의 식단 생성 요청을 통해 날짜와 식사 구분별 여러 `Diet` 데이터가 생성됩니다.
-- `Diet`은 가족, 식단 생성 요청, 메뉴를 연결하며 특정 날짜와 식사 구분의 확정 메뉴 한 건을 나타냅니다.
-- 식단 메뉴에는 AI 추천, 사용자 사전 선택, 수동 교체 등의 선정 출처가 기록됩니다.
-- 사용자가 사전에 선택한 메뉴로 확정된 식단은 임의로 교체할 수 없습니다.
-- 확정 식단의 메뉴는 같은 요리 종류의 메뉴로 교체할 수 있으며, 가족의 알레르기 재료가 포함된 메뉴는 추천 후보에서 제외됩니다.
-
-상세 테이블 구조와 컬럼 설명은 Notion 문서에 정리했습니다.
-
-## 6. 대표 API
-
-| 기능 | Method | Endpoint | 설명 |
-|---|---|---|---|
-| 회원가입 | POST | `/api/v1/users/signup` | 사용자 계정 생성 |
-| 로그인 | POST | `/api/v1/auth/login` | Access Token 및 Refresh Token 발급 |
-| 가족 생성 | POST | `/api/v1/families` | 가족 그룹 생성 |
-| 가족 합류 신청 | POST | `/api/v1/families/applications` | 초대 코드를 이용한 가족 합류 신청 |
-| 가족 합류 승인·거절 | PATCH | `/api/v1/families/me/applications/{requestId}` | 가족 리더가 가입 신청 처리 |
-| 질병 정보 수정 | PATCH | `/api/v1/users/me/diseases` | 사용자 질병 정보 수정 |
-| 재료 선호 정보 수정 | PATCH | `/api/v1/users/me/ingredient-preferences` | 선호·비선호·알레르기 재료 정보 수정 |
-| 메뉴 필터 옵션 조회 | GET | `/api/v1/menus/filter-options` | 카테고리 및 요리 종류 목록 조회 |
-| 메뉴 목록 조회 | GET | `/api/v1/menus?category=KOREAN&dishType=STEW&page=0&size=20` | 조건에 따른 메뉴 페이징 조회 |
-| 메뉴 상세 조회 | GET | `/api/v1/menus/{menuId}` | 메뉴 영양 정보 및 구성 재료 조회 |
-| 커스텀 메뉴 등록 | POST | `/api/v1/menus/custom` | 가족 전용 커스텀 메뉴 등록 |
-| 커스텀 메뉴 수정 | PUT | `/api/v1/menus/custom/{menuId}` | 가족 커스텀 메뉴 전체 수정 |
-| 커스텀 메뉴 삭제 | DELETE | `/api/v1/menus/custom/{menuId}` | 가족 커스텀 메뉴 삭제 |
-| 대체 메뉴 검색 | GET | `/api/v1/diets/{dietId}/replacement-menus` | 현재 식단과 같은 요리 종류의 대체 메뉴 검색 |
-| 대체 메뉴 추천 | GET | `/api/v1/diets/{dietId}/replacement-menu-suggestions` | 가족 알레르기 재료를 제외한 대체 메뉴 추천 |
-| 확정 식단 메뉴 교체 | PUT | `/api/v1/diets/{dietId}/menu` | 확정 식단 메뉴를 선택한 메뉴로 교체 |
-## 7. 실행 방법
-
-### 1. 프로젝트 클론
-
-```bash
-git clone https://github.com/사용자명/pickmeal.git
-cd pickmeal
+└── PickMealApplication
 ```
 
-### 2. 환경 변수 설정
+### API
 
-애플리케이션 실행 전 다음 환경 변수를 설정해야 합니다.
+외부 HTTP 요청과 응답을 처리하는 계층입니다.
+
+도메인별 API와 인증·보안 관련 처리를 분리했으며,
+요청 검증과 예외 Handler 역시 API 계층에서 관리합니다.
+
+```text
+api
+├── auth
+├── diet
+├── exception
+├── family
+├── menu
+├── security
+└── user
+```
+
+### Application
+
+하나의 유스케이스를 실행하는 Service와
+계층 간 데이터 전달에 사용하는 DTO를 관리합니다.
+
+Controller에서 전달받은 요청을 바탕으로 필요한 Core의 비즈니스 규칙과
+Repository 작업을 조합하고, Transaction이 필요한 작업의 경계를 관리합니다.
+
+```text
+application
+├── auth
+├── diet
+├── family
+├── menu
+└── user
+```
+
+### Core
+
+프로젝트의 핵심 Domain과 Business Rule을 관리합니다.
+
+식단, 가족, 메뉴, 사용자, 인증과 같은 도메인 로직과
+외부 구현체가 따라야 하는 Repository 및 AI 관련 계약을 Core에 두어,
+핵심 로직이 구체적인 외부 기술 구현에 직접 의존하지 않도록 구성했습니다.
+
+```text
+core
+├── ai
+├── auth
+├── common
+├── diet
+├── family
+├── menu
+├── service
+└── user
+```
+
+### Infrastructure
+
+Core와 Application에서 필요로 하는 외부 기술을 실제로 구현하는 계층입니다.
+
+```text
+infrastructure
+├── config
+├── external
+│   ├── ai
+│   └── recipe
+├── repository
+└── service
+```
+
+- `config` : 외부 기술 및 애플리케이션 설정
+- `external/ai` : OpenAI API 연동
+- `external/recipe` : 공공 레시피 및 외부 메뉴 데이터 연동
+- `repository` : Core의 Repository에 대한 데이터 접근 구현
+- `service` : Infrastructure에 속하는 외부 기술 기반 Service 구현
+
+### Common
+
+특정 도메인에 종속되지 않는 공통 응답 형식과 예외 관련 코드를 관리합니다.
+
+```text
+common
+├── ApiResponse
+└── exception
+```
+
+이 구조를 통해 HTTP 처리, 유스케이스 실행, 핵심 비즈니스 규칙,
+외부 기술 구현의 책임을 분리하고 각 계층의 변경이 다른 영역으로 직접 전파되는 범위를 줄이도록 구성했습니다.
+
+## 5. Key Design
+
+README에서는 프로젝트의 전체 문제 해결 과정을 반복하기보다,
+현재 구조를 이해하는 데 필요한 핵심 설계만 정리했습니다.
+
+### 5.1 LLM과 Server의 책임 분리
+
+초기에는 LLM이 메뉴 선택뿐 아니라 날짜, 끼니, 메뉴 개수, 중복 제한까지 포함한
+최종 식단 구성을 담당했습니다.
+
+하지만 LLM 응답만으로는 메뉴 누락, 개수 불일치, 중복과 같이
+반드시 지켜야 하는 규칙을 안정적으로 보장하기 어려웠습니다.
+
+현재는 역할을 다음과 같이 분리했습니다.
+
+| LLM | Server |
+| --- | --- |
+| 가족 구성원의 선호·건강 정보 해석 | 알레르기 조건 검증 |
+| 메뉴 적합성 판단 | 날짜·끼니 구성 |
+| 후보 메뉴 우선순위 및 배치 판단 | 메뉴 개수·중복 제한 |
+|  | 응답 menuId 유효성 검증 |
+|  | 최종 Diet 생성 및 저장 |
+
+LLM에는 서버에서 선별한 메뉴 후보만 전달하고,
+응답 역시 후보에 존재하는 `menuId`를 기준으로 처리합니다.
+
+이를 통해 의미적인 판단은 LLM에 맡기고,
+명확하게 검증 가능한 비즈니스 규칙은 Server가 보장하도록 구성했습니다.
+
+---
+
+### 5.2 비동기 식단 생성과 Transaction Commit 시점 분리
+
+월 단위 식단 생성은 OpenAI API 호출과 결과 검증, 식단 저장까지 포함하기 때문에
+일반적인 API 요청보다 처리 시간이 길어질 수 있습니다.
+
+이에 실제 식단 결과인 `Diet`와 생성 작업의 상태를 관리하는
+`DietGeneration`을 분리했습니다.
+
+```text
+PENDING
+   ↓
+PROCESSING
+   ↓
+COMPLETED
+
+실패 시 → FAILED
+```
+
+식단 생성 요청에서는 먼저 `PENDING` 상태의 `DietGeneration`을 저장하고
+생성 요청 ID를 반환한 뒤, 실제 식단 생성은 비동기로 처리합니다.
+
+초기에는 저장 직후 `@Async` 작업을 실행했지만,
+부모 Transaction이 Commit되기 전에 비동기 작업이 시작되면서
+방금 저장한 데이터를 조회하지 못할 수 있는 문제가 있었습니다.
+
+현재는 다음과 같이 처리합니다.
+
+```text
+DietGeneration 저장
+        ↓
+Event 발행
+        ↓
+Transaction Commit
+        ↓
+@TransactionalEventListener(AFTER_COMMIT)
+        ↓
+@Async
+        ↓
+OpenAI API 호출
+        ↓
+응답 검증 및 Diet 저장
+```
+
+부모 Transaction이 정상적으로 Commit된 이후에만 비동기 작업을 시작하여,
+요청 데이터의 저장 시점과 장시간 수행되는 외부 AI 작업의 실행 시점을 분리했습니다.
+
+---
+
+### 5.3 Repository Port / Adapter 분리
+
+Application과 Core가 Spring Data JPA 구현체에 직접 의존하지 않도록
+Core에 Repository Interface를 정의하고 Infrastructure에서 실제 데이터 접근을 구현했습니다.
+
+```text
+Application Service
+        ↓ 사용
+Core Repository Interface
+        ↑ 구현
+Infrastructure Repository Adapter
+        ↓ 위임
+Spring Data JPA Repository
+        ↓
+PostgreSQL
+```
+
+Application은 데이터가 어떤 방식으로 저장되는지보다
+유스케이스에 필요한 Repository 계약에 의존하도록 구성했습니다.
+
+이를 통해 핵심 비즈니스 로직과 JPA 기반 데이터 접근 구현의 책임을 분리했습니다.
+
+---
+
+### 5.4 Redis 기반 인증 상태 관리
+
+JWT 인증을 사용하면서도 로그아웃과 Refresh Token의 상태를
+서버에서 통제할 수 있도록 Redis를 함께 사용했습니다.
+
+- Refresh Token을 Redis에 저장하고 재발급 시 서버의 저장 값과 비교
+- 로그아웃 시 Refresh Token 제거
+- 로그아웃된 Access Token은 Redis Blacklist에 등록
+- Blacklist의 TTL은 해당 Access Token의 남은 만료 시간을 기준으로 설정
+
+```text
+Login
+  ↓
+Access Token + Refresh Token 발급
+  ↓
+Refresh Token → Redis
+
+Logout
+  ├─ Refresh Token 삭제
+  └─ Access Token → Blacklist
+                      ↓
+                   TTL 만료
+```
+
+이를 통해 JWT 기반 인증 구조를 유지하면서도
+로그아웃과 토큰 재발급에 필요한 인증 상태를 서버에서 관리하도록 구성했습니다.
+
+## 6. Database
+
+PostgreSQL을 사용해 사용자·가족·메뉴·식단 데이터를 관계형 구조로 관리했습니다.
+
+### 사용자·선호·선택권
+
+![User ERD](docs/images/erd-user.png)
+
+### 가족·식단
+
+![Family Diet ERD](docs/images/erd-family-diet.png)
+
+### 메뉴·재료
+
+![Menu Ingredient ERD](docs/images/erd-menu-ingredient.png)
+
+### 주요 설계
+
+- **식단 생성 작업과 결과 분리**
+  - `diet_generation`에서 식단 생성 요청의 기간, 식사 횟수와 `PENDING / PROCESSING / COMPLETED / FAILED` 상태를 관리합니다.
+  - 실제 생성된 식단은 `diet`에 저장하고 `diet_generation_id`를 통해 어떤 생성 요청에서 만들어졌는지 추적합니다.
+
+- **사용자 상태와 변경 이력 분리**
+  - 현재 보유한 선택권은 `user_pick_count`에서 관리합니다.
+  - 선택권의 지급·사용·복구 등 변경 내역은 `pick_count_histories`에 누적하고 `transaction_id`를 통해 변경 작업을 추적합니다.
+  - 사용자가 직접 선택한 메뉴는 `user_menu_pick`에서 별도로 관리합니다.
+
+- **사용자 건강·선호 정보 분리**
+  - 신체 정보는 `user_health_profile`,
+  - 질환 정보는 `user_diseases`,
+  - 재료 선호·기피 정보는 `user_ingredient_preference`에서 관리합니다.
+  - 재료 선호 정보는 `ingredient`와 연결하여 식단 생성 시 활용합니다.
+
+- **메뉴와 재료 관계 정규화**
+  - `menu`와 `ingredient`의 다대다 관계를 `menu_ingredients`로 분리했습니다.
+  - 재료 수량은 `quantity`, `unit`으로 저장하며,
+    외부 데이터의 원문 표현은 `quantity_text`에 함께 보존합니다.
+
+- **가족 단위 데이터 연결**
+  - `users`, `diet_generation`, `diet`, `menu`, `family_join_requests` 등 주요 데이터는 `family_id`를 기준으로 가족과 연결됩니다.
+  - 이를 통해 식단 생성과 메뉴 관리, 가족 가입 요청을 가족 단위로 처리합니다.
+
+## 7. Test
+
+서비스의 주요 비즈니스 규칙과 API 요청·예외 흐름을 중심으로
+**총 286개의 자동화 테스트**를 작성했습니다.
+
+정상 흐름뿐 아니라 권한 검증, 상태 전이, 중복 요청,
+잘못된 요청과 주요 비즈니스 예외 조건을 함께 검증했습니다.
+
+### 주요 테스트 범위
+
+- **Family**
+  - 가족 생성·합류 요청·승인·거절
+  - 구성원 탈퇴·방출
+  - 초대 코드 재발급
+  - 가족 리더 권한 검증
+
+- **Diet**
+  - 식단 생성 요청
+  - `DietGeneration` 상태 변경
+  - 생성 결과 조회
+  - 메뉴 교체
+  - 사용자 선택 메뉴 반영
+  - 잘못된 상태 및 요청 검증
+
+- **Auth / Security**
+  - 로그인·로그아웃
+  - Access Token / Refresh Token 재발급
+  - Access Token Blacklist
+  - 인증·인가 예외 처리
+
+- **Menu / Pick**
+  - 메뉴 조회
+  - 사용자 메뉴 선택
+  - 선택권 차감·복구
+  - 중복 선택 및 잘못된 요청 검증
+
+- **External Data**
+  - 외부 레시피 데이터 매핑
+  - 메뉴·재료 변환 및 저장 로직
+
+### Coverage
+
+JaCoCo를 사용해 테스트 범위를 확인했습니다.
+
+- **Automated Tests**: 286
+- **Application**: Line Coverage **92%** / Branch Coverage **80%**
+- **API**: Line Coverage **83%**
+
+현재 테스트는 Application·Core·API 계층의 비즈니스 규칙 검증에 집중되어 있으며,
+Infrastructure 계층은 외부 DB·Redis 및 Adapter를 포함한 통합 테스트를 추가하며
+검증 범위를 확장하고 있습니다.
+
+## 8. CI/CD
+
+![Menu ERD](docs/images/cicd.png)
+
+`develop` 브랜치에 코드가 Push되면 GitHub Actions를 통해 테스트부터 배포까지 자동으로 수행하도록 구성했습니다.
+
+### CI
+
+GitHub Actions에서 PostgreSQL과 Redis Service Container를 실행해
+테스트에 필요한 환경을 구성한 뒤 자동화 테스트와 Gradle Build를 수행합니다.
+
+```text
+develop Push
+    ↓
+PostgreSQL / Redis Service Container
+    ↓
+JUnit 5 Automated Test
+    ↓
+Gradle Build
+    ↓
+Docker Image Build
+    ↓
+Docker Hub Push
+```
+
+테스트가 실패하면 이후 Docker Image 생성 및 배포 단계가 실행되지 않도록 구성하여,
+검증되지 않은 코드가 운영 환경에 배포되지 않도록 했습니다.
+
+### CD
+
+Docker Image가 Registry에 Push된 이후에는
+장기 AWS Access Key를 GitHub Secret에 저장하지 않고,
+**GitHub OIDC를 통해 실행 시점에 AWS 임시 권한을 획득**합니다.
+
+이후 AWS Systems Manager의 **SSM Run Command**를 이용해
+EC2에 배포 명령을 전달합니다.
+
+```text
+GitHub Actions
+    ↓
+GitHub OIDC
+    ↓
+AWS IAM Role
+    ↓
+SSM Run Command
+    ↓
+AWS EC2
+    ↓
+docker compose pull app
+    ↓
+docker compose up -d --force-recreate app
+```
+
+운영 환경의 Redis는 동일한 EC2의 Docker Compose에서 계속 실행하고,
+배포 시에는 Spring Boot 애플리케이션 컨테이너만 새로운 Image로 교체하도록 구성했습니다.
+
+PostgreSQL은 EC2 내부 컨테이너가 아닌 **AWS RDS**를 사용하여
+애플리케이션 배포와 영속 데이터베이스의 수명주기를 분리했습니다.
+
+## 9. Run & API
+
+### Local Environment
+
+로컬 환경에서는 PostgreSQL과 Redis를 Docker Compose로 실행하고,
+Spring Boot 애플리케이션은 `local` Profile로 실행합니다.
+
+#### 1. Environment Variables
+
+애플리케이션 실행에 필요한 주요 환경변수입니다.
 
 ```env
-# PostgreSQL
-DB_URL=jdbc:postgresql://localhost:5432/pickmeal
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
+DB_URL=<PostgreSQL JDBC URL>
+DB_USERNAME=<PostgreSQL Username>
+DB_PASSWORD=<PostgreSQL Password>
 
-# Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# JWT
-JWT_ACCESS_SECRET=your_access_token_secret_at_least_32_bytes
-JWT_REFRESH_SECRET=your_refresh_token_secret_at_least_32_bytes
+JWT_ACCESS_SECRET=<JWT Access Token Secret>
+JWT_REFRESH_SECRET=<JWT Refresh Token Secret>
 
-# OpenAI
-OPENAI_API_KEY=your_openai_api_key
+OPENAI_API_KEY=<OpenAI API Key>
 
-# 공공데이터 API
-PUBLIC_DATA_API_KEY=your_public_data_api_key
-FOOD_SAFETY_API_KEY=your_food_safety_api_key
+PUBLIC_DATA_API_KEY=<Public Data API Key>
+FOOD_SAFETY_API_KEY=<Food Safety API Key>
 ```
 
-### 3. PostgreSQL / Redis 실행
+실제 인증 정보와 API Key는 Repository에 포함하지 않고
+환경변수를 통해 주입하도록 구성했습니다.
 
-Docker Compose를 사용하는 경우:
+---
 
-```
-docker compose up -d
-```
-
-### 4. 애플리케이션 실행
-
-```
-bash gradlew bootRun --args='--spring.profiles.active=local'
-```
-
-### 5. 테스트 실행
-
-```
-bash gradlew test
-```
-
-## 외부 API 데이터 Import
-
-공공데이터 기반 메뉴/재료 데이터 적재:
-
-```
-bash gradlew bootRun --args='--spring.profiles.active=local,public-data-import'
-```
-
-
-```
-bash gradlew bootRun --args='--spring.profiles.active=local,food-safety-import'
-```
-
-## 8. 테스트 방법
-
-### 테스트 실행
+#### 2. PostgreSQL / Redis 실행
 
 ```bash
-bash gradlew test
+docker compose -f compose.local.yaml up -d
 ```
 
-| 도구                   | 사용 목적                        |
-|----------------------|------------------------------|
-| JUnit5               | 테스트 코드 작성 및 실행               |
-| Mockito              | Service 테스트에서 의존 객체 Mock 처리  |
-| MockMvc              | Controller 계층의 HTTP 요청/응답 검증 |
-| Spring Security Test | 인증/인가가 필요한 API 테스트           |
+로컬 Docker Compose에서는 다음 서비스를 실행합니다.
 
-### 테스트 범위
+```text
+PostgreSQL 16
+└─ localhost:5432
 
-- 인증 API
-  - 회원가입
-  - 로그인 및 로그아웃
-  - Access Token 재발급
-  
-- 가족 관리 API
-  - 가족 생성
-  - 초대 코드를 통한 가족 합류 신청
-  - 합류 신청 승인 및 거절
-  - 가족 구성원과 가입 신청 목록 조회
-  - 초대 코드 재발급
-  - 가족 구성원 방출
-  - 가족 탈퇴 및 가족 해체
-  - 가족 리더와 일반 구성원의 권한 검증
-  
-- 사용자 정보 API
-  - 건강 및 질병 정보 수정
-  - 선호·비선호·알레르기 재료 정보 수정
-  - 요청값 유효성 검증
+Redis 7
+└─ localhost:6379
+```
 
-- 메뉴 API
-  - 메뉴 필터 옵션 조회
-  - 메뉴명·카테고리·요리 종류 기반 목록 검색
-  - 메뉴 목록 페이징 응답 검증
-  - 메뉴 상세 및 영양·재료 정보 조회
-  - 가족 커스텀 메뉴 등록·수정·삭제
-  - 다른 가족의 커스텀 메뉴 접근 제한
-  - 삭제된 메뉴 조회 및 수정 제한
+PostgreSQL과 Redis의 데이터는 Docker Volume을 통해 유지됩니다.
 
-- 사용자 메뉴 선택 API
-  - 식단에 반영할 메뉴 사전 선택
-  - 대상 월별 선택 메뉴 조회
-  - 선택 가능 개수 제한
-  - 선택 메뉴 취소
-  - 식단 생성에 사용된 메뉴 선택 상태 변경
+---
 
-- 식단 생성 API
-  - 대상 월과 일일 식사 횟수를 이용한 식단 생성 요청
-  - 중복 생성 요청 제한
-  - 식단 생성 기간 계산
-  - 비동기 생성 요청 및 상태 변경
-  - 생성 성공·실패 상태 처리
-  - 사용자 선택 메뉴와 가족 알레르기 정보 반영
-  - AI 응답 검증 및 식단 저장
+#### 3. Application 실행
 
-- 식단 조회 API
-  - 월별 식단 조회
-  - 날짜 및 식사 구분별 식단 조회
-  - 다른 가족 식단 접근 제한
-  - 식단 생성 상태 조회
+```bash
+./gradlew bootRun --args='--spring.profiles.active=local'
+```
 
-- 확정 식단 메뉴 교체 API
-  - 현재 메뉴와 동일한 요리 종류의 대체 메뉴 검색
-  - 대체 메뉴 목록 페이징 및 키워드 검색
-  - 가족 알레르기 재료가 포함된 메뉴 제외
-  - 알레르기 재료를 제외한 대체 메뉴 랜덤 추천
-  - 추천 메뉴의 영양 및 재료 정보 조회
-  - 선택한 메뉴로 확정 식단 교체
-  - 사용자가 사전에 선택한 메뉴의 교체 제한
-  - 가족 리더 권한 및 메뉴 교체 조건 검증
+Windows 환경에서는 다음과 같이 실행할 수 있습니다.
 
-Controller 테스트에서는 `MockMvc`를 사용하여 HTTP 상태 코드, 요청값 검증, 권한 처리 및 JSON 응답 구조를 확인했습니다.  
-인증이 필요한 API는 `@WithMockUser` 또는 Spring Security Test의 `user()` 요청 후처리기를 사용해 사용자 역할별 접근 권한을 검증했습니다.
+```bash
+gradlew.bat bootRun --args="--spring.profiles.active=local"
+```
 
-Service 테스트에서는 JUnit과 Mockito를 사용하여 repository 및 외부 연동 객체를 격리하고, 유스케이스별 성공·실패 흐름과 도메인 규칙을 검증했습니다. 공공데이터 및 AI API 호출은 실제 외부 요청 대신 mock 객체를 사용했습니다.
+`local` Profile에서는 Hibernate Schema Update와 SQL Logging을 활성화하여
+개발 과정에서 데이터베이스 변경과 실행 Query를 확인할 수 있도록 구성했습니다.
 
-## 9. 핵심 기술적 고민 3~5개 핵심 설계 및 트러블슈팅
+---
 
-### 1. Menu와 Diet 도메인 분리
+### Docker Image
 
-초기에는 메뉴 관련 모델을 `diet` 패키지에 함께 두었지만, `Menu`는 사용자가 실제로 선택한 식단 기록이 아니라 식단 선택을 위한 후보 데이터에 가깝다고 판단했습니다.
+애플리케이션 Docker Image는 빌드된 Spring Boot JAR를 기반으로 실행합니다.
 
-따라서 `Menu`, `Ingredient`, `MenuIngredient`는 `menu` 도메인으로 분리하고, `Diet`는 사용자가 실제로 선택하거나 확정한 식단 기록을 담당하도록 분리했습니다.
+```bash
+./gradlew clean build
+docker build -t pickmeal:latest .
+```
 
-이를 통해 메뉴 데이터 조회/필터링과 식단 선택/확정 로직의 책임을 분리했습니다.
+Docker Container 내부에서는 Java 21 환경에서 애플리케이션을 실행합니다.
 
-### 2. Repository Port-Adapter 분리
+---
 
-초기에는 application 계층에서 Spring Data JPA Repository를 직접 의존했습니다.  
-이 경우 도메인/유스케이스 로직이 JPA 구현체에 강하게 결합된다고 판단했습니다.
+### API Documentation
 
-이를 개선하기 위해 `core` 계층에는 repository interface를 정의하고, `infrastructure` 계층에서 JPA adapter가 이를 구현하도록 분리했습니다.
+SpringDoc OpenAPI를 사용해 API 문서를 제공합니다.
 
-이를 통해 application 계층은 JPA 구현체가 아니라 repository port에만 의존하도록 구성했습니다.
+애플리케이션 실행 후 Swagger UI에서
+각 API의 Request / Response와 Endpoint를 확인할 수 있습니다.
 
-### 3. 외부 API 기반 메뉴 데이터 Import
+```text
+Swagger UI
+http://localhost:8080/swagger-ui/index.html
+```
 
-메뉴와 재료 데이터는 직접 입력하지 않고, 공공 레시피 API와 식품안전나라 API를 기반으로 수집했습니다.
+운영 환경의 인증 정보와 외부 서비스 설정은 `.env` 및 환경변수를 통해 주입하며, 실제 Secret 값을 포함하지 않습니다.
 
-각 API는 응답 구조와 제공 데이터가 달라 import service와 client를 분리했습니다.  
-또한 import 작업은 일반 애플리케이션 실행과 분리하기 위해 `public-data-import`, `food-safety-import` profile 기반 runner로 실행되도록 구성했습니다.
+## 10. Portfolio & Documentation
 
-이를 통해 일반 서버 실행과 데이터 적재 작업이 동시에 수행되지 않도록 분리했습니다.
+프로젝트의 상세 설계 과정과 문제 해결 내용은 별도의 Portfolio 문서에 정리했습니다.
 
-### 4. 비정형 재료 문자열 파싱
+README에서는 프로젝트의 구조와 실행 방법을 중심으로 설명하고,
+Portfolio에서는 다음 내용을 더 자세히 확인할 수 있습니다.
 
-외부 API의 재료 정보는 구조화된 JSON이 아니라 `"된장 5g, 두부 20g"`과 같은 문자열 형태로 제공되었습니다.
+- 시스템 아키텍처 및 설계 의도
+- 주요 데이터베이스 설계
+- LLM과 Server의 역할 분리 과정
+- 비동기 식단 생성과 Transaction 문제 해결
+- Redis 인증 상태 관리
+- Docker Compose 환경의 Redis 연결 문제 해결
+- 테스트 전략 및 Coverage
+- CI/CD 구성과 배포 흐름
+- 프로젝트 결과 및 회고
 
-이를 메뉴와 재료 테이블로 정규화하기 위해 재료 문자열을 줄바꿈, 쉼표, 수량 시작 위치 기준으로 파싱하는 parser를 구현했습니다.
+### Links
 
-수량 단위가 일정하지 않은 데이터가 많았기 때문에 `quantity`와 `unit`을 무리하게 분리하지 않고, 원문 수량을 `quantityText`로 보존했습니다.
-
-### 5. 가족 리더 권한 처리
-
-가족 가입 승인, 구성원 방출, 초대 코드 재발급, 가족 해체와 같은 기능은 가족 리더만 수행할 수 있도록 제한했습니다.
-
-컨트롤러에서는 인증 사용자를 기준으로 요청을 받고, 서비스 계층에서 해당 사용자가 대상 가족의 리더인지 검증했습니다.
-
-이를 통해 다른 가족의 데이터에 접근하거나, 권한 없는 사용자가 가족 관리 기능을 수행하지 못하도록 처리했습니다.
-
-### 6. AI 식단 생성의 비동기 처리와 상태 관리
-
-월 단위 식단 생성은 AI 응답 대기와 결과 검증, 여러 식단 데이터 저장이 포함되어 일반 API 요청보다 처리 시간이 길어질 수 있습니다.
-
-처음에는 식단 생성 요청 안에서 AI 호출부터 데이터 저장까지 모두 처리하는 방식을 고려했지만, 요청 시간이 길어지고 처리 결과를 사용자에게 즉시 반환하기 어렵다는 문제가 있었습니다.
-
-이를 해결하기 위해 식단 생성 요청 자체를 나타내는 `DietGeneration`을 별도 도메인으로 구성하고, 생성 요청과 실제 AI 처리 작업을 분리했습니다.
-
-- 식단 생성 요청 시 `PENDING` 상태의 `DietGeneration` 저장
-- 생성 요청 ID와 현재 상태를 즉시 응답
-- `@Async`를 이용하여 AI 식단 생성 작업을 별도 스레드에서 수행
-- 처리 과정에 따라 `PROCESSING`, `COMPLETED`, `FAILED` 상태로 변경
-- 사용자는 생성 ID를 통해 처리 상태를 별도로 조회
-
-이를 통해 긴 AI 처리 시간 동안 HTTP 요청을 유지하지 않고, 생성 진행 상태와 실패 여부를 명확하게 관리할 수 있도록 구성했습니다.
-
-### 7. 비동기 작업과 트랜잭션 커밋 시점 분리
-
-식단 생성 요청을 저장한 직후 비동기 메서드를 호출할 경우, 기존 트랜잭션이 아직 커밋되지 않아 비동기 스레드에서 생성 요청 데이터를 조회하지 못할 가능성이 있었습니다.
-
-비동기 메서드는 호출한 스레드와 별도의 트랜잭션에서 동작하므로, 단순히 repository의 `save()`가 호출되었다고 해서 다른 스레드에서 해당 데이터가 즉시 보장되는 것은 아니었습니다.
-
-이에 따라 식단 생성 요청 저장 트랜잭션이 정상적으로 커밋된 이후 비동기 작업을 실행하도록 책임을 분리했습니다.
-
-또한 AI 호출, 응답 검증, 식단 저장, 상태 변경을 각각 구분하여 실패 발생 시 `DietGeneration`의 상태를 `FAILED`로 변경하고 실패 원인을 추적할 수 있도록 구성했습니다.
-
-이를 통해 비동기 처리 과정에서 발생할 수 있는 조회 시점 문제와 불완전한 상태 저장을 방지했습니다.
-
-### 8. JWT Access/Refresh Token과 Redis 기반 인증 상태 관리
-
-초기에는 JWT 자체의 만료 시간만으로 인증을 관리하는 방식을 고려했지만, 발급된 토큰을 서버에서 즉시 무효화하기 어렵다는 문제가 있었습니다.
-
-이를 해결하기 위해 Access Token과 Refresh Token을 분리하고, Refresh Token은 Redis에 저장하도록 구성했습니다.
-
-- Access Token은 짧은 만료 시간을 사용하여 API 인증에 활용
-- Refresh Token은 Redis에 저장하고 재발급 요청 시 서버 데이터와 비교
-- 로그아웃 시 Redis의 Refresh Token 제거
-- 로그아웃된 Access Token은 남은 만료 시간 동안 Redis 블랙리스트에 등록
-- Access Token과 Refresh Token에 서로 다른 Secret과 만료 시간 사용
-
-이를 통해 단순한 Stateless JWT 방식의 한계를 보완하고, 로그아웃과 토큰 재발급 상태를 서버에서 통제할 수 있도록 구성했습니다.
-
-### 9. 확정 식단 메뉴 교체 규칙과 알레르기 메뉴 제외
-
-확정된 식단의 메뉴를 아무 메뉴로나 교체할 수 있게 하면 식사의 종류가 달라지거나 가족 구성원의 알레르기 정보가 무시될 수 있습니다.
-
-이에 따라 메뉴 교체 시 다음 조건을 검증하도록 구성했습니다.
-
-- 요청 사용자가 해당 가족의 리더인지 확인
-- 현재 식단과 같은 요리 종류의 메뉴만 교체 허용
-- 사용자가 식단 생성 전에 직접 선택한 메뉴는 교체 제한
-- 현재 메뉴와 동일한 메뉴는 후보에서 제외
-- 가족 구성원의 알레르기 재료가 포함된 메뉴는 추천 후보에서 제외
-
-알레르기 메뉴 제외는 메뉴 후보를 조회한 뒤 애플리케이션에서 반복적으로 검사하는 대신, `MenuIngredient` 연결 관계를 이용한 `NOT EXISTS` 서브쿼리로 처리했습니다.
-
-```sql
-not exists (
-    select 1
-    from MenuIngredient mi
-    where mi.menu = m
-      and mi.ingredient.id in :allergyIngredientIds
-)
-
-## 10. Notion 상세 문서 링크
-
-https://app.notion.com/p/33cc5ec7e63d80ca8f9ef6a42faaf6dd?source=copy_link
+- **Portfolio**: [PickMeal Portfolio](https://app.notion.com/p/PICKMEAL-af3c5ec7e63d83cf89b88164a1a2b288?source=copy_link)

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import kongju.pickmeal.core.family.*;
+import kongju.pickmeal.core.menu.Menu;
 import kongju.pickmeal.core.user.User;
 import kongju.pickmeal.core.user.UserPickCount;
 import kongju.pickmeal.core.user.type.UserRole;
@@ -18,11 +19,15 @@ import kongju.pickmeal.core.user.PickCountHistory;
 import kongju.pickmeal.common.exception.ErrorCode;
 import kongju.pickmeal.application.user.UserReader;
 import kongju.pickmeal.common.exception.BusinessException;
+import kongju.pickmeal.core.diet.repository.DietRepository;
+import kongju.pickmeal.core.menu.repository.MenuRepository;
 import kongju.pickmeal.core.user.repository.UserRepository;
 import kongju.pickmeal.core.family.repository.FamilyRepository;
 import kongju.pickmeal.core.family.repository.FamilyJoinRepository;
 import kongju.pickmeal.core.user.repository.UserPickCountRepository;
+import kongju.pickmeal.core.diet.repository.DietGenerationRepository;
 import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
+
 
 @Service
 @Transactional
@@ -30,10 +35,13 @@ import kongju.pickmeal.core.user.repository.PickCountHistoryRepository;
 public class FamilyService {
     private final UserReader userReader;
     private final UserRepository userRepository;
+    private final MenuRepository menuRepository;
+    private final DietRepository dietRepository;
     private final FamilyRepository familyRepository;
     private final FamilyJoinRepository familyJoinRepository;
     private final InvitationCodeGenerator invitationCodeGenerator;
     private final UserPickCountRepository userPickCountRepository;
+    private final DietGenerationRepository dietGenerationRepository;
     private final PickCountHistoryRepository pickCountHistoryRepository;
 
     /**
@@ -47,11 +55,8 @@ public class FamilyService {
         // 초대 코드 생성
         String invitationCode = invitationCodeGenerator.generateUniqueCode();
         // 가족 엔티티 생성
-        Family family = Family.builder()
-                .familyName(request.familyName())
-                .invitationCode(invitationCode)
-                .leaderId(userId)
-                .build();
+        Family family = Family.create(request.familyName(), invitationCode);
+
         // 저장
         familyRepository.save(family);
         // 현재 유저를 리더로 가족 아이디와 연결
@@ -78,11 +83,7 @@ public class FamilyService {
         Family family = validationJoinRequest(request.invitationCode(), user);
 
         // 신청 테이블 만들기
-        FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.builder()
-                .user(user)
-                .family(family)
-                .status(ApplyStatus.PENDING)
-                .build();
+        FamilyJoinRequest familyJoinRequest = FamilyJoinRequest.create(user, family);
 
         familyJoinRepository.save(familyJoinRequest);
     }
@@ -328,9 +329,26 @@ public class FamilyService {
             throw new BusinessException(ErrorCode.FAMILY_MEMBER_EXISTS);
         }
 
+        deleteFamilyRelatedData(family);
         // member가 없으면 없애기
         familyRepository.delete(family);
-        user.deleteFamilyLeader();
+        user.leaveFamily();
+    }
+
+    private void deleteFamilyRelatedData(Family family) {
+        familyJoinRepository.deleteAllByFamily(family);
+        // 가족 메뉴 삭제
+        List<Menu> menus = menuRepository.findAllByFamily(family);
+        // 가족 메뉴 재료 연결 테이블 삭제
+        menuRepository.deleteAll(menus);
+        // pickCountHistory 삭제
+        pickCountHistoryRepository.deleteAllByUser_Family(family);
+        // userPickCount 삭제
+        userPickCountRepository.deleteAllByUser_Family(family);
+        // diet 삭제
+        dietRepository.deleteAllByFamily(family);
+        // dietGeneration 삭제
+        dietGenerationRepository.deleteAllByFamily(family);
     }
 
     /**
@@ -342,16 +360,22 @@ public class FamilyService {
     public FamilyMemberDto.KickResponse kickMember(Long userId, Long leaderId) {
         // 아이디 확인
         User member = userReader.getById(userId);
-
         User leader = userReader.getById(leaderId);
+
+        // 리더 자신을 방출 하지 못하도록 설정
+        if(Objects.equals(member.getId(), leader.getId())) {
+            throw new BusinessException(ErrorCode.LEADER_CANNOT_KICK_SELF);
+        }
 
         // 패밀리 멤버가 맞는지 확인
         if (!userRepository.existsByIdAndFamily(userId, leader.getFamily())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "해당 가족의 리더가 아닙니다.");
         }
 
+        resetPickCount(member);
+
         // 멤버 제거, 권한 제거
-        member.deleteFamilyMember();
+        member.leaveFamily();
         return FamilyMemberDto.KickResponse.builder()
                 .kickedNickname(member.getNickname())
                 .build();
@@ -366,9 +390,10 @@ public class FamilyService {
         User user = userReader.getById(userId);
         // 가족이 없는 경우
         validationFamily(user);
-
+        
+        resetPickCount(user);
         // 권한 변경
-        user.deleteFamilyMember();
+        user.leaveFamily();
     }
 
     /**
@@ -397,7 +422,7 @@ public class FamilyService {
 
         } else {
             // false라면 멤버별 선택권 넣기
-            List<FamilyPickDto.UpdateConfigRequest.pickAllocations> pickAllocations = request.pickAllocations();
+            List<FamilyPickDto.UpdateConfigRequest.PickAllocations> pickAllocations = request.pickAllocations();
 
             pickAllocations
                     .forEach(pick -> {

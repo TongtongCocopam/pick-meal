@@ -32,7 +32,9 @@ public enum ErrorCode {
     REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "신청 데이터가 존재하지 않습니다."),
     INVITATION_CODE_REISSUE_TOO_FAST(HttpStatus.BAD_REQUEST, "초대코드 재발급 제한 시간이 지나지 않았습니다."),
     FAMILY_MEMBER_EXISTS(HttpStatus.BAD_REQUEST, "구성원을 모두 방출한 후에 삭제할 수 있습니다."),
+    FAMILY_LEADER_MUST_DISBAND(HttpStatus.CONFLICT, "가족 리더는 가족을 해체한 후 회원탈퇴할 수 있습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "유저를 찾을 수 없습니다."),
+    LEADER_CANNOT_KICK_SELF(HttpStatus.BAD_REQUEST, "리더는 자기 자신을 방출할 수 없습니다."),
 
     EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "외부 API 호출에 실패했습니다."),
     EXTERNAL_API_EMPTY_RESPONSE(HttpStatus.BAD_GATEWAY, "외부 API 응답이 비어 있습니다."),
@@ -61,8 +63,9 @@ public enum ErrorCode {
     TOO_MANY_SELECTIONS(HttpStatus.BAD_REQUEST, "선택권 개수를 초과하였습니다."),
 
     DIET_MENU_LOCKED(HttpStatus.BAD_REQUEST,  "사용자가 선택한 메뉴는 교체할 수 없습니다."),
-    NOT_A_CANDIDATE(HttpStatus.BAD_REQUEST, "이미 식단으로 확정된 메뉴입니다."),
+    MENU_PICK_ALREADY_USED(HttpStatus.BAD_REQUEST, "이미 식단으로 확정된 메뉴입니다."),
     AI_PROCESS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI 식단 생성에 실패했습니다."),
+    DIET_GENERATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "AI 식단 생성 테이블을 찾을 수 없습니다."),
 //    AI_RESPONSE_TIMEOUT(HttpStatus.GATEWAY_TIMEOUT, "AI 응답이 지연되고 있습니다."),
     AI_DATA_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "생성된 데이터가 유효하지 않습니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "서버 점검 중입니다."),

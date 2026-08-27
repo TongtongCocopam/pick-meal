@@ -15,9 +15,11 @@ public interface FamilyJoinRepository {
 
     List<FamilyJoinRequest> findAllByFamilyAndStatus(Family family, ApplyStatus status);
 
-    Optional<FamilyJoinRequest> findByIdAndFamily(Long id, Long family);
-
     FamilyJoinRequest save(FamilyJoinRequest familyJoinRequest);
 
     Optional<FamilyJoinRequest> findById(Long id);
+
+    void deleteByUser(User user);
+
+    void deleteAllByFamily(Family family);
 }

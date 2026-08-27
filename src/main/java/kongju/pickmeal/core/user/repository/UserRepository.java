@@ -1,6 +1,5 @@
 package kongju.pickmeal.core.user.repository;
 
-
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +17,8 @@ public interface UserRepository {
 
     boolean existsByEmail(String email);
 
+    boolean existsByNickname(String nickname);
+
     List<User> findAllByFamily(Family family);
 
     boolean existsByIdAndFamily(Long id, Family family);
@@ -25,4 +26,6 @@ public interface UserRepository {
     User save(User user);
 
     List<User> findAllFamily(Family family);
+
+    void delete(User user);
 }

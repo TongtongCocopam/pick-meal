@@ -30,6 +30,10 @@ public interface DietGenerationJpaRepository extends JpaRepository<DietGeneratio
     );
 
     long countByFamilyAndTargetMonthAndStatusIn(
-            Family family, LocalDate targetMonth, List<DietGenerationStatus> status
+            @Param("family") Family family,
+            @Param("targetMonth") LocalDate targetMonth,
+            @Param("status") List<DietGenerationStatus> status
     );
+
+    void deleteAllByFamily(Family family);
 }

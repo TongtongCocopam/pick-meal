@@ -16,4 +16,6 @@ public interface DietRepository {
     List<Diet> findAllFamilyAndMealDate(Family family, LocalDate date);
 
     Optional<Diet> findById(Long id);
+
+    void deleteAllByFamily(Family family);
 }

@@ -336,4 +336,38 @@ public class UserControllerTest {
                     .andExpect(jsonPath("$.success").value(true));
         }
     }
+
+    @Nested
+    @DisplayName("회원탈퇴")
+    class UserDelete{
+        @Test
+        @DisplayName("비밀번호 양식 불일치")
+        public void should_success_user_delete_when_parameter_invalid() throws Exception {
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder().password("pass").build();
+
+            mockMvc.perform(delete("/api/v1/users/me")
+                            .with(user(mockGuest()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andDo(print())
+                    .andExpect(jsonPath("$.success").value(false))
+                    .andExpect(jsonPath("$.error.message").exists());
+        }
+
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_user_delete() throws Exception {
+            UserDto.WithdrawRequest request = UserDto.WithdrawRequest.builder().password("password1234").build();
+
+            mockMvc.perform(delete("/api/v1/users/me")
+                            .with(user(mockGuest()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andDo(print())
+                    .andExpect(jsonPath("$.success").value(true));
+
+        }
+    }
 }

@@ -21,4 +21,6 @@ public interface MenuIngredientRepository {
     List<MenuIngredient> findAllByMenuInFetchIngredient(List<Menu> menus);
 
     void deleteAllByMenu(Menu menu);
+
+    void flush();
 }

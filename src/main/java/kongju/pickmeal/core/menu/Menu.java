@@ -1,5 +1,7 @@
 package kongju.pickmeal.core.menu;
 
+import java.util.List;
+import java.util.ArrayList;
 import java.math.BigDecimal;
 
 import lombok.Getter;
@@ -25,7 +27,7 @@ import kongju.pickmeal.core.menu.type.MenuCategory;
         }
 )
 public class Menu extends BaseTimeEntity {
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String menuName;
 
     @Enumerated(EnumType.STRING)
@@ -33,12 +35,17 @@ public class Menu extends BaseTimeEntity {
     private MenuCategory category;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
     private DishType dishType;
-
+    @Column(precision = 10, scale = 2)
     private BigDecimal kcal;
+    @Column(precision = 10, scale = 2)
     private BigDecimal carbs;
+    @Column(precision = 10, scale = 2)
     private BigDecimal protein;
+    @Column(precision = 10, scale = 2)
     private BigDecimal fat;
+    @Column(precision = 10, scale = 2)
     private BigDecimal sodium;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "family_id")
@@ -47,8 +54,15 @@ public class Menu extends BaseTimeEntity {
     @Column(name = "external_recipe_id", unique = true)
     private Long externalRecipeId;
 
+    @OneToMany(
+            mappedBy = "menu",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private final List<MenuIngredient> menuIngredients = new ArrayList<>();
+
     @Builder(access = AccessLevel.PRIVATE)
-    public Menu(
+    private Menu(
             Long externalRecipeId, String menuName, MenuCategory category,
             DishType dishType, BigDecimal kcal, BigDecimal carbs,
             BigDecimal protein, BigDecimal fat, BigDecimal sodium,
@@ -91,7 +105,6 @@ public class Menu extends BaseTimeEntity {
     }
 
     public static Menu createFamilyMenu(
-            Long externalRecipeId,
             String menuName,
             MenuCategory category,
             DishType dishType,
@@ -103,7 +116,7 @@ public class Menu extends BaseTimeEntity {
             Family family
     ) {
         return Menu.builder()
-                .externalRecipeId(externalRecipeId)
+                .externalRecipeId(null)
                 .menuName(menuName)
                 .category(category)
                 .dishType(dishType)
@@ -125,7 +138,7 @@ public class Menu extends BaseTimeEntity {
         this.kcal = kcal;
         this.carbs = carbs;
         this.protein = protein;
-        this.fat=fat;
+        this.fat = fat;
         this.sodium = sodium;
     }
 
