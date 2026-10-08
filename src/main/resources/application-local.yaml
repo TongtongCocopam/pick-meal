@@ -1,4 +1,7 @@
 spring:
+  docker:
+    compose:
+      file: ./compose.local.yaml
   jpa:
     hibernate:
       ddl-auto: update
@@ -23,3 +26,9 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 debug: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
