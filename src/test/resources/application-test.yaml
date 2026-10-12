@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:pickmeal-test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+  flyway:
+    enabled: false
+
+  docker:
+    compose:
+      enabled: false
+
+jwt:
+  access-secret: test-access-secret-must-be-at-least-32-bytes-long
+  refresh-secret: test-refresh-secret-must-be-at-least-32-bytes-long
