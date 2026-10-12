@@ -210,7 +210,7 @@ public class DietServiceTest {
 
             MenuPickDto.CreateRequest request = MenuPickDto.CreateRequest.builder()
                     .menuIds(List.of(1L, 2L))
-                    .targetMonth(YearMonth.of(2026, 8))
+                    .targetMonth(YearMonth.now())
                     .build();
 
             User user = UserFixture.user();
