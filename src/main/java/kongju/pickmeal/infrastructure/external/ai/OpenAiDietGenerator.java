@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.ai.chat.metadata.Usage;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.ResponseFormat;
@@ -16,20 +15,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import kongju.pickmeal.core.ai.DietAiGenerator;
 import kongju.pickmeal.core.ai.AiDietGenerateDto;
+import kongju.pickmeal.infrastructure.external.ai.data.OpenAiClient;
 
 
 @Slf4j
 @Component
 public class OpenAiDietGenerator implements DietAiGenerator {
-    private final ChatClient chatClient;
+    private final OpenAiClient openAiClient;
     private final OpenAiPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
 
     public OpenAiDietGenerator(
-            ChatClient.Builder chatClientBuilder,
-            OpenAiPromptBuilder promptBuilder, ObjectMapper objectMapper
-    ){
-        this.chatClient = chatClientBuilder.build();
+            OpenAiClient openAiClient,
+            OpenAiPromptBuilder promptBuilder,
+            ObjectMapper objectMapper
+    ) {
+        this.openAiClient = openAiClient;
         this.promptBuilder = promptBuilder;
         this.objectMapper = objectMapper;
     }
@@ -59,12 +60,11 @@ public class OpenAiDietGenerator implements DietAiGenerator {
                 .build();
 
         // 결과
-        ChatResponse response = chatClient.prompt()
-                .system(promptBuilder.system())
-                .user(promptBuilder.user(command))
-                .options(options)
-                .call()
-                .chatResponse();
+        ChatResponse response = openAiClient.request(
+                promptBuilder.system(),
+                promptBuilder.user(command),
+                options
+        );
 
         // 사용량 확인
         Usage usage = Objects.requireNonNull(response).getMetadata().getUsage();
@@ -88,7 +88,6 @@ public class OpenAiDietGenerator implements DietAiGenerator {
             );
 
         } catch (JsonProcessingException e) {
-//            throw new BusinessException(ErrorCode.AI_PROCESS_FAILED);
             throw new IllegalStateException(
                     "AI 프롬프트 데이터 JSON 변환에 실패했습니다.",
                     e
