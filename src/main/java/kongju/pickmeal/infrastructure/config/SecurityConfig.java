@@ -3,7 +3,6 @@ package kongju.pickmeal.infrastructure.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,9 +14,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
-import kongju.pickmeal.core.service.JwtService;
 import kongju.pickmeal.api.security.JwtTokenFilter;
-import kongju.pickmeal.core.user.repository.UserRepository;
+import kongju.pickmeal.api.security.JwtAuthenticationService;
 import kongju.pickmeal.api.security.CustomAccessDeniedHandler;
 import kongju.pickmeal.api.security.CustomAuthenticationEntryPoint;
 
@@ -27,17 +25,10 @@ import kongju.pickmeal.api.security.CustomAuthenticationEntryPoint;
 @EnableMethodSecurity // @PreAuthorize 작동을 위해
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private final JwtService jwtService;
-    private final UserRepository userRepository;
-    private final RedisTemplate<String, String> redisTemplate;
 
+    private final JwtAuthenticationService jwtAuthenticationService;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
-
-    @Bean
-    public JwtTokenFilter jwtTokenFilter() {
-        return new JwtTokenFilter(jwtService, userRepository, redisTemplate);
-    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -45,7 +36,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtTokenFilter jwtTokenFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 // CSRF설정 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
@@ -74,7 +65,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 // UsernamePasswordAuthenticationFilter전에 jwt먼저 실행
-                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtTokenFilter(jwtAuthenticationService),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
