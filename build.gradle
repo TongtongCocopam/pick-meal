@@ -23,41 +23,78 @@ repositories {
 }
 
 dependencies {
-    // 설정 검증용
+    // @Valid, @NotNull, @NotBlank, @Size 등의 Bean Validation 사용
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    // JWT API (인터페이스 및 설정용)
+    // JWT 생성/파싱을 위한 공개 API, Jwts.builder(), Jwts.parser()
     implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
-    // Open AI
-    implementation platform("org.springframework.ai:spring-ai-bom:1.1.7")
-    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
-    // JWT 구현체 (실제 로직 실행용)
+    // 컴파일 시에는 필요 없고 애플리케이션 실행 시 필요
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
-    // JSON 직렬화/역직렬화를 위한 Jackson 연동
+    // JWT Claims와 Java 객체 사이 JSON 직렬화/역직렬화를 Jackson으로 처리
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 
+    // Spring AI 라이브러리들의 버전을 일관되게 관리하는 BOM
+    implementation platform("org.springframework.ai:spring-ai-bom:1.1.7")
+    // Spring AI를 통해 OpenAI API 사용
+    // ChatModel, OpenAiChatModel 등의 자동 설정 제공
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+
+    // 애플리케이션 상태 및 메트릭 확인
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // Actuator/Micrometer 메트릭을 Prometheus 형식으로 노출
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
+    // 인증/인가 및 SecurityFilterChain 구성
+    // JWT 인증 필터 등 Spring Security 기반 보안 처리
     implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // Spring MVC 기반 REST API 개발
+    // DispatcherServlet, @RestController, Jackson, 내장 Tomcat 등 포함
     implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // DB 스키마 버전 관리 및 migration 실행
     implementation 'org.flywaydb:flyway-core'
+    // Flyway에서 PostgreSQL 지원
     implementation 'org.flywaydb:flyway-database-postgresql'
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
-    implementation 'org.springframework.session:spring-session-data-redis'
+
+    // Spring MVC API의 OpenAPI 문서와 Swagger UI 자동 생성
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.9.1'
+
+    // RedisTemplate, StringRedisTemplate 등 Redis 접근 기능 제공
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Spring Data JPA + Hibernate
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    compileOnly 'org.projectlombok:lombok'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+    // 실제 실행 시 PostgreSQL 연결에 필요
     runtimeOnly 'org.postgresql:postgresql'
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // @Getter, @Builder, @RequiredArgsConstructor 등의 코드 생성을 위해 사용
+    // 컴파일 시에만 필요
+    compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // 테스트 코드에서도 Lombok 사용
     testCompileOnly 'org.projectlombok:lombok'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
+
+    // 개발 중 코드 변경 시 자동 재시작 등의 편의 기능
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    // application 실행 시 compose.yaml을 감지해
+    // Docker Compose 서비스를 자동으로 실행/연결할 때 사용
+    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+
+    // @ConfigurationProperties 기반 설정 메타데이터 생성
+    // application.yml/properties 작성 시 IDE 자동완성 등을 지원
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // JUnit 실행 플랫폼
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // 테스트용 인메모리 DB
     testImplementation 'com.h2database:h2'
+
+    // JUnit5, Mockito, AssertJ, Spring Test 등
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Spring Security 테스트 지원
     testImplementation 'org.springframework.security:spring-security-test'
 }
 
