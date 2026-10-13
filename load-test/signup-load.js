@@ -3,7 +3,7 @@ import { check } from 'k6';
 
 const BASE_URL = 'http://localhost:8080';
 
-const START_ID = 2000;
+const START_ID = 4000;
 
 export const options = {
     scenarios: {
