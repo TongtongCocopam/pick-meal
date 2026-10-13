@@ -1,5 +1,6 @@
 package kongju.pickmeal.infrastructure.config;
 
+import kongju.pickmeal.api.security.JwtAuthenticationService;
 import kongju.pickmeal.application.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +29,7 @@ import kongju.pickmeal.api.security.CustomAuthenticationEntryPoint;
 @WebMvcTest(UserController.class)
 @Import({
         SecurityConfig.class,
+        JwtAuthenticationService.class,
         CustomAuthenticationEntryPoint.class,
         CustomAccessDeniedHandler.class
 })
@@ -37,11 +39,7 @@ public class SecurityConfigTest {
     @MockitoBean
     UserService userService;
     @MockitoBean
-    private JwtService jwtService;
-    @MockitoBean
-    private UserRepository userRepository;
-    @MockitoBean
-    private RedisTemplate<String, String> redisTemplate;
+    private JwtAuthenticationService jwtAuthenticationService;
 
     @Test
     @DisplayName("공개 엔드포인트는 인증 없이 접근 가능")
