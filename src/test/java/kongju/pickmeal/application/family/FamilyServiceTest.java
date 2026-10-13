@@ -428,6 +428,26 @@ public class FamilyServiceTest {
     }
 
     @Nested
+    @DisplayName("초대코드 조회")
+    class GetInvitation {
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_get_invitation() {
+            Family family = family();
+            User user = user();
+            user.joinFamilyLeader(family);
+
+            given(userReader.getById(any())).willReturn(user);
+            given(familyRepository.findById(any())).willReturn(Optional.of(family));
+
+            FamilyInvitationDto.CurrentCodeResponse response =
+                    familyService.getInvitationCode(1L);
+
+            assertThat(response.invitationCode()).isEqualTo("1234asdf");
+        }
+    }
+
+    @Nested
     @DisplayName("가족 멤버 리스트 불러오기")
     class getMembers {
         @Test
