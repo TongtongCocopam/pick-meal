@@ -264,6 +264,27 @@ public class FamilyControllerTest {
         }
     }
 
+    @Nested
+    @DisplayName("초대코드 조회")
+    class GetInvitation {
+        @Test
+        @DisplayName("성공 케이스")
+        public void should_success_get_invitation() throws Exception {
+            FamilyInvitationDto.CurrentCodeResponse response =
+                    FamilyInvitationDto.CurrentCodeResponse.builder()
+                            .invitationCode("1sdd12d")
+                            .build();
+
+            given(familyService.getInvitationCode(any())).willReturn(response);
+
+            mockMvc.perform(get("/api/v1/families/me/invitation-code")
+                            .with(user(mockLeader())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.invitationCode").value("1sdd12d"));
+        }
+    }
+
 
     @Nested
     @DisplayName("가족 멤버 리스트 불러오기")

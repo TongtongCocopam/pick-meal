@@ -1,9 +1,13 @@
 package kongju.pickmeal.api.exception;
 
+import java.util.Map;
+import java.util.Objects;
 import java.nio.file.AccessDeniedException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -52,5 +56,32 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.fail(ErrorCode.INVALID_INPUT));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityException(
+            DataIntegrityViolationException ex
+    ) {
+        Throwable cause = ex;
+
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException constraintEx) {
+                // UNIQUE 제약조건 위반 23505
+                if ("23505".equals(constraintEx.getSQLState())
+                        && "uk_family_join_request_pending".equals(
+                        constraintEx.getConstraintName())) {
+
+                    return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body(Map.of(
+                                    "success", false,
+                                    "message", "이미 가입 신청한 가족입니다."
+                            ));
+                }
+            }
+
+            cause = cause.getCause();
+        }
+
+        throw Objects.requireNonNull(ex);
     }
 }

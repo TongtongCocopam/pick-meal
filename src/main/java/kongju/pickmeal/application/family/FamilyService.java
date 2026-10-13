@@ -269,6 +269,22 @@ public class FamilyService {
     }
 
     /**
+     * 현재 가족의 초대 코드 조회
+     *
+     * @param userId 조회하는 리더의 사용자 ID
+     * @return 현재 초대 코드
+     */
+    @Transactional(readOnly = true)
+    public FamilyInvitationDto.CurrentCodeResponse getInvitationCode(Long userId) {
+        User user = userReader.getById(userId);
+        Family family = validationFamily(user);
+
+        return FamilyInvitationDto.CurrentCodeResponse.builder()
+                .invitationCode(family.getInvitationCode())
+                .build();
+    }
+
+    /**
      * 초대 코드 재발급
      *
      * @param userId 재발급 리더

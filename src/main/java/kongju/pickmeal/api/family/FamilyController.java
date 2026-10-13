@@ -82,6 +82,18 @@ public class FamilyController {
                 .body(ApiResponse.success(response));
     }
 
+    @GetMapping("/me/invitation-code")
+    @PreAuthorize("hasRole('LEADER')")
+    public ResponseEntity<ApiResponse<FamilyInvitationDto.CurrentCodeResponse>> getInvitationCode(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        FamilyInvitationDto.CurrentCodeResponse response = familyService.getInvitationCode(userDetails.id());
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(ApiResponse.success(response));
+    }
+
     @GetMapping("/me/members")
     @PreAuthorize("hasRole('LEADER') or hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<List<FamilyMemberDto.ListItem>>> getFamilyMembers(
