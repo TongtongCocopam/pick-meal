@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check, fail } from 'k6';
+import { login } from './common/auth.js';
 
 const BASE_URL = 'http://localhost:8080';
 const FIRST_USER_ID = 4000;
@@ -23,30 +24,8 @@ export default function () {
     const secondLetter = String.fromCharCode(97 + (userIndex % 26));
     const familyName = `ff${firstLetter}${secondLetter}`;
 
-    const loginResponse = http.post(
-        `${BASE_URL}/api/v1/auth/login`,
-        JSON.stringify({
-            loginId: `k6test${userNumber}`,
-            password: 'Test1234!',
-        }),
-        {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        }
-    );
+    const accessToken = login(`k6test${userNumber}`);
 
-    const loginSuccess = check(loginResponse, {
-        'login status is 200': (res) => res.status === 200,
-        'access token exists': (res) =>
-            res.json('data.accessToken') !== null,
-    });
-
-    if (!loginSuccess) {
-        fail(`k6test${userNumber} 로그인 실패: ${loginResponse.body}`);
-    }
-
-    const accessToken = loginResponse.json('data.accessToken');
     const createResponse = http.post(
         `${BASE_URL}/api/v1/families`,
         JSON.stringify({ familyName }),

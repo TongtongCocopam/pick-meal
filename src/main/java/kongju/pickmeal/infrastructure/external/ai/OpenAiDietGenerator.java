@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.ai.chat.metadata.Usage;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Profile;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.ResponseFormat;
@@ -20,6 +21,7 @@ import kongju.pickmeal.infrastructure.external.ai.data.OpenAiClient;
 
 @Slf4j
 @Component
+@Profile("!load-test")
 public class OpenAiDietGenerator implements DietAiGenerator {
     private final OpenAiClient openAiClient;
     private final OpenAiPromptBuilder promptBuilder;

@@ -1,6 +1,7 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { Trend, Rate } from 'k6/metrics';
+import { login } from './common/auth.js';
 
 const BASE_URL = 'http://localhost:8080';
 const START_ID = 2000;
