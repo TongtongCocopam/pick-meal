@@ -14,7 +14,7 @@ import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 
 @Slf4j
 @Service
-@Profile("!load-test")
+//@Profile("!load-test")
 @RequiredArgsConstructor
 public class AiDietService {
     private final AiDietWorker aiDietWorker;
