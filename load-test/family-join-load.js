@@ -1,7 +1,8 @@
 import { Counter } from 'k6/metrics';
 
 import http from 'k6/http';
-import { check, fail } from 'k6';
+import { fail } from 'k6';
+import { login } from './common/auth.js';
 
 
 const BASE_URL = 'http://localhost:8080';
@@ -24,36 +25,6 @@ export const options = {
         join_unexpected: ['count==0'],
     },
 };
-
-function login(loginId) {
-    const loginResponse = http.post(
-        `${BASE_URL}/api/v1/auth/login`,
-        JSON.stringify({
-            loginId,
-            password: 'Test1234!',
-        }),
-        {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            tags: {
-                api: 'login',
-            },
-        }
-    );
-
-    const loginSuccess = check(loginResponse, {
-        'status is 200': (res) => res.status === 200,
-        'access token exists': (res) =>
-            res.json('data.accessToken') !== null,
-    });
-
-    if (!loginSuccess) {
-        fail(`${loginId} 로그인 실패: ${loginResponse.body}`);
-    }
-
-    return loginResponse.json('data.accessToken');
-}
 
 export function setup() {
     const leaderToken = login('k6test2001');

@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check, fail } from 'k6';
+import { login } from './common/auth.js';
 
 const BASE_URL = 'http://localhost:8080';
 
@@ -13,31 +14,9 @@ export const options = {
  * @returns {{accessToken: *}}
  */
 export function setup() {
-    const loginResponse = http.post(
-        `${BASE_URL}/api/v1/auth/login`,
-        JSON.stringify({
-            loginId: 'k6test3000',
-            password: 'Test1234!',
-        }),
-        {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        }
-    );
-
-    const loginSuccess = check(loginResponse, {
-        'login status is 200': (res) => res.status === 200,
-        'access token exists': (res) =>
-            res.json('data.accessToken') !== null,
-    });
-
-    if (!loginSuccess) {
-        fail(`로그인 실패: ${loginResponse.body}`);
-    }
-
+    const accessToken = login('k6test3000');
     return {
-        accessToken: loginResponse.json('data.accessToken'),
+        accessToken: accessToken
     };
 }
 
