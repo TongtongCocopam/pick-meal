@@ -3,6 +3,7 @@ package kongju.pickmeal.application.diet.generation;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -13,6 +14,7 @@ import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 
 @Slf4j
 @Service
+@Profile("!load-test")
 @RequiredArgsConstructor
 public class AiDietService {
     private final AiDietWorker aiDietWorker;
