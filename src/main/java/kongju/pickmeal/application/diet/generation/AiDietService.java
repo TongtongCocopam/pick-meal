@@ -25,7 +25,7 @@ public class AiDietService {
      *
      * @param event ai식단 관련 데이터
      */
-    @Async
+    @Async("dietTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void generateDietAsync(
             DietGenerationRequestedEventDto event
