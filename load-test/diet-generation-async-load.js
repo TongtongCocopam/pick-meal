@@ -3,8 +3,8 @@ import { login } from './common/auth.js';
 import { Counter } from 'k6/metrics';
 
 const BASE_URL = 'http://localhost:8080';
-const START_ID = 2001;
-const USER_COUNT = 20;
+const START_ID = 1000;
+const USER_COUNT = 50;
 
 const successCount = new Counter('generation_success');
 const unexpectedCount = new Counter('generation_unexpected');
@@ -19,7 +19,7 @@ export const options = {
     },
 
     thresholds: {
-        generation_success: ['count==20'],
+        generation_success: ['count==50'],
         generation_unexpected: ['count==0'],
     },
 };
