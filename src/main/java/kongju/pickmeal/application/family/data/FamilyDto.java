@@ -9,8 +9,8 @@ public class FamilyDto {
     @Builder
     public record CreateRequest(
             @NotBlank
-            @Pattern(regexp = "^[a-zA-Z가-힣\\\\s]*${2,15}",
-                    message = "가족 이름은 한글, 영문만 가능합니다.")
+            @Pattern(regexp = "^[가-힣a-zA-Z0-9]+${2,15}",
+                    message = "가족 이름은 한글, 영문, 숫자만 가능합니다.")
             String familyName
     ){}
     @Builder

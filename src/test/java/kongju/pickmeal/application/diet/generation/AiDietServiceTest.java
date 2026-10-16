@@ -17,6 +17,7 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import kongju.pickmeal.application.diet.DietGenerationFailureHandler;
+import kongju.pickmeal.infrastructure.monitoring.DietGenerationMetrics;
 import kongju.pickmeal.infrastructure.external.ai.data.DietGenerationDto;
 import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 
@@ -25,8 +26,13 @@ import kongju.pickmeal.application.diet.event.DietGenerationRequestedEventDto;
 public class AiDietServiceTest {
     @Mock
     private AiDietWorker aiDietWorker;
+
     @Mock
     private DietGenerationFailureHandler dietGenerationFailureHandler;
+
+    @Mock
+    private DietGenerationMetrics dietGenerationMetrics;
+
     @InjectMocks
     private AiDietService aiDietService;
 
